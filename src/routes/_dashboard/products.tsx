@@ -233,6 +233,11 @@ function ProductsPage() {
       const validSupportPhone = getValidSupportPhone();
       if (!validSupportPhone) return;
 
+      let finalImageUrl = imageUrl;
+      if (imageFile) {
+        finalImageUrl = await uploadProductImage(editingProduct.user_id, imageFile);
+      }
+
       const { error } = await supabase
         .from("products")
         .update({
@@ -244,6 +249,7 @@ function ProductsPage() {
           pixel_id: pixelId,
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
+          image_url: finalImageUrl || null,
         })
         .eq("id", editingProduct.id);
 
