@@ -32,6 +32,7 @@ declare global {
 
 
 function CheckoutPage() {
+  const payFn = useServerFn(processPayment);
   const { productId } = useParams({ from: "/p/$productId" });
   const [product, setProduct] = useState<any>(null);
   const [checkout, setCheckout] = useState<any>(null);
