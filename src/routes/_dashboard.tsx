@@ -58,19 +58,18 @@ function DashboardLayout() {
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { name: "Produtos", icon: Package, path: "/dashboard/products" },
-    { name: "Vendas", icon: CreditCard, path: "/dashboard/sales" },
-    { name: "Clientes", icon: Users, path: "/dashboard/customers" },
-    { name: "Relatórios", icon: BarChart3, path: "/dashboard/dashboard" }, // Point to dashboard or create new reports page
-    { name: "Pixel Facebook", icon: BarChart3, path: "/dashboard/pixel" },
-    { name: "Configurações", icon: Settings, path: "/dashboard/settings" },
+    { name: "Produtos", icon: Package, path: "/products" },
+    { name: "Vendas", icon: CreditCard, path: "/sales" },
+    { name: "Clientes", icon: Users, path: "/customers" },
+    { name: "Relatórios", icon: BarChart3, path: "/dashboard" },
+    { name: "Pixel Facebook", icon: BarChart3, path: "/pixel" },
+    { name: "Configurações", icon: Settings, path: "/settings" },
   ];
 
   if (!user) return null;
 
   return (
     <div className="flex min-h-screen bg-slate-50/50">
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed left-0 top-0 z-40 h-screen border-r bg-white transition-all duration-300",
@@ -78,7 +77,6 @@ function DashboardLayout() {
         )}
       >
         <div className="flex h-full flex-col">
-          {/* Logo */}
           <div className="flex h-16 items-center px-6">
             <Link to="/dashboard" className="flex items-center gap-2 overflow-hidden">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
@@ -92,7 +90,6 @@ function DashboardLayout() {
 
           <Separator />
 
-          {/* Navigation */}
           <nav className="flex-1 space-y-1 p-3">
             {menuItems.map((item) => (
               <Link
@@ -109,7 +106,6 @@ function DashboardLayout() {
             ))}
           </nav>
 
-          {/* Bottom Sidebar */}
           <div className="p-3">
             <Separator className="mb-3" />
             <button
@@ -133,7 +129,6 @@ function DashboardLayout() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className={cn("flex-1 transition-all duration-300", isSidebarOpen ? "ml-64" : "ml-20")}>
         <div className="p-8">
           <Outlet />
