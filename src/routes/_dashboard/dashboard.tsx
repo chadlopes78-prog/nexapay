@@ -225,6 +225,22 @@ function DashboardPage() {
         change: calculateChange(current.productsSold, previous.productsSold),
         positive: current.productsSold >= previous.productsSold,
         description: "Volume total"
+      },
+      {
+        title: "Total M-Pesa",
+        value: `${current.mpesaRevenue.toLocaleString("pt-MZ")} MT`,
+        icon: Smartphone,
+        change: calculateChange(current.mpesaRevenue, previous.mpesaRevenue),
+        positive: current.mpesaRevenue >= previous.mpesaRevenue,
+        description: "Processado"
+      },
+      {
+        title: "Total e-Mola",
+        value: `${current.emolaRevenue.toLocaleString("pt-MZ")} MT`,
+        icon: Smartphone,
+        change: calculateChange(current.emolaRevenue, previous.emolaRevenue),
+        positive: current.emolaRevenue >= previous.emolaRevenue,
+        description: "Processado"
       }
     ];
   }, [dashboardData]);
