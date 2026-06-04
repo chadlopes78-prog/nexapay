@@ -125,6 +125,56 @@ function SettingsPage() {
             <Button variant="outline">Alterar Senha</Button>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              <CardTitle>Notificações DarkPay</CardTitle>
+            </div>
+            <CardDescription>Configure como e quando você deseja ser notificado.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <PushNotificationManager />
+            
+            <Separator />
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Histórico Recente</h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 rounded-lg border bg-slate-50/50 dark:bg-slate-800/30 text-sm">
+                  <PieChart className="h-4 w-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Relatório Diário Disponível</p>
+                    <p className="text-xs text-muted-foreground">Seu resumo de vendas de ontem está pronto.</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Há 14 horas</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3 rounded-lg border bg-slate-50/50 dark:bg-slate-800/30 text-sm">
+                  <MessageSquare className="h-4 w-4 text-orange-500 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Inspiração Matinal</p>
+                    <p className="text-xs text-muted-foreground">"O sucesso é a soma de pequenos esforços repetidos dia após dia."</p>
+                    <p className="text-[10px] text-slate-400 mt-1">Hoje, 08:00</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              <CardTitle>Integrações</CardTitle>
+            </div>
+            <CardDescription>Conecte outras plataformas ao seu checkout.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground italic">Em breve novas integrações disponíveis.</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
