@@ -291,19 +291,51 @@ function DashboardPage() {
         <DateRangePicker onRangeChange={handleRangeChange} initialPreset={preset} initialRange={dateRange} />
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-          {[...Array(10)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="h-20" />
-              <CardContent className="h-16" />
-            </Card>
-          ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {isLoading ? (
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+              {[...Array(8)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader className="h-20" />
+                  <CardContent className="h-16" />
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+              {stats.slice(0, 8).map((stat) => (
+                <Card key={stat.title} className="hover:shadow-sm transition-all duration-200 border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{stat.title}</CardTitle>
+                    <stat.icon className="h-4 w-4 text-primary/70" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold truncate">{stat.value}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={cn(
+                        "text-xs font-bold flex items-center px-1.5 py-0.5 rounded-full",
+                        stat.positive ? "text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30" : "text-rose-700 bg-rose-100 dark:bg-rose-900/30"
+                      )}>
+                        {stat.positive ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+                        {stat.change}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-      ) : (
+        <div className="lg:col-span-1">
+          <PushNotificationManager />
+        </div>
+      </div>
+
+      {isLoading ? null : (
         <>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-            {stats.map((stat) => (
+            {stats.slice(8).map((stat) => (
               <Card key={stat.title} className="hover:shadow-sm transition-all duration-200 border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{stat.title}</CardTitle>
@@ -319,7 +351,6 @@ function DashboardPage() {
                       {stat.positive ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
                       {stat.change}
                     </span>
-                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter italic">per. anterior</span>
                   </div>
                 </CardContent>
               </Card>
