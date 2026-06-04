@@ -1,6 +1,8 @@
 (function() {
   // Get script parameters
   const script = document.currentScript;
+  if (!script) return;
+
   const urlParams = new URLSearchParams(script.src.split('?')[1]);
   const trackingId = urlParams.get('id');
 
@@ -9,33 +11,17 @@
     return;
   }
 
-  // Configuration - Update these with your Supabase project details
-  // Note: These are public keys, similar to how Firebase/Supabase are used on frontends.
-  const SUPABASE_URL = window.CHECKOUTPRO_URL || ''; 
-  const SUPABASE_KEY = window.CHECKOUTPRO_KEY || '';
-
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    // We'll try to find them from the script source if not provided
-    // This is a simplified version. In a real production environment, 
-    // we would hardcode these or use a proxy edge function.
-  }
-
-  // Store tracking ID in session
-  sessionStorage.setItem('cp_tracking_id', trackingId);
-
+  // Configuration
+  const scriptUrl = new URL(script.src);
+  const BASE_URL = scriptUrl.origin;
+  
   // Helper to send events
   async function sendEvent(eventType, metadata = {}) {
     try {
-      // Find the page ID first using the tracking ID
-      // For performance and security, it's better to have an edge function 
-      // but we'll simulate the logic here.
-      // In this implementation, the script will call our backend.
-      
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/track-event`, {
+      const response = await fetch(`${BASE_URL}/functions/v1/track-event`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_KEY}`
         },
         body: JSON.stringify({
           trackingId: trackingId,
@@ -48,7 +34,7 @@
       
       return await response.json();
     } catch (e) {
-      console.error('CheckoutPro Tracking Error:', e);
+      // Silently fail in production
     }
   }
 
@@ -58,15 +44,19 @@
   // 2. Capture Clicks on Checkout Buttons
   document.addEventListener('click', function(e) {
     const target = e.target.closest('a');
-    if (target && (target.href.includes('/p/') || target.getAttribute('data-checkout'))) {
-      sendEvent('click', { targetUrl: target.href });
+    if (target) {
+      const isCheckoutLink = target.href.includes('/p/') || target.getAttribute('data-checkout');
       
-      // Append tracking ID to URL if it's a checkout link
-      try {
-        const url = new URL(target.href);
-        url.searchParams.set('tp_id', trackingId);
-        target.href = url.toString();
-      } catch(err) {}
+      if (isCheckoutLink) {
+        sendEvent('click', { targetUrl: target.href });
+        
+        // Append tracking ID to URL if it's a checkout link
+        try {
+          const url = new URL(target.href);
+          url.searchParams.set('tp_id', trackingId);
+          target.href = url.toString();
+        } catch(err) {}
+      }
     }
   });
 
