@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_dashboard" as any)({
+export const Route = createFileRoute("/_dashboard")({
   component: DashboardLayout,
 });
 

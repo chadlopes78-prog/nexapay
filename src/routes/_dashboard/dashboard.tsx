@@ -11,6 +11,8 @@ import {
   Percent,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
 import {
   AreaChart,
   Area,
@@ -26,7 +28,7 @@ import {
   Cell,
 } from "recharts";
 
-export const Route = createFileRoute("/_dashboard/dashboard" as any)({
+export const Route = createFileRoute("/_dashboard/dashboard")({
   component: DashboardPage,
 });
 
@@ -180,7 +182,3 @@ function DashboardPage() {
   );
 }
 
-// Simple CN helper for dashboard page
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(" ");
-}

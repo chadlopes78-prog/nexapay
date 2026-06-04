@@ -16,15 +16,18 @@ import {
   Package,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/p/$productId" as any)({
+export const Route = createFileRoute("/p/$productId")({
   component: CheckoutPage,
 });
 
+
 function CheckoutPage() {
-  const { productId } = useParams({ from: "/p/$productId" });
+  const { productId } = useParams({ from: "/p/$productId" } as any);
   const [product, setProduct] = useState<any>(null);
   const [checkout, setCheckout] = useState<any>(null);
+
   const [loading, setLoading] = useState(true);
 
   // Form state
@@ -251,6 +254,3 @@ function CheckoutPage() {
   );
 }
 
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(" ");
-}
