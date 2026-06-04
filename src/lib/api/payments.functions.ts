@@ -14,6 +14,18 @@ const PAYMENT_ENDPOINTS = {
   emola: "/emola/c2b/pay/",
 } as const;
 
+type PaymentGatewayResponse = {
+  success?: boolean;
+  message?: unknown;
+  error?: unknown;
+  detail?: unknown;
+  code?: unknown;
+  transaction_id?: unknown;
+  mpesa_transaction_id?: unknown;
+  emola_txid?: unknown;
+  raw?: string;
+};
+
 function buildPaymentUrl(baseUrl: string, method: "mpesa" | "emola") {
   const cleanBase = baseUrl.replace(/\/+$/, "");
   const apiBase = cleanBase.includes("/api/v1/pagamentos")
@@ -30,7 +42,10 @@ export const processPayment = createServerFn({ method: "POST" })
     const baseUrl = process.env.PAYMENT_API_BASE_URL || "https://h.paymoz.tech";
 
     if (!apiKey) {
-      return { success: false, error: "API key de pagamento não configurada no servidor." };
+      return {
+        success: false,
+        error: "API key de pagamento não configurada no servidor.",
+      };
     }
 
     const url = buildPaymentUrl(baseUrl, data.method);
@@ -46,7 +61,11 @@ export const processPayment = createServerFn({ method: "POST" })
     }
 
     if (!/^258\d{9}$/.test(msisdn)) {
-      return { success: false, error: "Número de telefone inválido. Use o formato 84xxxxxxx, 85xxxxxxx, 86xxxxxxx ou 87xxxxxxx." };
+      return {
+        success: false,
+        error:
+          "Número de telefone inválido. Use o formato 84xxxxxxx, 85xxxxxxx, 86xxxxxxx ou 87xxxxxxx.",
+      };
     }
 
     const localPrefix = msisdn.slice(3, 5);
@@ -79,19 +98,15 @@ export const processPayment = createServerFn({ method: "POST" })
       });
 
       const text = await res.text();
-      let json: any = null;
+      let json: PaymentGatewayResponse | null = null;
       try {
-        json = text ? JSON.parse(text) : null;
+        json = text ? (JSON.parse(text) as PaymentGatewayResponse) : null;
       } catch {
         json = { raw: text };
       }
 
       if (!res.ok || json?.success === false) {
-        const message =
-          json?.message ||
-          json?.error ||
-          json?.detail ||
-          `Falha no pagamento (HTTP ${res.status})`;
+        const message = json?.message || json?.error || json?.detail || `Falha no pagamento (HTTP ${res.status})`;
         return {
           success: false,
           error: String(message),
@@ -106,8 +121,11 @@ export const processPayment = createServerFn({ method: "POST" })
         providerTxId: json?.mpesa_transaction_id ?? json?.emola_txid ?? null,
         data: json,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("processPayment error:", err);
-      return { success: false, error: err?.message || "Erro de rede ao contactar o gateway de pagamento." };
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Erro de rede ao contactar o gateway de pagamento.",
+      };
     }
   });
