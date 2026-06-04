@@ -268,6 +268,10 @@ export const processPayment = createServerFn({ method: "POST" })
       if (!res.ok || json?.success === false) {
         const message =
           json?.message || json?.error || json?.detail || `Falha no pagamento (HTTP ${res.status})`;
+        await supabaseAdmin
+          .from("sales")
+          .update({ status: "failed", payment_reference: String(message).slice(0, 200) })
+          .eq("id", sale.id);
         return {
           success: false,
           error: String(message),
