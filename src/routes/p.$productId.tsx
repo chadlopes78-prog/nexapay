@@ -33,6 +33,7 @@ function CheckoutPage() {
   const { productId } = useParams({ from: "/p/$productId" });
   const [product, setProduct] = useState<any>(null);
   const [checkout, setCheckout] = useState<any>(null);
+  const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -42,6 +43,36 @@ function CheckoutPage() {
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
   const [paymentStep, setPaymentStep] = useState<"info" | "reference">("info");
+
+  useEffect(() => {
+    // Get traffic page ID from URL
+    const params = new URLSearchParams(window.location.search);
+    const tp_id = params.get('tp_id');
+    if (tp_id) {
+      setTrafficPageId(tp_id);
+      
+      // If we have a tracking ID, record a click event
+      // This ensures that even if the tracking script on the landing page 
+      // didn't record the click (e.g. adblocker on the landing page but not here), 
+      // we still count it.
+      const recordClick = async () => {
+        try {
+          await supabase.functions.invoke('track-event', {
+            body: {
+              trackingId: tp_id,
+              eventType: 'click',
+              url: window.location.href,
+              referrer: document.referrer,
+              metadata: { productId }
+            }
+          });
+        } catch (e) {
+          console.error("Error recording click event:", e);
+        }
+      };
+      recordClick();
+    }
+  }, [productId]);
 
   // Facebook Pixel integration
   useEffect(() => {
@@ -151,6 +182,17 @@ function CheckoutPage() {
     toast.info(`Processando pagamento via ${paymentMethod.toUpperCase()}...`);
 
     try {
+      // Find the page ID from the tracking ID (which is a hex string)
+      let finalTrafficPageId = null;
+      if (trafficPageId) {
+        const { data: pageData } = await supabase
+          .from("traffic_pages")
+          .select("id")
+          .eq("tracking_id", trafficPageId)
+          .single();
+        if (pageData) finalTrafficPageId = pageData.id;
+      }
+
       const { data, error } = await supabase.from("sales").insert({
         product_id: productId,
         customer_name: name,
@@ -159,9 +201,19 @@ function CheckoutPage() {
         payment_method: paymentMethod,
         payment_reference: paymentReference,
         status: "pending",
+        traffic_page_id: finalTrafficPageId,
       }).select().single();
 
       if (error) throw error;
+
+      // Also record a purchase event for the traffic analysis funnel
+      if (finalTrafficPageId) {
+        await supabase.from("traffic_events").insert({
+          page_id: finalTrafficPageId,
+          event_type: "purchase",
+          metadata: { saleId: data.id, productId }
+        });
+      }
 
       trackPurchase();
       toast.success("Pagamento enviado para verificação!");
