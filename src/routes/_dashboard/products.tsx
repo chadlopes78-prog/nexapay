@@ -66,6 +66,22 @@ function ProductsPage() {
   const [deliveryType, setDeliveryType] = useState("none");
   const [deliveryLink, setDeliveryLink] = useState("");
   const [deliveryFile, setDeliveryFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>("");
+
+  const uploadProductImage = async (userId: string, file: File): Promise<string> => {
+    const fileExt = file.name.split(".").pop();
+    const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+    const { error: upErr } = await supabase.storage
+      .from("product-images")
+      .upload(filePath, file, { cacheControl: "3600", upsert: false });
+    if (upErr) throw upErr;
+    const { data: signed, error: signErr } = await supabase.storage
+      .from("product-images")
+      .createSignedUrl(filePath, 60 * 60 * 24 * 365 * 10);
+    if (signErr) throw signErr;
+    return signed.signedUrl;
+  };
 
   const normalizeSupportPhone = (value: string) => {
     let digits = value.replace(/\D/g, "");
