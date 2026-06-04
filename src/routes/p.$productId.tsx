@@ -254,9 +254,9 @@ function CheckoutPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-4 md:py-12 px-4">
       {/* Top Banner - Urgency */}
-      <div className="w-full max-w-[500px] mb-4">
-        <div className="bg-[#8B0000] text-white text-sm md:text-lg py-3 px-5 md:py-4 md:px-8 rounded-full flex items-center justify-center gap-2 md:gap-3 font-bold shadow-lg">
-          <span className="animate-pulse text-base md:text-xl">●</span>
+      <div className="w-full mb-4 -mx-4 md:-mx-0 md:-mt-12 md:mb-6">
+        <div className="bg-[#8B0000] text-white text-sm md:text-xl py-4 px-6 md:py-5 md:px-8 flex items-center justify-center gap-2 md:gap-3 font-bold shadow-lg rounded-none">
+          <span className="animate-pulse text-base md:text-2xl">●</span>
           Oferta por tempo limitado — expira em 10:00
         </div>
       </div>
