@@ -21,6 +21,12 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/p/$productId")({
   component: CheckoutPage,
 });
+declare global {
+  interface Window {
+    fbq: any;
+    _fbq: any;
+  }
+}
 
 
 function CheckoutPage() {
@@ -111,18 +117,21 @@ function CheckoutPage() {
       // @ts-ignore
       if (!window.fbq) {
         (function(f,b,e,v,n,t,s)
-        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        {if(f.fbq)return;n=f.fbq=function(){// @ts-ignore
+        n.callMethod?// @ts-ignore
         n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        // @ts-ignore
         if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        // @ts-ignore
         n.queue=[];t=b.createElement(e);t.async=!0;
+        // @ts-ignore
         t.src=v;s=b.getElementsByTagName(e)[0];
+        // @ts-ignore
         s.parentNode.insertBefore(t,s)}(window, document,'script',
         'https://connect.facebook.net/en_US/fbevents.js'));
       }
-      // @ts-ignore
-      fbq('init', product.pixel_id);
-      // @ts-ignore
-      fbq('track', 'PageView');
+      window.fbq('init', product.pixel_id);
+      window.fbq('track', 'PageView');
     }
   }, [product?.pixel_id]);
 
