@@ -206,10 +206,16 @@ export type Database = {
           category: string | null
           created_at: string
           custom_url: string | null
+          delivery_file_url: string | null
+          delivery_link: string | null
+          delivery_type: string | null
           description: string | null
           id: string
           image_url: string | null
           name: string
+          pixel_id: string | null
+          pixel_name: string | null
+          pixel_token: string | null
           price: number
           status: string | null
           updated_at: string
@@ -220,10 +226,16 @@ export type Database = {
           category?: string | null
           created_at?: string
           custom_url?: string | null
+          delivery_file_url?: string | null
+          delivery_link?: string | null
+          delivery_type?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           name: string
+          pixel_id?: string | null
+          pixel_name?: string | null
+          pixel_token?: string | null
           price: number
           status?: string | null
           updated_at?: string
@@ -234,10 +246,16 @@ export type Database = {
           category?: string | null
           created_at?: string
           custom_url?: string | null
+          delivery_file_url?: string | null
+          delivery_link?: string | null
+          delivery_type?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
           name?: string
+          pixel_id?: string | null
+          pixel_name?: string | null
+          pixel_token?: string | null
           price?: number
           status?: string | null
           updated_at?: string
