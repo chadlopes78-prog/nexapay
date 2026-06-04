@@ -66,6 +66,22 @@ function ProductsPage() {
   const [deliveryType, setDeliveryType] = useState("none");
   const [deliveryLink, setDeliveryLink] = useState("");
   const [deliveryFile, setDeliveryFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>("");
+
+  const uploadProductImage = async (userId: string, file: File): Promise<string> => {
+    const fileExt = file.name.split(".").pop();
+    const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+    const { error: upErr } = await supabase.storage
+      .from("product-images")
+      .upload(filePath, file, { cacheControl: "3600", upsert: false });
+    if (upErr) throw upErr;
+    const { data: signed, error: signErr } = await supabase.storage
+      .from("product-images")
+      .createSignedUrl(filePath, 60 * 60 * 24 * 365 * 10);
+    if (signErr) throw signErr;
+    return signed.signedUrl;
+  };
 
   const normalizeSupportPhone = (value: string) => {
     let digits = value.replace(/\D/g, "");
@@ -138,6 +154,11 @@ function ProductsPage() {
         deliveryFileUrl = publicUrl;
       }
 
+      let uploadedImageUrl = "";
+      if (imageFile) {
+        uploadedImageUrl = await uploadProductImage(user.id, imageFile);
+      }
+
       const { data, error } = await supabase
         .from("products")
         .insert({
@@ -152,6 +173,7 @@ function ProductsPage() {
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
           delivery_file_url: deliveryFileUrl,
+          image_url: uploadedImageUrl || null,
         })
         .select()
         .single();
@@ -184,6 +206,8 @@ function ProductsPage() {
     setDeliveryType("none");
     setDeliveryLink("");
     setDeliveryFile(null);
+    setImageFile(null);
+    setImageUrl("");
   };
 
   const handleEditProduct = (product: any) => {
@@ -196,6 +220,8 @@ function ProductsPage() {
     setPixelId(product.pixel_id || "");
     setDeliveryType(product.delivery_type || "none");
     setDeliveryLink(product.delivery_link || "");
+    setImageUrl(product.image_url || "");
+    setImageFile(null);
     setIsEditDialogOpen(true);
   };
 
@@ -206,6 +232,11 @@ function ProductsPage() {
     try {
       const validSupportPhone = getValidSupportPhone();
       if (!validSupportPhone) return;
+
+      let finalImageUrl = imageUrl;
+      if (imageFile) {
+        finalImageUrl = await uploadProductImage(editingProduct.user_id, imageFile);
+      }
 
       const { error } = await supabase
         .from("products")
@@ -218,6 +249,7 @@ function ProductsPage() {
           pixel_id: pixelId,
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
+          image_url: finalImageUrl || null,
         })
         .eq("id", editingProduct.id);
 
@@ -278,6 +310,13 @@ function ProductsPage() {
                 <div className="grid gap-2">
                   <Label htmlFor="name">Nome do Produto</Label>
                   <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Curso de Marketing" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="image">Imagem do Produto</Label>
+                  <Input id="image" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                  {imageFile && (
+                    <img src={URL.createObjectURL(imageFile)} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded border" />
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="pixel_id">ID do Pixel (Facebook)</Label>
@@ -361,6 +400,17 @@ function ProductsPage() {
                     placeholder="Ex: Curso de Marketing"
                     required
                   />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-image">Imagem do Produto</Label>
+                  <Input id="edit-image" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                  {(imageFile || imageUrl) && (
+                    <img
+                      src={imageFile ? URL.createObjectURL(imageFile) : imageUrl}
+                      alt="Preview"
+                      className="mt-2 h-24 w-24 object-cover rounded border"
+                    />
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="edit-pixel_id">ID do Pixel (Facebook)</Label>
