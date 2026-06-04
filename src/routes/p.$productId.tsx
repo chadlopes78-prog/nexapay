@@ -244,14 +244,6 @@ function CheckoutPage() {
             </div>
           </div>
 
-          <div className="space-y-3 pt-6">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <CheckCircle2 className="h-4 w-4 text-green-500" /> Transação segura e encriptada
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <CheckCircle2 className="h-4 w-4 text-green-500" /> Entrega confiável
-            </div>
-          </div>
         </div>
       </div>
 
