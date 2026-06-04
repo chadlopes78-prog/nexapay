@@ -424,10 +424,10 @@ function CheckoutPage() {
             <Button
               type="submit"
               disabled={processingPayment}
-              className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200 disabled:opacity-60"
+              className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60"
             >
               <Lock className="mr-2 h-5 w-5" />
-              {processingPayment ? "A aguardar confirmação..." : `Pagar ${product.price.toLocaleString("pt-MZ")} MT`}
+              {processingPayment ? "A aguardar confirmação..." : `Finalizar compra (${product.price.toLocaleString("pt-MZ")} MT)`}
             </Button>
 
           </CardContent>
