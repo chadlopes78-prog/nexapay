@@ -5,15 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  ShieldCheck, 
-  CreditCard, 
-  Smartphone, 
-  CheckCircle2, 
+import {
+  ShieldCheck,
+  CreditCard,
+  Smartphone,
+  CheckCircle2,
   Lock,
   ChevronRight,
   ShieldAlert,
-  Package
+  Package,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,11 +22,11 @@ export const Route = createFileRoute("/p/$productId" as any)({
 });
 
 function CheckoutPage() {
-  const { productId } = useParams({ from: '/p/$productId' });
+  const { productId } = useParams({ from: "/p/$productId" });
   const [product, setProduct] = useState<any>(null);
   const [checkout, setCheckout] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -65,7 +65,7 @@ function CheckoutPage() {
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     toast.info(`Iniciando pagamento via ${paymentMethod.toUpperCase()}...`);
-    
+
     // Simulate payment process
     setTimeout(() => {
       toast.success("Pagamento solicitado! Verifique seu celular.");
@@ -89,7 +89,9 @@ function CheckoutPage() {
         <Card className="max-w-md w-full text-center p-8">
           <ShieldAlert className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Produto não encontrado</h1>
-          <p className="text-muted-foreground mt-2">Este link de checkout parece ser inválido ou expirou.</p>
+          <p className="text-muted-foreground mt-2">
+            Este link de checkout parece ser inválido ou expirou.
+          </p>
           <Button className="mt-6" asChild>
             <a href="/">Voltar ao início</a>
           </Button>
@@ -113,7 +115,11 @@ function CheckoutPage() {
           <div className="space-y-4">
             <div className="aspect-video bg-slate-100 rounded-xl overflow-hidden">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-slate-300">
                   <Package className="h-12 w-12" />
@@ -127,7 +133,7 @@ function CheckoutPage() {
           <div className="space-y-4 pt-4 border-t">
             <div className="flex justify-between items-center text-lg font-bold">
               <span>Total a pagar</span>
-              <span className="text-primary">{product.price.toLocaleString('pt-MZ')} MT</span>
+              <span className="text-primary">{product.price.toLocaleString("pt-MZ")} MT</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <Lock className="h-3 w-3" /> Pagamento criptografado e seguro
@@ -139,7 +145,8 @@ function CheckoutPage() {
               <CheckCircle2 className="h-4 w-4 text-green-500" /> Acesso imediato após confirmação
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <CheckCircle2 className="h-4 w-4 text-green-500" /> {product.warranty_days} dias de garantia
+              <CheckCircle2 className="h-4 w-4 text-green-500" /> {product.warranty_days} dias de
+              garantia
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600">
               <CheckCircle2 className="h-4 w-4 text-green-500" /> Suporte 24/7 especializado
@@ -159,10 +166,10 @@ function CheckoutPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="checkout-name">Nome Completo</Label>
-                  <Input 
-                    id="checkout-name" 
-                    placeholder="Seu nome" 
-                    required 
+                  <Input
+                    id="checkout-name"
+                    placeholder="Seu nome"
+                    required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
@@ -170,21 +177,21 @@ function CheckoutPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="checkout-email">Email</Label>
-                    <Input 
-                      id="checkout-email" 
-                      type="email" 
-                      placeholder="seu@email.com" 
-                      required 
+                    <Input
+                      id="checkout-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="checkout-phone">Celular (84/85/82/87)</Label>
-                    <Input 
-                      id="checkout-phone" 
-                      placeholder="840000000" 
-                      required 
+                    <Input
+                      id="checkout-phone"
+                      placeholder="840000000"
+                      required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                     />
@@ -199,9 +206,9 @@ function CheckoutPage() {
                       onClick={() => setPaymentMethod("mpesa")}
                       className={cn(
                         "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all",
-                        paymentMethod === "mpesa" 
-                          ? "border-primary bg-primary/5 text-primary" 
-                          : "border-slate-100 hover:border-slate-200"
+                        paymentMethod === "mpesa"
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-slate-100 hover:border-slate-200",
                       )}
                     >
                       <CreditCard className="h-5 w-5" />
@@ -212,9 +219,9 @@ function CheckoutPage() {
                       onClick={() => setPaymentMethod("emola")}
                       className={cn(
                         "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all",
-                        paymentMethod === "emola" 
-                          ? "border-red-600 bg-red-50 text-red-600" 
-                          : "border-slate-100 hover:border-slate-200"
+                        paymentMethod === "emola"
+                          ? "border-red-600 bg-red-50 text-red-600"
+                          : "border-slate-100 hover:border-slate-200",
                       )}
                     >
                       <Smartphone className="h-5 w-5" />
@@ -234,7 +241,9 @@ function CheckoutPage() {
 
           <div className="text-center space-y-2 text-xs text-slate-400">
             <p>© 2026 CheckoutPro Mozambique. Todos os direitos reservados.</p>
-            <p>Seu pagamento está sendo processado por CheckoutPro em nome de {product.merchant_id}</p>
+            <p>
+              Seu pagamento está sendo processado por CheckoutPro em nome de {product.merchant_id}
+            </p>
           </div>
         </div>
       </div>
@@ -245,4 +254,3 @@ function CheckoutPage() {
 function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(" ");
 }
-

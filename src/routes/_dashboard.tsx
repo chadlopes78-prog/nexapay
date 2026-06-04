@@ -1,18 +1,18 @@
 import { createFileRoute, Outlet, Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
-  Settings, 
-  LogOut, 
-  ChevronLeft, 
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  Settings,
+  LogOut,
+  ChevronLeft,
   ChevronRight,
   ShieldCheck,
   CreditCard,
   MessageSquare,
-  BarChart3
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -30,7 +30,9 @@ function DashboardLayout() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         navigate({ to: "/auth" });
       } else {
@@ -39,7 +41,9 @@ function DashboardLayout() {
     };
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) navigate({ to: "/auth" });
       else setUser(session.user);
     });
@@ -70,7 +74,7 @@ function DashboardLayout() {
       <aside
         className={cn(
           "fixed left-0 top-0 z-40 h-screen border-r bg-white transition-all duration-300",
-          isSidebarOpen ? "w-64" : "w-20"
+          isSidebarOpen ? "w-64" : "w-20",
         )}
       >
         <div className="flex h-full flex-col">
@@ -96,9 +100,7 @@ function DashboardLayout() {
                 to={item.path}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
-                  location.pathname === item.path
-                    ? "bg-primary/5 text-primary"
-                    : "text-slate-600"
+                  location.pathname === item.path ? "bg-primary/5 text-primary" : "text-slate-600",
                 )}
               >
                 <item.icon className="h-5 w-5 shrink-0" />
@@ -121,19 +123,18 @@ function DashboardLayout() {
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="mt-2 flex w-full items-center justify-center rounded-lg p-2 text-slate-400 hover:bg-slate-100"
             >
-              {isSidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              {isSidebarOpen ? (
+                <ChevronLeft className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
             </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main
-        className={cn(
-          "flex-1 transition-all duration-300",
-          isSidebarOpen ? "ml-64" : "ml-20"
-        )}
-      >
+      <main className={cn("flex-1 transition-all duration-300", isSidebarOpen ? "ml-64" : "ml-20")}>
         <div className="p-8">
           <Outlet />
         </div>

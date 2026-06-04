@@ -5,7 +5,14 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ShieldCheck, Loader2 } from "lucide-react";
@@ -99,24 +106,22 @@ function AuthPage() {
             <TabsTrigger value="login">Entrar</TabsTrigger>
             <TabsTrigger value="signup">Criar Conta</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="login">
             <Card>
               <form onSubmit={handleSignIn}>
                 <CardHeader>
                   <CardTitle>Entrar</CardTitle>
-                  <CardDescription>
-                    Insira suas credenciais para acessar o painel.
-                  </CardDescription>
+                  <CardDescription>Insira suas credenciais para acessar o painel.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="seu@email.com" 
-                      required 
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -128,10 +133,10 @@ function AuthPage() {
                         Esqueceu a senha?
                       </button>
                     </div>
-                    <Input 
-                      id="password" 
-                      type="password" 
-                      required 
+                    <Input
+                      id="password"
+                      type="password"
+                      required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
@@ -149,7 +154,12 @@ function AuthPage() {
                       <span className="bg-card px-2 text-muted-foreground">Ou continue com</span>
                     </div>
                   </div>
-                  <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleGoogleSignIn}
+                  >
                     Google
                   </Button>
                 </CardFooter>
@@ -162,38 +172,36 @@ function AuthPage() {
               <form onSubmit={handleSignUp}>
                 <CardHeader>
                   <CardTitle>Criar Conta</CardTitle>
-                  <CardDescription>
-                    Comece a vender com M-Pesa e e-Mola hoje mesmo.
-                  </CardDescription>
+                  <CardDescription>Comece a vender com M-Pesa e e-Mola hoje mesmo.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nome Completo</Label>
-                    <Input 
-                      id="name" 
-                      placeholder="Seu nome" 
-                      required 
+                    <Input
+                      id="name"
+                      placeholder="Seu nome"
+                      required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
-                    <Input 
-                      id="signup-email" 
-                      type="email" 
-                      placeholder="seu@email.com" 
-                      required 
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Senha</Label>
-                    <Input 
-                      id="signup-password" 
-                      type="password" 
-                      required 
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
@@ -211,7 +219,12 @@ function AuthPage() {
                       <span className="bg-card px-2 text-muted-foreground">Ou continue com</span>
                     </div>
                   </div>
-                  <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleGoogleSignIn}
+                  >
                     Google
                   </Button>
                 </CardFooter>
