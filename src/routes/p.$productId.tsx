@@ -245,4 +245,3 @@ function cn(...inputs: any[]) {
   return inputs.filter(Boolean).join(" ");
 }
 
-import { Package } from "lucide-react";
