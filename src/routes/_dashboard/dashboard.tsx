@@ -32,7 +32,7 @@ import {
   Cell
 } from "recharts";
 
-export const Route = createFileRoute("/_dashboard/dashboard")({
+export const Route = createFileRoute("/_dashboard/dashboard" as any)({
   component: DashboardPage,
 });
 
