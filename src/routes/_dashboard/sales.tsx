@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const Route = createFileRoute("/_dashboard/sales" as any)({
+export const Route = createFileRoute("/_dashboard/sales")({
   component: SalesPage,
 });
 

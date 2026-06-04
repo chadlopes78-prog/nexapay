@@ -13,8 +13,13 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PProductIdRouteImport } from './routes/p.$productId'
+import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/settings'
+import { Route as DashboardSalesRouteImport } from './routes/_dashboard/sales'
+import { Route as DashboardRecoveryRouteImport } from './routes/_dashboard/recovery'
 import { Route as DashboardProductsRouteImport } from './routes/_dashboard/products'
+import { Route as DashboardPixelRouteImport } from './routes/_dashboard/pixel'
 import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dashboard'
+import { Route as DashboardCustomersRouteImport } from './routes/_dashboard/customers'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -35,9 +40,29 @@ const PProductIdRoute = PProductIdRouteImport.update({
   path: '/p/$productId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSalesRoute = DashboardSalesRouteImport.update({
+  id: '/sales',
+  path: '/sales',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardRecoveryRoute = DashboardRecoveryRouteImport.update({
+  id: '/recovery',
+  path: '/recovery',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardProductsRoute = DashboardProductsRouteImport.update({
   id: '/products',
   path: '/products',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardPixelRoute = DashboardPixelRouteImport.update({
+  id: '/pixel',
+  path: '/pixel',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardDashboardRoute = DashboardDashboardRouteImport.update({
@@ -45,19 +70,34 @@ const DashboardDashboardRoute = DashboardDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardCustomersRoute = DashboardCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => DashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
+  '/pixel': typeof DashboardPixelRoute
   '/products': typeof DashboardProductsRoute
+  '/recovery': typeof DashboardRecoveryRoute
+  '/sales': typeof DashboardSalesRoute
+  '/settings': typeof DashboardSettingsRoute
   '/p/$productId': typeof PProductIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
+  '/pixel': typeof DashboardPixelRoute
   '/products': typeof DashboardProductsRoute
+  '/recovery': typeof DashboardRecoveryRoute
+  '/sales': typeof DashboardSalesRoute
+  '/settings': typeof DashboardSettingsRoute
   '/p/$productId': typeof PProductIdRoute
 }
 export interface FileRoutesById {
@@ -65,22 +105,52 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_dashboard': typeof DashboardRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_dashboard/customers': typeof DashboardCustomersRoute
   '/_dashboard/dashboard': typeof DashboardDashboardRoute
+  '/_dashboard/pixel': typeof DashboardPixelRoute
   '/_dashboard/products': typeof DashboardProductsRoute
+  '/_dashboard/recovery': typeof DashboardRecoveryRoute
+  '/_dashboard/sales': typeof DashboardSalesRoute
+  '/_dashboard/settings': typeof DashboardSettingsRoute
   '/p/$productId': typeof PProductIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/products' | '/p/$productId'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/customers'
+    | '/dashboard'
+    | '/pixel'
+    | '/products'
+    | '/recovery'
+    | '/sales'
+    | '/settings'
+    | '/p/$productId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/products' | '/p/$productId'
+  to:
+    | '/'
+    | '/auth'
+    | '/customers'
+    | '/dashboard'
+    | '/pixel'
+    | '/products'
+    | '/recovery'
+    | '/sales'
+    | '/settings'
+    | '/p/$productId'
   id:
     | '__root__'
     | '/'
     | '/_dashboard'
     | '/auth'
+    | '/_dashboard/customers'
     | '/_dashboard/dashboard'
+    | '/_dashboard/pixel'
     | '/_dashboard/products'
+    | '/_dashboard/recovery'
+    | '/_dashboard/sales'
+    | '/_dashboard/settings'
     | '/p/$productId'
   fileRoutesById: FileRoutesById
 }
@@ -121,11 +191,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_dashboard/settings': {
+      id: '/_dashboard/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/sales': {
+      id: '/_dashboard/sales'
+      path: '/sales'
+      fullPath: '/sales'
+      preLoaderRoute: typeof DashboardSalesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/recovery': {
+      id: '/_dashboard/recovery'
+      path: '/recovery'
+      fullPath: '/recovery'
+      preLoaderRoute: typeof DashboardRecoveryRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/products': {
       id: '/_dashboard/products'
       path: '/products'
       fullPath: '/products'
       preLoaderRoute: typeof DashboardProductsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/pixel': {
+      id: '/_dashboard/pixel'
+      path: '/pixel'
+      fullPath: '/pixel'
+      preLoaderRoute: typeof DashboardPixelRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/_dashboard/dashboard': {
@@ -135,17 +233,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardDashboardRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/customers': {
+      id: '/_dashboard/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof DashboardCustomersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
 interface DashboardRouteChildren {
+  DashboardCustomersRoute: typeof DashboardCustomersRoute
   DashboardDashboardRoute: typeof DashboardDashboardRoute
+  DashboardPixelRoute: typeof DashboardPixelRoute
   DashboardProductsRoute: typeof DashboardProductsRoute
+  DashboardRecoveryRoute: typeof DashboardRecoveryRoute
+  DashboardSalesRoute: typeof DashboardSalesRoute
+  DashboardSettingsRoute: typeof DashboardSettingsRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardCustomersRoute: DashboardCustomersRoute,
   DashboardDashboardRoute: DashboardDashboardRoute,
+  DashboardPixelRoute: DashboardPixelRoute,
   DashboardProductsRoute: DashboardProductsRoute,
+  DashboardRecoveryRoute: DashboardRecoveryRoute,
+  DashboardSalesRoute: DashboardSalesRoute,
+  DashboardSettingsRoute: DashboardSettingsRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
@@ -161,3 +276,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

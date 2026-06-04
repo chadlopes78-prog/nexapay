@@ -24,7 +24,7 @@ export const Route = createFileRoute("/p/$productId")({
 
 
 function CheckoutPage() {
-  const { productId } = useParams({ from: "/p/$productId" } as any);
+  const { productId } = useParams({ from: "/p/$productId" });
   const [product, setProduct] = useState<any>(null);
   const [checkout, setCheckout] = useState<any>(null);
 

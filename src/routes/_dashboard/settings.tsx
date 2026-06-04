@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-export const Route = createFileRoute("/_dashboard/settings" as any)({
+export const Route = createFileRoute("/_dashboard/settings")({
   component: SettingsPage,
 });
 
