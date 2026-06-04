@@ -185,50 +185,19 @@ function CheckoutPage() {
     toast.info(`Enviando pedido de pagamento via ${paymentMethod.toUpperCase()}... Confirme no seu telefone.`);
 
     try {
-      // Resolve traffic page id
-      let finalTrafficPageId: string | null = null;
-      if (trafficPageId) {
-        const { data: pageData } = await supabase
-          .from("traffic_pages")
-          .select("id")
-          .eq("tracking_id", trafficPageId)
-          .single();
-        if (pageData) finalTrafficPageId = pageData.id;
-      }
-
-      // Create pending sale first to get a stable reference
-      const { data: sale, error: saleErr } = await supabase
-        .from("sales")
-        .insert({
-          product_id: productId,
-          customer_name: contactPhone ? `${name} (contacto: ${contactPhone})` : name,
-          customer_phone: phone,
-          amount: product.price,
-          payment_method: paymentMethod,
-          status: "pending",
-          traffic_page_id: finalTrafficPageId,
-        })
-        .select()
-        .single();
-
-      if (saleErr) throw saleErr;
-
       // Call payment gateway
       const result = (await payFn({
         data: {
+          productId,
           method: paymentMethod,
           msisdn: phone,
-          amount: Number(product.price),
-          reference: sale.id.slice(0, 16),
           customerName: name,
+          contactPhone: contactPhone || undefined,
+          trafficPageTrackingId: trafficPageId,
         },
       })) as PaymentResult;
 
       if (!result.success) {
-        await supabase
-          .from("sales")
-          .update({ status: "failed", payment_reference: result.error?.slice(0, 200) })
-          .eq("id", sale.id);
         setPaymentErrorMessage(result.error || "Pagamento recusado.");
         setPaymentStatusMessage(null);
         toast.error(result.error || "Pagamento recusado.");
@@ -236,29 +205,12 @@ function CheckoutPage() {
         return;
       }
 
-      // Mark as paid
-      const gatewayRef =
-        (result.data && (result.data.transaction_id || result.data.reference || result.data.id)) ||
-        sale.id;
-      await supabase
-        .from("sales")
-        .update({ status: "paid", payment_reference: String(gatewayRef) })
-        .eq("id", sale.id);
-
-      if (finalTrafficPageId) {
-        await supabase.from("traffic_events").insert({
-          page_id: finalTrafficPageId,
-          event_type: "purchase",
-          metadata: { saleId: sale.id, productId },
-        });
-      }
-
       trackPurchase();
       setPaymentStatusMessage("Pagamento confirmado. A redirecionar...");
       toast.success("Pagamento confirmado!");
 
       setTimeout(() => {
-        window.location.href = `/success?productId=${productId}&saleId=${sale.id}`;
+        window.location.href = `/success?productId=${productId}&saleId=${result.saleId}`;
       }, 800);
     } catch (error: any) {
       setPaymentErrorMessage(error?.message || "Erro inesperado ao processar pagamento.");
