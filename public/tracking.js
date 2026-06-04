@@ -41,11 +41,38 @@
   // 1. Record Visit
   sendEvent('visit');
 
-  // 2. Capture Clicks on Checkout Buttons
+  // 2. Quiz Tracking Helpers
+  // Auto-detect quiz elements
+  function trackQuiz() {
+    // Look for common quiz button patterns or explicit markers
+    const quizStartButtons = document.querySelectorAll('.quiz-start, [data-quiz-start]');
+    quizStartButtons.forEach(btn => {
+      btn.addEventListener('click', () => sendEvent('quiz_start'));
+    });
+
+    const quizOptions = document.querySelectorAll('.quiz-option, [data-quiz-option], .quiz-next');
+    quizOptions.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const step = btn.getAttribute('data-quiz-step') || 'progress';
+        sendEvent('quiz_progress', { step: step });
+      });
+    });
+
+    const quizFinalButtons = document.querySelectorAll('.quiz-finish, [data-quiz-finish]');
+    quizFinalButtons.forEach(btn => {
+      btn.addEventListener('click', () => sendEvent('quiz_complete'));
+    });
+  }
+  
+  trackQuiz();
+
+  // 3. Capture Clicks on Checkout Buttons
   document.addEventListener('click', function(e) {
     const target = e.target.closest('a');
     if (target) {
-      const isCheckoutLink = target.href.includes('/p/') || target.getAttribute('data-checkout');
+      const isCheckoutLink = target.href.includes('/p/') || 
+                             target.getAttribute('data-checkout') || 
+                             target.classList.contains('checkout-btn');
       
       if (isCheckoutLink) {
         sendEvent('click', { targetUrl: target.href });
