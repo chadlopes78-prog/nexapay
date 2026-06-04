@@ -154,6 +154,11 @@ function ProductsPage() {
         deliveryFileUrl = publicUrl;
       }
 
+      let uploadedImageUrl = "";
+      if (imageFile) {
+        uploadedImageUrl = await uploadProductImage(user.id, imageFile);
+      }
+
       const { data, error } = await supabase
         .from("products")
         .insert({
@@ -168,6 +173,7 @@ function ProductsPage() {
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
           delivery_file_url: deliveryFileUrl,
+          image_url: uploadedImageUrl || null,
         })
         .select()
         .single();
