@@ -108,8 +108,8 @@ function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Bem-vindo ao seu resumo de vendas.</p>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Bem-vindo ao seu resumo de vendas.</p>
       </div>
 
       {/* Stats Grid */}
@@ -137,7 +137,7 @@ function DashboardPage() {
             <CardTitle>Visão Geral de Receita</CardTitle>
             <CardDescription>Receita gerada nos últimos 7 dias.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[250px] md:h-[300px]">
             {stats?.salesCount === 0 ? (
               <div className="h-full flex items-center justify-center text-muted-foreground italic">
                 Sem dados de vendas para exibir o gráfico.
@@ -161,7 +161,7 @@ function DashboardPage() {
             <CardTitle>Métodos de Pagamento</CardTitle>
             <CardDescription>Distribuição entre M-Pesa e e-Mola.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px] flex flex-col items-center justify-center">
+          <CardContent className="h-[250px] md:h-[300px] flex flex-col items-center justify-center">
             {stats?.salesCount === 0 ? (
               <div className="text-muted-foreground italic">Sem vendas registradas.</div>
             ) : (

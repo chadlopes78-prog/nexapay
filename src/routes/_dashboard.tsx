@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_dashboard")({
 
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,6 +52,11 @@ function DashboardLayout() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
@@ -68,69 +74,112 @@ function DashboardLayout() {
 
   if (!user) return null;
 
+  const SidebarContent = () => (
+    <div className="flex h-full flex-col">
+      <div className="flex h-16 items-center px-6">
+        <Link to="/dashboard" className="flex items-center gap-2 overflow-hidden">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
+            <ShieldCheck className="h-5 w-5 text-white" />
+          </div>
+          {(isSidebarOpen || isMobileMenuOpen) && (
+            <span className="text-lg font-bold tracking-tight truncate">CheckoutPro</span>
+          )}
+        </Link>
+      </div>
+
+      <Separator />
+
+      <nav className="flex-1 space-y-1 p-3">
+        {menuItems.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
+              location.pathname === item.path ? "bg-primary/5 text-primary" : "text-slate-600",
+            )}
+          >
+            <item.icon className="h-5 w-5 shrink-0" />
+            {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="p-3">
+        <Separator className="mb-3" />
+        <button
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-red-600"
+        >
+          <LogOut className="h-5 w-5 shrink-0" />
+          {(isSidebarOpen || isMobileMenuOpen) && <span>Sair</span>}
+        </button>
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="mt-2 hidden lg:flex w-full items-center justify-center rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+        >
+          {isSidebarOpen ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex min-h-screen bg-slate-50/50">
+      {/* Mobile Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
+        <Link to="/dashboard" className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <ShieldCheck className="h-5 w-5 text-white" />
+          </div>
+          <span className="text-lg font-bold tracking-tight">CheckoutPro</span>
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          <LayoutDashboard className="h-6 w-6" />
+        </Button>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 h-screen border-r bg-white transition-all duration-300",
+          "fixed left-0 top-0 z-50 h-screen w-64 border-r bg-white transition-transform duration-300 lg:hidden",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <SidebarContent />
+      </aside>
+
+      {/* Desktop Sidebar */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-40 hidden h-screen border-r bg-white transition-all duration-300 lg:block",
           isSidebarOpen ? "w-64" : "w-20",
         )}
       >
-        <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center px-6">
-            <Link to="/dashboard" className="flex items-center gap-2 overflow-hidden">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
-                <ShieldCheck className="h-5 w-5 text-white" />
-              </div>
-              {isSidebarOpen && (
-                <span className="text-lg font-bold tracking-tight truncate">CheckoutPro</span>
-              )}
-            </Link>
-          </div>
-
-          <Separator />
-
-          <nav className="flex-1 space-y-1 p-3">
-            {menuItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
-                  location.pathname === item.path ? "bg-primary/5 text-primary" : "text-slate-600",
-                )}
-              >
-                <item.icon className="h-5 w-5 shrink-0" />
-                {isSidebarOpen && <span>{item.name}</span>}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="p-3">
-            <Separator className="mb-3" />
-            <button
-              onClick={handleSignOut}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-red-600"
-            >
-              <LogOut className="h-5 w-5 shrink-0" />
-              {isSidebarOpen && <span>Sair</span>}
-            </button>
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="mt-2 flex w-full items-center justify-center rounded-lg p-2 text-slate-400 hover:bg-slate-100"
-            >
-              {isSidebarOpen ? (
-                <ChevronLeft className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-        </div>
+        <SidebarContent />
       </aside>
 
-      <main className={cn("flex-1 transition-all duration-300", isSidebarOpen ? "ml-64" : "ml-20")}>
-        <div className="p-8">
+      <main className={cn(
+        "flex-1 transition-all duration-300 pt-16 lg:pt-0", 
+        isSidebarOpen ? "lg:ml-64" : "lg:ml-20"
+      )}>
+        <div className="p-4 md:p-8">
           <Outlet />
         </div>
       </main>

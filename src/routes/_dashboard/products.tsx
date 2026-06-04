@@ -187,18 +187,18 @@ function ProductsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
-          <p className="text-muted-foreground">Gerencie seus produtos digitais e físicos.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Produtos</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Gerencie seus produtos digitais e físicos.</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
+            <Button className="flex items-center gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" /> Novo Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleCreateProduct}>
               <DialogHeader>
                 <DialogTitle>Novo Produto</DialogTitle>
@@ -226,7 +226,7 @@ function ProductsPage() {
                     placeholder="Breve descrição do produto"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="price">Preço (MT)</Label>
                     <Input
@@ -249,8 +249,8 @@ function ProductsPage() {
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="submit">Criar Produto</Button>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button type="submit" className="w-full sm:w-auto">Criar Produto</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -323,14 +323,14 @@ function ProductsPage() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-white">
+      <div className="rounded-md border bg-white overflow-x-auto overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Preço</TableHead>
+              <TableHead className="min-w-[150px]">Nome</TableHead>
+              <TableHead className="hidden sm:table-cell">Preço</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Vendas</TableHead>
+              <TableHead className="hidden md:table-cell">Vendas</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -352,24 +352,28 @@ function ProductsPage() {
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
-                      <span>{product.name}</span>
+                      <span className="truncate max-w-[120px] sm:max-w-none">{product.name}</span>
+                      <span className="text-xs text-muted-foreground block sm:hidden">
+                        {product.price.toLocaleString("pt-MZ")} MT
+                      </span>
                       <span className="text-xs text-muted-foreground">{product.category}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{product.price.toLocaleString("pt-MZ")} MT</TableCell>
+                  <TableCell className="hidden sm:table-cell">{product.price.toLocaleString("pt-MZ")} MT</TableCell>
                   <TableCell>
                     <Badge
                       variant={product.status === "active" ? "secondary" : "outline"}
-                      className={
+                      className={cn(
+                        "text-[10px] sm:text-xs",
                         product.status === "active"
                           ? "bg-green-100 text-green-700 hover:bg-green-100"
                           : ""
-                      }
+                      )}
                     >
                       {product.status === "active" ? "Ativo" : "Inativo"}
                     </Badge>
                   </TableCell>
-                  <TableCell>0</TableCell>
+                  <TableCell className="hidden md:table-cell">0</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
