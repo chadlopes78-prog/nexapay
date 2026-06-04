@@ -123,7 +123,7 @@ function getGatewayFailureMessage(
 
   if (status === 402) {
     const providerName = method === "emola" ? "e-Mola" : "M-Pesa";
-    return `Pagamento não autorizado pelo ${providerName}. Confirme se o número está ativo, tem saldo suficiente e aprove a cobrança no telemóvel.`;
+    return `O gateway recusou o pedido ${providerName} antes de enviar a notificação de PIN. Verifique se a conta/chave do gateway está ativa para ${providerName} live e se o número pertence ao operador correto.`;
   }
 
   return `Falha no pagamento (HTTP ${status})`;
