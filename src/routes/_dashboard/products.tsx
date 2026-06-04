@@ -382,7 +382,7 @@ function ProductsPage() {
         </Dialog>
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleUpdateProduct}>
               <DialogHeader>
                 <DialogTitle>Editar Produto</DialogTitle>
