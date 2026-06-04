@@ -137,15 +137,25 @@ function DashboardPage() {
         const dayStr = format(day, "yyyy-MM-dd");
         const dayLabel = format(day, "dd/MM", { locale: ptBR });
         
+        // Previous period day
+        const prevDay = subDays(day, days);
+        const prevDayStr = format(prevDay, "yyyy-MM-dd");
+
         const daySales = currentSales.filter(s => format(parseISO(s.created_at), "yyyy-MM-dd") === dayStr);
         const dayApproved = daySales.filter(s => s.status === "approved");
         const dayRevenue = dayApproved.reduce((acc, s) => acc + Number(s.amount), 0);
         const dayConversion = daySales.length > 0 ? (dayApproved.length / daySales.length) * 100 : 0;
 
+        const prevDaySales = prevSales.filter(s => format(parseISO(s.created_at), "yyyy-MM-dd") === prevDayStr);
+        const prevDayApproved = prevDaySales.filter(s => s.status === "approved");
+        const prevDayRevenue = prevDayApproved.reduce((acc, s) => acc + Number(s.amount), 0);
+
         chartData.push({
           name: dayLabel,
           revenue: dayRevenue,
+          prevRevenue: prevDayRevenue,
           sales: dayApproved.length,
+          prevSales: prevDayApproved.length,
           conversion: parseFloat(dayConversion.toFixed(1))
         });
       }
