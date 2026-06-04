@@ -344,7 +344,7 @@ function CheckoutPage() {
 
             <div className="space-y-4">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                DESEJA PAGAR COM:
+                MÉTODOS DE PAGAMENTO
               </Label>
               <div className="grid grid-cols-2 gap-4">
                 <button
