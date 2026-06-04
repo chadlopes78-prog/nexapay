@@ -57,10 +57,26 @@ function DashboardLayout() {
             },
             (payload: any) => {
               if (payload.new.status === 'approved') {
-                toast.success(`Nova Venda! MT ${payload.new.amount} via ${payload.new.payment_method}`, {
-                  icon: <CreditCard className="h-4 w-4" />,
-                  duration: 5000,
-                });
+                // Browser Toast
+                toast.success(
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-bold text-sm">Nova venda:</span>
+                    <span className="text-base">Pingou🎉 +{payload.new.amount} MT</span>
+                  </div>,
+                  {
+                    icon: <div className="bg-green-100 p-1 rounded-full"><CreditCard className="h-4 w-4 text-green-600" /></div>,
+                    duration: 8000,
+                  }
+                );
+
+                // native Push Notification (if permission granted and app is open/PWA)
+                if ("Notification" in window && Notification.permission === "granted") {
+                  new Notification("Nova venda:", {
+                    body: `Pingou🎉 +${payload.new.amount} MT`,
+                    icon: "/favicon.ico",
+                    badge: "/favicon.ico",
+                  });
+                }
               }
             }
           )

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, BellOff, Info } from "lucide-react";
+import { Bell, BellOff, Info, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -82,6 +82,29 @@ export function PushNotificationManager() {
       toast.error("Erro ao desativar notificações");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const testNotification = () => {
+    // Show toast
+    toast.success(
+      <div className="flex flex-col gap-0.5">
+        <span className="font-bold text-sm">Nova venda:</span>
+        <span className="text-base">Pingou🎉 +350 MT</span>
+      </div>,
+      {
+        icon: <div className="bg-green-100 p-1 rounded-full"><CreditCard className="h-4 w-4 text-green-600" /></div>,
+        duration: 5000,
+      }
+    );
+
+    // Show native if possible
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("Nova venda:", {
+        body: `Pingou🎉 +350 MT`,
+        icon: "/favicon.ico",
+        badge: "/favicon.ico",
+      });
     }
   };
 
@@ -171,6 +194,15 @@ export function PushNotificationManager() {
             Ativar Notificações Inteligentes
           </Button>
         )}
+
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="w-full text-[10px] text-slate-400 hover:text-primary"
+          onClick={testNotification}
+        >
+          Enviar Notificação de Teste
+        </Button>
 
         <div className="text-[10px] text-center text-slate-400">
           Compatível com iOS (Safari PWA) e Android.
