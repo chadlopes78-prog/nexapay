@@ -201,7 +201,6 @@ function CheckoutPage() {
         .from("sales")
         .insert({
           product_id: productId,
-          customer_name: name,
           customer_name: contactPhone ? `${name} (contacto: ${contactPhone})` : name,
           customer_phone: phone,
           amount: product.price,
