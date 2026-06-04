@@ -416,14 +416,27 @@ function CheckoutPage() {
               </p>
             </div>
 
+            {(paymentStatusMessage || paymentErrorMessage) && (
+              <div
+                className={cn(
+                  "rounded-xl border p-4 text-sm font-medium",
+                  paymentErrorMessage
+                    ? "border-red-200 bg-red-50 text-red-700"
+                    : "border-blue-200 bg-blue-50 text-blue-700",
+                )}
+              >
+                {paymentErrorMessage || paymentStatusMessage}
+              </div>
+            )}
+
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={processingPayment}
               className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200 disabled:opacity-60"
             >
               <Lock className="mr-2 h-5 w-5" />
-              {loading ? "Processando..." : `Pagar ${product.price.toLocaleString("pt-MZ")} MT`}
+              {processingPayment ? "A aguardar confirmação..." : `Pagar ${product.price.toLocaleString("pt-MZ")} MT`}
             </Button>
 
           </CardContent>
