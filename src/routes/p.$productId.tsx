@@ -342,27 +342,31 @@ function CheckoutPage() {
                       type="button"
                       onClick={() => setPaymentMethod("mpesa")}
                       className={cn(
-                        "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all font-bold",
+                        "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
                         paymentMethod === "mpesa"
                           ? "border-blue-600 bg-blue-50 text-blue-600"
                           : "border-slate-100 hover:border-slate-200 text-slate-500",
                       )}
                     >
-                      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTjvxvoKytXHjXSQ7ZcGIC3dbkOdt3BI0UCeoQWU0CoSQ&s=10" className="h-5 w-5 rounded" alt="" />
-                      <span>M-Pesa</span>
+                      <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
+                        <img src="/mpesa-logo.jpg" className="h-full w-full object-cover" alt="M-Pesa" />
+                      </div>
+                      <span className="text-sm">M-Pesa</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setPaymentMethod("emola")}
                       className={cn(
-                        "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all font-bold",
+                        "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
                         paymentMethod === "emola"
                           ? "border-orange-500 bg-orange-50 text-orange-600"
                           : "border-slate-100 hover:border-slate-200 text-slate-500",
                       )}
                     >
-                      <img src="https://play-lh.googleusercontent.com/2TGAhJ55tiyhCwW0ZM43deGv4lUTFTBMoq83mnAO6-bU5hi2NPyKX8BN8iKt13irK7Y" className="h-5 w-5 rounded" alt="" />
-                      <span>e-Mola</span>
+                      <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
+                        <img src="/emola-logo.jpg" className="h-full w-full object-cover" alt="e-Mola" />
+                      </div>
+                      <span className="text-sm">e-Mola</span>
                     </button>
                   </div>
                 </div>
