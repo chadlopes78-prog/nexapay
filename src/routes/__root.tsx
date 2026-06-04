@@ -77,11 +77,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "CheckoutPro Mozambique | SaaS de Checkout" },
+      { name: "description", content: "A plataforma de checkout mais completa para Moçambique. Aceite M-Pesa e e-Mola." },
+      { name: "author", content: "CheckoutPro" },
+      { property: "og:title", content: "CheckoutPro Mozambique" },
+      { property: "og:description", content: "Venda mais com M-Pesa e e-Mola." },
+
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
