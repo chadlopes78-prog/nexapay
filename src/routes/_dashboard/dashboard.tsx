@@ -49,14 +49,19 @@ function DashboardPage() {
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>(() => {
     const saved = sessionStorage.getItem("dashboard-date-range");
     if (saved) {
-      const { from, to } = JSON.parse(saved);
-      return { from: new Date(from), to: new Date(to) };
+      try {
+        const { from, to } = JSON.parse(saved);
+        return { from: new Date(from), to: new Date(to) };
+      } catch (e) {
+        console.error("Error parsing saved date range", e);
+      }
     }
     return {
       from: startOfDay(subDays(new Date(), 6)),
       to: endOfDay(new Date()),
     };
   });
+  
   const [preset, setPreset] = useState<DateRangePreset>(() => {
     return (sessionStorage.getItem("dashboard-preset") as DateRangePreset) || "last7days";
   });
@@ -71,11 +76,6 @@ function DashboardPage() {
       const prevFrom = subDays(dateRange.from, daysDiff);
       const prevTo = subSeconds(dateRange.from, 1);
 
-      // Fetch sales for current and previous period
-      // We fetch all sales of the user's products
-      // RLS should handle the user_id filtering for us if configured, 
-      // but we need to ensure we get the right dates.
-      
       const [currentSalesRes, prevSalesRes, productsRes] = await Promise.all([
         supabase
           .from("sales")
@@ -103,11 +103,11 @@ function DashboardPage() {
         const salesCount = approved.length;
         const conversion = sales.length > 0 ? (approved.length / sales.length) * 100 : 0;
         const ticketMedio = salesCount > 0 ? revenue / salesCount : 0;
-        const lucroEstimado = revenue * 0.95; // 5% fee simulation
+        const lucroEstimado = revenue * 0.95; 
         const mpesaRevenue = approved.filter(s => s.payment_method?.toLowerCase() === "mpesa").reduce((acc, s) => acc + Number(s.amount), 0);
         const emolaRevenue = approved.filter(s => s.payment_method?.toLowerCase() === "emola").reduce((acc, s) => acc + Number(s.amount), 0);
         const uniqueCustomers = new Set(sales.map(s => s.customer_phone || s.customer_id)).size;
-        const productsSold = salesCount; // Assuming 1 product per sale for now
+        const productsSold = salesCount; 
 
         return {
           revenue,
@@ -128,7 +128,6 @@ function DashboardPage() {
       const currentStats = calculateStats(currentSales);
       const prevStats = calculateStats(prevSales);
 
-      // Prepare chart data (daily)
       const chartData: any[] = [];
       const days = differenceInDays(dateRange.to, dateRange.from) + 1;
       
@@ -137,7 +136,6 @@ function DashboardPage() {
         const dayStr = format(day, "yyyy-MM-dd");
         const dayLabel = format(day, "dd/MM", { locale: ptBR });
         
-        // Previous period day
         const prevDay = subDays(day, days);
         const prevDayStr = format(prevDay, "yyyy-MM-dd");
 
@@ -149,13 +147,14 @@ function DashboardPage() {
         const prevDaySales = prevSales.filter(s => format(parseISO(s.created_at), "yyyy-MM-dd") === prevDayStr);
         const prevDayApproved = prevDaySales.filter(s => s.status === "approved");
         const prevDayRevenue = prevDayApproved.reduce((acc, s) => acc + Number(s.amount), 0);
+        const prevDaySalesCount = prevDayApproved.length;
 
         chartData.push({
           name: dayLabel,
           revenue: dayRevenue,
           prevRevenue: prevDayRevenue,
           sales: dayApproved.length,
-          prevSales: prevDayApproved.length,
+          prevSales: prevDaySalesCount,
           conversion: parseFloat(dayConversion.toFixed(1))
         });
       }
@@ -281,18 +280,18 @@ function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Analise o desempenho do seu negócio.</p>
+          <p className="text-sm md:text-base text-muted-foreground">Resumo de desempenho e métricas em tempo real.</p>
         </div>
         <DateRangePicker onRangeChange={handleRangeChange} initialPreset={preset} />
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(8)].map((_, i) => (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          {[...Array(10)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader className="h-20" />
               <CardContent className="h-16" />
@@ -303,33 +302,33 @@ function DashboardPage() {
         <>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
             {stats.map((stat) => (
-              <Card key={stat.title} className="hover:shadow-md transition-shadow">
+              <Card key={stat.title} className="hover:shadow-sm transition-all duration-200 border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                  <stat.icon className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{stat.title}</CardTitle>
+                  <stat.icon className="h-4 w-4 text-primary/70" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <div className="text-xl font-bold truncate">{stat.value}</div>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={cn(
-                      "text-xs font-medium flex items-center",
-                      stat.positive ? "text-emerald-600" : "text-rose-600"
+                      "text-xs font-bold flex items-center px-1.5 py-0.5 rounded-full",
+                      stat.positive ? "text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30" : "text-rose-700 bg-rose-100 dark:bg-rose-900/30"
                     )}>
                       {stat.positive ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
                       {stat.change}
                     </span>
-                    <span className="text-xs text-muted-foreground italic">vs per. anterior</span>
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter italic">per. anterior</span>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="lg:col-span-4 shadow-sm border-none bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="shadow-sm border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Faturamento e Vendas</CardTitle>
-                <CardDescription>Evolução diária no período selecionado.</CardDescription>
+                <CardTitle className="text-lg font-bold">Gráfico de Faturamento</CardTitle>
+                <CardDescription>Comparação de receita com o período anterior.</CardDescription>
               </CardHeader>
               <CardContent className="h-[350px]">
                 {dashboardData?.current.totalCount === 0 ? (
@@ -346,29 +345,30 @@ function DashboardPage() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#64748B', fontSize: 12 }}
-                      />
-                      <YAxis 
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#64748B', fontSize: 12 }}
-                        tickFormatter={(value) => `${value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
-                      />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} tickFormatter={(val) => val >= 1000 ? `${val/1000}k` : val} />
                       <Tooltip 
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        formatter={(value: any) => [value.toLocaleString("pt-MZ") + " MT", "Faturamento"]}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        formatter={(value: any) => [value.toLocaleString("pt-MZ") + " MT", ""]}
                       />
+                      <Legend verticalAlign="top" height={36} iconType="circle"/>
                       <Area 
+                        name="Período Atual"
                         type="monotone" 
                         dataKey="revenue" 
                         stroke="#2563eb" 
-                        strokeWidth={2}
+                        strokeWidth={3}
                         fillOpacity={1} 
                         fill="url(#colorRev)" 
+                      />
+                      <Area 
+                        name="Período Anterior"
+                        type="monotone" 
+                        dataKey="prevRevenue" 
+                        stroke="#94a3b8" 
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        fill="transparent" 
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -376,10 +376,39 @@ function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-3 shadow-sm border-none bg-slate-50/50 dark:bg-slate-900/50">
+            <Card className="shadow-sm border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle>Métodos de Pagamento</CardTitle>
-                <CardDescription>Volume processado por canal.</CardDescription>
+                <CardTitle className="text-lg font-bold">Gráfico de Vendas</CardTitle>
+                <CardDescription>Volume de pedidos aprovados por dia.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[350px]">
+                {dashboardData?.current.totalCount === 0 ? (
+                  <div className="h-full flex items-center justify-center text-muted-foreground italic">
+                    Nenhum dado encontrado.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dashboardData?.chartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} />
+                      <Tooltip 
+                        cursor={{fill: 'rgba(0,0,0,0.05)'}}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      />
+                      <Legend verticalAlign="top" height={36} iconType="circle"/>
+                      <Bar name="Vendas Atuais" dataKey="sales" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                      <Bar name="Vendas Anteriores" dataKey="prevSales" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold">Métodos de Pagamento</CardTitle>
+                <CardDescription>Distribuição de receita por canal.</CardDescription>
               </CardHeader>
               <CardContent className="h-[350px] flex flex-col items-center justify-center">
                 {paymentData.length === 0 ? (
@@ -401,15 +430,15 @@ function DashboardPage() {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value: any) => [value.toLocaleString("pt-MZ") + " MT", "Valor"]} />
+                        <Tooltip formatter={(value: any) => [value.toLocaleString("pt-MZ") + " MT", ""]} />
                       </PieChart>
                     </ResponsiveContainer>
-                    <div className="flex gap-4 mt-4">
+                    <div className="flex flex-wrap justify-center gap-4 mt-4">
                       {paymentData.map((item) => (
                         <div key={item.name} className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                          <span className="text-sm font-medium">{item.name}</span>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm font-semibold">{item.name}</span>
+                          <span className="text-xs text-muted-foreground">
                             ({((item.value / (dashboardData?.current.revenue || 1)) * 100).toFixed(0)}%)
                           </span>
                         </div>
@@ -420,39 +449,22 @@ function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-7 shadow-sm border-none bg-slate-50/50 dark:bg-slate-900/50">
+            <Card className="shadow-sm border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm lg:col-span-1">
               <CardHeader>
-                <CardTitle>Evolução da Conversão</CardTitle>
-                <CardDescription>Percentual de aprovação ao longo do tempo.</CardDescription>
+                <CardTitle className="text-lg font-bold">Evolução da Conversão</CardTitle>
+                <CardDescription>Taxa de aprovação diária no período.</CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">
+              <CardContent className="h-[350px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dashboardData?.chartData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748B', fontSize: 12 }}
-                    />
-                    <YAxis 
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748B', fontSize: 12 }}
-                      tickFormatter={(value) => `${value}%`}
-                    />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} tickFormatter={(val) => `${val}%`} />
                     <Tooltip 
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      formatter={(value: any) => [`${value}%`, "Taxa de Conversão"]}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value: any) => [`${value}%`, "Conversão"]}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="conversion" 
-                      stroke="#10b981" 
-                      strokeWidth={3}
-                      dot={{ fill: '#10b981', r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
+                    <Line type="monotone" dataKey="conversion" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
