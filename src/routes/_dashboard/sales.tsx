@@ -70,6 +70,7 @@ function SalesPage() {
                 <TableHead>Produto</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Método</TableHead>
+                <TableHead>Referência</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -92,7 +93,7 @@ function SalesPage() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{sale.customer_name || "Desconhecido"}</span>
-                        <span className="text-xs text-muted-foreground">{sale.customer_phone}</span>
+                        <span className="text-xs text-muted-foreground">{sale.customer_phone || "-"}</span>
                       </div>
                     </TableCell>
                     <TableCell>{(sale.products as any)?.name || "Produto Removido"}</TableCell>
@@ -102,7 +103,19 @@ function SalesPage() {
                         {sale.payment_method}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(sale.created_at).toLocaleDateString("pt-MZ")}</TableCell>
+                    <TableCell>
+                      <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
+                        {sale.payment_reference || "-"}
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span>{new Date(sale.created_at).toLocaleDateString("pt-MZ")}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(sale.created_at).toLocaleTimeString("pt-MZ", { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge 
                         variant={sale.status === "approved" ? "secondary" : "outline"}

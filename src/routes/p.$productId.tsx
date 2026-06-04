@@ -38,9 +38,10 @@ function CheckoutPage() {
 
   // Form state
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [paymentReference, setPaymentReference] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
+  const [paymentStep, setPaymentStep] = useState<"info" | "reference">("info");
 
   // Facebook Pixel integration
   useEffect(() => {
@@ -134,35 +135,40 @@ function CheckoutPage() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone) {
-      toast.error("Por favor, insira seu número de celular.");
+    
+    if (paymentStep === "info") {
+      setPaymentStep("reference");
+      trackCheckout();
+      return;
+    }
+
+    if (!paymentReference) {
+      toast.error("Por favor, insira o código de referência do pagamento.");
       return;
     }
 
     setLoading(true);
-    toast.info(`Iniciando pagamento via ${paymentMethod.toUpperCase()}...`);
+    toast.info(`Processando pagamento via ${paymentMethod.toUpperCase()}...`);
 
     try {
-      trackCheckout();
       const { data, error } = await supabase.from("sales").insert({
         product_id: productId,
         customer_name: name,
         customer_phone: phone,
         amount: product.price,
         payment_method: paymentMethod,
+        payment_reference: paymentReference,
         status: "pending",
       }).select().single();
 
       if (error) throw error;
 
-      // Simulate the USSD push delay
+      trackPurchase();
+      toast.success("Pagamento enviado para verificação!");
+      
       setTimeout(() => {
-        trackPurchase();
-        toast.success("Solicitação de pagamento enviada! Verifique seu celular para confirmar.");
-        setLoading(false);
-        // Redirect to success page
         window.location.href = `/success?productId=${productId}&saleId=${data.id}`;
-      }, 1500);
+      }, 1000);
     } catch (error: any) {
       toast.error("Erro ao processar pedido: " + error.message);
       setLoading(false);
@@ -207,7 +213,7 @@ function CheckoutPage() {
             <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center">
               <ShieldCheck className="h-6 w-6 text-white" />
             </div>
-            <span className="font-bold text-xl">CheckoutPro</span>
+            <span className="font-bold text-xl">Checkout Seguro</span>
           </div>
 
           <div className="space-y-4">
@@ -240,14 +246,10 @@ function CheckoutPage() {
 
           <div className="space-y-3 pt-6">
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <CheckCircle2 className="h-4 w-4 text-green-500" /> Acesso imediato após confirmação
+              <CheckCircle2 className="h-4 w-4 text-green-500" /> Transação segura e encriptada
             </div>
             <div className="flex items-center gap-2 text-sm text-slate-600">
-              <CheckCircle2 className="h-4 w-4 text-green-500" /> {product.warranty_days} dias de
-              garantia
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <CheckCircle2 className="h-4 w-4 text-green-500" /> Suporte 24/7 especializado
+              <CheckCircle2 className="h-4 w-4 text-green-500" /> Entrega confiável
             </div>
           </div>
         </div>
@@ -262,85 +264,114 @@ function CheckoutPage() {
                 <CardTitle className="text-xl">Informações de Contato</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="checkout-name">Nome Completo</Label>
-                  <Input
-                    id="checkout-name"
-                    placeholder="Seu nome"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="checkout-email">Email</Label>
-                    <Input
-                      id="checkout-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="checkout-phone">Celular (84/85/82/87)</Label>
-                    <Input
-                      id="checkout-phone"
-                      placeholder="840000000"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
+                {paymentStep === "info" ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="checkout-name">Nome Completo</Label>
+                      <Input
+                        id="checkout-name"
+                        placeholder="Seu nome"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="checkout-phone">Celular (Opcional)</Label>
+                      <Input
+                        id="checkout-phone"
+                        placeholder="840000000"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
 
-                <div className="pt-6">
-                  <h3 className="text-lg font-semibold mb-4">Forma de Pagamento</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("mpesa")}
-                      className={cn(
-                        "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all",
-                        paymentMethod === "mpesa"
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-slate-100 hover:border-slate-200",
-                      )}
-                    >
-                      <CreditCard className="h-5 w-5" />
-                      <span className="font-bold italic">M-Pesa</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("emola")}
-                      className={cn(
-                        "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all",
-                        paymentMethod === "emola"
-                          ? "border-red-600 bg-red-50 text-red-600"
-                          : "border-slate-100 hover:border-slate-200",
-                      )}
-                    >
-                      <Smartphone className="h-5 w-5" />
-                      <span className="font-bold italic">e-Mola</span>
-                    </button>
-                  </div>
-                </div>
+                    <div className="pt-6">
+                      <h3 className="text-lg font-semibold mb-4">Forma de Pagamento</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("mpesa")}
+                          className={cn(
+                            "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all",
+                            paymentMethod === "mpesa"
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-slate-100 hover:border-slate-200",
+                          )}
+                        >
+                          <CreditCard className="h-5 w-5" />
+                          <span className="font-bold italic">M-Pesa</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("emola")}
+                          className={cn(
+                            "flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all",
+                            paymentMethod === "emola"
+                              ? "border-red-600 bg-red-50 text-red-600"
+                              : "border-slate-100 hover:border-slate-200",
+                          )}
+                        >
+                          <Smartphone className="h-5 w-5" />
+                          <span className="font-bold italic">e-Mola</span>
+                        </button>
+                      </div>
+                    </div>
 
-                <div className="pt-8">
-                  <Button type="submit" className="w-full h-14 text-lg font-bold">
-                    Pagar Agora <ChevronRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </div>
+                    <div className="pt-8">
+                      <Button type="submit" className="w-full h-14 text-lg font-bold">
+                        Prosseguir <ChevronRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                      <h4 className="font-bold text-center">Instruções de Pagamento</h4>
+                      <div className="space-y-2 text-sm">
+                        <p>1. Transfira <strong>{product.price.toLocaleString("pt-MZ")} MT</strong> para o número:</p>
+                        <p className="text-xl font-mono font-bold text-center bg-white p-2 rounded border">841234567</p>
+                        <p className="text-xs text-muted-foreground text-center">(Número de exemplo - substitua pelo real)</p>
+                        <p>2. Após o pagamento, copie o <strong>Código de Referência</strong> da transação.</p>
+                        <p>3. Insira o código abaixo e clique em confirmar.</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="payment-ref">Referência da Transação</Label>
+                      <Input
+                        id="payment-ref"
+                        placeholder="Ex: 123456789"
+                        required
+                        value={paymentReference}
+                        onChange={(e) => setPaymentReference(e.target.value)}
+                        className="h-12 text-lg text-center font-mono"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setPaymentStep("info")}
+                        className="h-14"
+                      >
+                        Voltar
+                      </Button>
+                      <Button type="submit" className="flex-1 h-14 text-lg font-bold">
+                        Confirmar Pagamento
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </form>
           </Card>
 
           <div className="text-center space-y-2 text-xs text-slate-400">
-            <p>© 2026 CheckoutPro Mozambique. Todos os direitos reservados.</p>
+            <p>© 2026 Pagamento Seguro. Todos os direitos reservados.</p>
             <p>
-              Seu pagamento está sendo processado por CheckoutPro em nome de {product.merchant_id}
+              Seu pagamento está sendo processado em nome de {product.merchant_id}
             </p>
           </div>
         </div>
