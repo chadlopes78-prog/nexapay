@@ -123,7 +123,7 @@ export function TrafficAnalysis() {
 
   const getTrackingScript = (trackingId: string) => {
     const origin = window.location.origin;
-    return `<!-- Início do Código de Tracking -->
+    return `<!-- Início do Código de Tracking DarkPay -->
 <script>
 (function(w,d,s,l,i){
   w[l]=w[l]||[];
@@ -133,7 +133,7 @@ export function TrafficAnalysis() {
   f.parentNode.insertBefore(j,f);
 })(window,document,'script','trackData','${trackingId}');
 </script>
-<!-- Fim do Código de Tracking -->`;
+<!-- Fim do Código de Tracking DarkPay -->`;
   };
 
   const getPageMetrics = (pageId: string, pageType: string) => {
