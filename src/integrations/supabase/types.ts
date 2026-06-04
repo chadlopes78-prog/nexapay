@@ -14,7 +14,238 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      checkouts: {
+        Row: {
+          banner_url: string | null
+          button_text: string | null
+          created_at: string
+          footer_text: string | null
+          form_fields: Json | null
+          guarantee_text: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          product_id: string
+          subtitle: string | null
+          testimonials: Json | null
+          title: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          banner_url?: string | null
+          button_text?: string | null
+          created_at?: string
+          footer_text?: string | null
+          form_fields?: Json | null
+          guarantee_text?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          product_id: string
+          subtitle?: string | null
+          testimonials?: Json | null
+          title?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          banner_url?: string | null
+          button_text?: string | null
+          created_at?: string
+          footer_text?: string | null
+          form_fields?: Json | null
+          guarantee_text?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          product_id?: string
+          subtitle?: string | null
+          testimonials?: Json | null
+          title?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkouts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          merchant_id: string
+          metadata: Json | null
+          payment_method: string | null
+          product_id: string
+          status: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          id?: string
+          merchant_id: string
+          metadata?: Json | null
+          payment_method?: string | null
+          product_id: string
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          merchant_id?: string
+          metadata?: Json | null
+          payment_method?: string | null
+          product_id?: string
+          status?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pixel_configs: {
+        Row: {
+          created_at: string
+          fb_access_token: string | null
+          fb_pixel_id: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fb_access_token?: string | null
+          fb_pixel_id?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fb_access_token?: string | null
+          fb_pixel_id?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          id: string
+          is_registrations_open: boolean | null
+          transaction_fee_percentage: number | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          is_registrations_open?: boolean | null
+          transaction_fee_percentage?: number | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          is_registrations_open?: boolean | null
+          transaction_fee_percentage?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string | null
+          created_at: string
+          custom_url: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          status: string | null
+          updated_at: string
+          user_id: string
+          warranty_days: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          custom_url?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price: number
+          status?: string | null
+          updated_at?: string
+          user_id: string
+          warranty_days?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          custom_url?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+          warranty_days?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
