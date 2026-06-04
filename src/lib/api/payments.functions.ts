@@ -162,27 +162,32 @@ export const processPayment = createServerFn({ method: "POST" })
     }
 
     const reference = sale.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20);
+    const localPhone = msisdn.slice(3); // 9-digit local format expected by e2payments
 
     try {
       const token = await getAccessToken();
+      const clientId = process.env.E2PAYMENT_CLIENT_ID!;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45_000);
+      const timeoutId = setTimeout(() => controller.abort(), 90_000);
 
-      const res = await fetch(`${E2PAY_BASE_URL}/payments/create`, {
+      const endpoint =
+        data.method === "mpesa"
+          ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
+          : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          wallet_id: walletId,
-          phone: msisdn,
-          amount,
-          currency: "MZN",
+          client_id: clientId,
+          amount: String(amount),
+          phone: localPhone,
           reference,
-          method: data.method,
-          customer_name: data.customerName.trim(),
         }),
         signal: controller.signal,
       }).finally(() => clearTimeout(timeoutId));
@@ -198,8 +203,9 @@ export const processPayment = createServerFn({ method: "POST" })
       console.info("e2payment response", {
         status: res.status,
         method: data.method,
+        endpoint,
         reference,
-        body: text?.slice(0, 500),
+        body: text?.slice(0, 800),
       });
 
       const transactionId =
