@@ -312,6 +312,13 @@ function ProductsPage() {
                   <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Curso de Marketing" required />
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="image">Imagem do Produto</Label>
+                  <Input id="image" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                  {imageFile && (
+                    <img src={URL.createObjectURL(imageFile)} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded border" />
+                  )}
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="pixel_id">ID do Pixel (Facebook)</Label>
                   <Input id="pixel_id" value={pixelId} onChange={(e) => setPixelId(e.target.value)} placeholder="Ex: 123456789" />
                 </div>
