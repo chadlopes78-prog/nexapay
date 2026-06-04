@@ -15,7 +15,9 @@ import {
   Package,
   Calendar as CalendarIcon,
   Smartphone,
+  Bell,
 } from "lucide-react";
+import { PushNotificationManager } from "@/components/dashboard/PushNotificationManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
