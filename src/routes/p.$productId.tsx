@@ -76,11 +76,9 @@ function CheckoutPage() {
     toast.info(`Iniciando pagamento via ${paymentMethod.toUpperCase()}...`);
 
     try {
-      const { error } = await supabase.from("orders").insert({
+      const { error } = await supabase.from("sales").insert({
         product_id: productId,
-        merchant_id: product.user_id,
         customer_name: name,
-        customer_email: email,
         customer_phone: phone,
         amount: product.price,
         payment_method: paymentMethod,
