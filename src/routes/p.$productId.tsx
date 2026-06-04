@@ -39,6 +39,9 @@ function CheckoutPage() {
   const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
+  const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -173,7 +176,9 @@ function CheckoutPage() {
       return;
     }
 
-    setLoading(true);
+    setProcessingPayment(true);
+    setPaymentErrorMessage(null);
+    setPaymentStatusMessage(`Pedido enviado para ${paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}. Confirme no seu telefone.`);
     trackCheckout();
     toast.info(`Enviando pedido de pagamento via ${paymentMethod.toUpperCase()}... Confirme no seu telefone.`);
 
@@ -222,8 +227,10 @@ function CheckoutPage() {
           .from("sales")
           .update({ status: "failed", payment_reference: result.error?.slice(0, 200) })
           .eq("id", sale.id);
+        setPaymentErrorMessage(result.error || "Pagamento recusado.");
+        setPaymentStatusMessage(null);
         toast.error(result.error || "Pagamento recusado.");
-        setLoading(false);
+        setProcessingPayment(false);
         return;
       }
 
@@ -245,14 +252,17 @@ function CheckoutPage() {
       }
 
       trackPurchase();
+      setPaymentStatusMessage("Pagamento confirmado. A redirecionar...");
       toast.success("Pagamento confirmado!");
 
       setTimeout(() => {
         window.location.href = `/success?productId=${productId}&saleId=${sale.id}`;
       }, 800);
     } catch (error: any) {
+      setPaymentErrorMessage(error?.message || "Erro inesperado ao processar pagamento.");
+      setPaymentStatusMessage(null);
       toast.error("Erro ao processar pagamento: " + error.message);
-      setLoading(false);
+      setProcessingPayment(false);
     }
   };
 
@@ -406,14 +416,27 @@ function CheckoutPage() {
               </p>
             </div>
 
+            {(paymentStatusMessage || paymentErrorMessage) && (
+              <div
+                className={cn(
+                  "rounded-xl border p-4 text-sm font-medium",
+                  paymentErrorMessage
+                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                    : "border-primary/30 bg-primary/10 text-primary",
+                )}
+              >
+                {paymentErrorMessage || paymentStatusMessage}
+              </div>
+            )}
+
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={processingPayment}
               className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200 disabled:opacity-60"
             >
               <Lock className="mr-2 h-5 w-5" />
-              {loading ? "Processando..." : `Pagar ${product.price.toLocaleString("pt-MZ")} MT`}
+              {processingPayment ? "A aguardar confirmação..." : `Pagar ${product.price.toLocaleString("pt-MZ")} MT`}
             </Button>
 
           </CardContent>
