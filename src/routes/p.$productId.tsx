@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import mozFlag from "@/assets/moz-flag.png.asset.json";
 
 export const Route = createFileRoute("/p/$productId")({
   component: CheckoutPage,
@@ -343,7 +344,7 @@ function CheckoutPage() {
 
             <div className="space-y-4">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                DESEJA PAGAR COM:
+                MÉTODOS DE PAGAMENTO
               </Label>
               <div className="grid grid-cols-2 gap-4">
                 <button
@@ -383,18 +384,24 @@ function CheckoutPage() {
               <Label htmlFor="checkout-phone" className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 {paymentMethod === "mpesa" ? "NÚMERO M-PESA *" : "NÚMERO E-MOLA *"}
               </Label>
-              <Input
-                id="checkout-phone"
-                placeholder={paymentMethod === "mpesa" ? "84xxxxxxx ou 85xxxxxxx" : "86xxxxxxx ou 87xxxxxxx"}
-                required
-                inputMode="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className={cn(
-                  "h-12 border-slate-200 rounded-xl",
-                  paymentMethod === "mpesa" ? "focus:ring-blue-500" : "focus:ring-orange-500",
-                )}
-              />
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                  <img src={mozFlag.url} alt="MZ" className="h-4 w-6 object-cover rounded-sm" />
+                  <span className="text-sm font-medium text-slate-600">+258</span>
+                </div>
+                <Input
+                  id="checkout-phone"
+                  placeholder={paymentMethod === "mpesa" ? "84xxxxxxx ou 85xxxxxxx" : "86xxxxxxx ou 87xxxxxxx"}
+                  required
+                  inputMode="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className={cn(
+                    "h-12 pl-24 border-slate-200 rounded-xl",
+                    paymentMethod === "mpesa" ? "focus:ring-blue-500" : "focus:ring-orange-500",
+                  )}
+                />
+              </div>
               <p className="text-[10px] text-slate-400">
                 Você receberá uma notificação no telemóvel para confirmar o pagamento via {paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}.
               </p>
@@ -417,10 +424,10 @@ function CheckoutPage() {
             <Button
               type="submit"
               disabled={processingPayment}
-              className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200 disabled:opacity-60"
+              className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60"
             >
               <Lock className="mr-2 h-5 w-5" />
-              {processingPayment ? "A aguardar confirmação..." : `Pagar ${product.price.toLocaleString("pt-MZ")} MT`}
+              {processingPayment ? "A aguardar confirmação..." : `Finalizar compra (${product.price.toLocaleString("pt-MZ")} MT)`}
             </Button>
 
           </CardContent>
