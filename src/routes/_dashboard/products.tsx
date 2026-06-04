@@ -52,8 +52,10 @@ function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
 
-  // New product state
+  // Form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -118,6 +120,59 @@ function ProductsPage() {
       setDescription("");
       setPrice("");
       setCategory("");
+      fetchProducts();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleEditProduct = (product: any) => {
+    setEditingProduct(product);
+    setName(product.name);
+    setDescription(product.description || "");
+    setPrice(product.price.toString());
+    setCategory(product.category || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({
+          name,
+          description,
+          price: parseFloat(price),
+          category,
+        })
+        .eq("id", editingProduct.id);
+
+      if (error) throw error;
+
+      toast.success("Produto atualizado com sucesso!");
+      setIsEditDialogOpen(false);
+      setEditingProduct(null);
+      setName("");
+      setDescription("");
+      setPrice("");
+      setCategory("");
+      fetchProducts();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+
+    try {
+      const { error } = await supabase.from("products").delete().eq("id", id);
+      if (error) throw error;
+
+      toast.success("Produto excluído com sucesso!");
       fetchProducts();
     } catch (error: any) {
       toast.error(error.message);
@@ -196,6 +251,65 @@ function ProductsPage() {
               </div>
               <DialogFooter>
                 <Button type="submit">Criar Produto</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <form onSubmit={handleUpdateProduct}>
+              <DialogHeader>
+                <DialogTitle>Editar Produto</DialogTitle>
+                <DialogDescription>
+                  Atualize as informações do seu produto.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-name">Nome do Produto</Label>
+                  <Input
+                    id="edit-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ex: Curso de Marketing"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-description">Descrição</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Breve descrição do produto"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-price">Preço (MT)</Label>
+                    <Input
+                      id="edit-price"
+                      type="number"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="1000"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-category">Categoria</Label>
+                    <Input
+                      id="edit-category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      placeholder="Educação"
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Salvar Alterações</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -279,14 +393,17 @@ function ProductsPage() {
                           >
                             <ExternalLink className="mr-2 h-4 w-4" /> Ver Checkout
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditProduct(product)}>
                             <Edit className="mr-2 h-4 w-4" /> Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <QrCode className="mr-2 h-4 w-4" /> QR Code
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteProduct(product.id)}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" /> Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
