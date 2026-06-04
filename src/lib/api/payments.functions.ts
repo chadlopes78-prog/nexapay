@@ -165,8 +165,7 @@ export const processPayment = createServerFn({ method: "POST" })
         },
         body: JSON.stringify(body),
         signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
+      }).finally(() => clearTimeout(timeoutId));
 
       const text = await res.text();
       let json: PaymentGatewayResponse | null = null;
