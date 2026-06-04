@@ -1,5 +1,7 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
+import { processPayment } from "@/lib/api/payments.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +32,7 @@ declare global {
 
 
 function CheckoutPage() {
+  const payFn = useServerFn(processPayment);
   const { productId } = useParams({ from: "/p/$productId" });
   const [product, setProduct] = useState<any>(null);
   const [checkout, setCheckout] = useState<any>(null);
@@ -40,9 +43,7 @@ function CheckoutPage() {
   // Form state
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [paymentReference, setPaymentReference] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
-  const [paymentStep, setPaymentStep] = useState<"info" | "reference">("info");
 
   useEffect(() => {
     // Get traffic page ID from URL
@@ -166,24 +167,19 @@ function CheckoutPage() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (paymentStep === "info") {
-      setPaymentStep("reference");
-      trackCheckout();
-      return;
-    }
 
-    if (!paymentReference) {
-      toast.error("Por favor, insira o código de referência do pagamento.");
+    if (!phone || phone.replace(/\D/g, "").length < 9) {
+      toast.error("Por favor, insira um número de telefone válido.");
       return;
     }
 
     setLoading(true);
-    toast.info(`Processando pagamento via ${paymentMethod.toUpperCase()}...`);
+    trackCheckout();
+    toast.info(`Enviando pedido de pagamento via ${paymentMethod.toUpperCase()}... Confirme no seu telefone.`);
 
     try {
-      // Find the page ID from the tracking ID (which is a hex string)
-      let finalTrafficPageId = null;
+      // Resolve traffic page id
+      let finalTrafficPageId: string | null = null;
       if (trafficPageId) {
         const { data: pageData } = await supabase
           .from("traffic_pages")
@@ -193,39 +189,72 @@ function CheckoutPage() {
         if (pageData) finalTrafficPageId = pageData.id;
       }
 
-      const { data, error } = await supabase.from("sales").insert({
-        product_id: productId,
-        customer_name: name,
-        customer_phone: phone,
-        amount: product.price,
-        payment_method: paymentMethod,
-        payment_reference: paymentReference,
-        status: "pending",
-        traffic_page_id: finalTrafficPageId,
-      }).select().single();
+      // Create pending sale first to get a stable reference
+      const { data: sale, error: saleErr } = await supabase
+        .from("sales")
+        .insert({
+          product_id: productId,
+          customer_name: name,
+          customer_phone: phone,
+          amount: product.price,
+          payment_method: paymentMethod,
+          status: "pending",
+          traffic_page_id: finalTrafficPageId,
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (saleErr) throw saleErr;
 
-      // Also record a purchase event for the traffic analysis funnel
+      // Call payment gateway
+      const result = await payFn({
+        data: {
+          method: paymentMethod,
+          msisdn: phone,
+          amount: Number(product.price),
+          reference: sale.id.slice(0, 16),
+        },
+      });
+
+      if (!result.success) {
+        await supabase
+          .from("sales")
+          .update({ status: "failed", payment_reference: result.error?.slice(0, 200) })
+          .eq("id", sale.id);
+        toast.error(result.error || "Pagamento recusado.");
+        setLoading(false);
+        return;
+      }
+
+      // Mark as paid
+      const gatewayRef =
+        (result.data && (result.data.transaction_id || result.data.reference || result.data.id)) ||
+        sale.id;
+      await supabase
+        .from("sales")
+        .update({ status: "paid", payment_reference: String(gatewayRef) })
+        .eq("id", sale.id);
+
       if (finalTrafficPageId) {
         await supabase.from("traffic_events").insert({
           page_id: finalTrafficPageId,
           event_type: "purchase",
-          metadata: { saleId: data.id, productId }
+          metadata: { saleId: sale.id, productId },
         });
       }
 
       trackPurchase();
-      toast.success("Pagamento enviado para verificação!");
-      
+      toast.success("Pagamento confirmado!");
+
       setTimeout(() => {
-        window.location.href = `/success?productId=${productId}&saleId=${data.id}`;
-      }, 1000);
+        window.location.href = `/success?productId=${productId}&saleId=${sale.id}`;
+      }, 800);
     } catch (error: any) {
-      toast.error("Erro ao processar pedido: " + error.message);
+      toast.error("Erro ao processar pagamento: " + error.message);
       setLoading(false);
     }
   };
+
 
 
   if (loading) {
@@ -303,120 +332,86 @@ function CheckoutPage() {
           </div>
 
           <CardContent className="p-0 space-y-6">
-            {paymentStep === "info" ? (
-              <>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="checkout-name" className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      NOME COMPLETO *
-                    </Label>
-                    <Input
-                      id="checkout-name"
-                      placeholder="Ex: João Silva"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="checkout-phone" className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      NÚMERO DE TELEFONE (OPCIONAL)
-                    </Label>
-                    <Input
-                      id="checkout-phone"
-                      placeholder="840000000"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    DESEJA PAGAR COM:
-                  </Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("mpesa")}
-                      className={cn(
-                        "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
-                        paymentMethod === "mpesa"
-                          ? "border-blue-600 bg-blue-50 text-blue-600"
-                          : "border-slate-100 hover:border-slate-200 text-slate-500",
-                      )}
-                    >
-                      <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
-                        <img src="/mpesa-logo.jpg" className="h-full w-full object-cover" alt="M-Pesa" />
-                      </div>
-                      <span className="text-sm">M-Pesa</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("emola")}
-                      className={cn(
-                        "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
-                        paymentMethod === "emola"
-                          ? "border-orange-500 bg-orange-50 text-orange-600"
-                          : "border-slate-100 hover:border-slate-200 text-slate-500",
-                      )}
-                    >
-                      <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
-                        <img src="/emola-logo.jpg" className="h-full w-full object-cover" alt="e-Mola" />
-                      </div>
-                      <span className="text-sm">e-Mola</span>
-                    </button>
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200">
-                  <Lock className="mr-2 h-5 w-5" /> Pagar {product.price.toLocaleString("pt-MZ")} MT
-                </Button>
-              </>
-            ) : (
-              <div className="space-y-6">
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4 text-center">
-                  <h4 className="font-bold text-slate-800">INSTRUÇÕES DE PAGAMENTO</h4>
-                  <div className="space-y-3">
-                    <p className="text-sm text-slate-600">Transfira o valor exato para o número:</p>
-                    <p className="text-2xl font-black text-slate-900 bg-white py-3 rounded-xl border border-slate-100">841234567</p>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-tighter">Beneficiário: SISTEMA AUTOMÁTICO</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-center">
-                  <Label htmlFor="payment-ref" className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    CÓDIGO DE REFERÊNCIA
-                  </Label>
-                  <Input
-                    id="payment-ref"
-                    placeholder="Ex: 123456789"
-                    required
-                    value={paymentReference}
-                    onChange={(e) => setPaymentReference(e.target.value)}
-                    className="h-14 text-xl text-center font-mono rounded-xl border-2 border-blue-100 focus:border-blue-500"
-                  />
-                  <p className="text-[10px] text-slate-400 px-4">
-                    Copie a referência do SMS que você recebeu após a transferência
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <Button type="submit" className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 rounded-xl shadow-lg shadow-green-100">
-                    Confirmar Pagamento
-                  </Button>
-                  <button 
-                    type="button" 
-                    onClick={() => setPaymentStep("info")}
-                    className="text-xs font-bold text-slate-400 uppercase hover:text-slate-600 transition-colors"
-                  >
-                    Voltar e alterar dados
-                  </button>
-                </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="checkout-name" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  NOME COMPLETO *
+                </Label>
+                <Input
+                  id="checkout-name"
+                  placeholder="Ex: João Silva"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
+                />
               </div>
-            )}
+              <div className="space-y-2">
+                <Label htmlFor="checkout-phone" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  NÚMERO DE TELEFONE * ({paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"})
+                </Label>
+                <Input
+                  id="checkout-phone"
+                  placeholder="84xxxxxxx ou 86xxxxxxx"
+                  required
+                  inputMode="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Você receberá um pedido de confirmação no seu telefone.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                DESEJA PAGAR COM:
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("mpesa")}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
+                    paymentMethod === "mpesa"
+                      ? "border-blue-600 bg-blue-50 text-blue-600"
+                      : "border-slate-100 hover:border-slate-200 text-slate-500",
+                  )}
+                >
+                  <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
+                    <img src="/mpesa-logo.jpg" className="h-full w-full object-cover" alt="M-Pesa" />
+                  </div>
+                  <span className="text-sm">M-Pesa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("emola")}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
+                    paymentMethod === "emola"
+                      ? "border-orange-500 bg-orange-50 text-orange-600"
+                      : "border-slate-100 hover:border-slate-200 text-slate-500",
+                  )}
+                >
+                  <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
+                    <img src="/emola-logo.jpg" className="h-full w-full object-cover" alt="e-Mola" />
+                  </div>
+                  <span className="text-sm">e-Mola</span>
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200 disabled:opacity-60"
+            >
+              <Lock className="mr-2 h-5 w-5" />
+              {loading ? "Processando..." : `Pagar ${product.price.toLocaleString("pt-MZ")} MT`}
+            </Button>
+
           </CardContent>
           
           <div className="pt-4 flex flex-col items-center gap-4 border-t border-slate-50">
