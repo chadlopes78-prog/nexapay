@@ -45,8 +45,10 @@ function CheckoutPage() {
 
   // Form state
   const [name, setName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
+
 
   useEffect(() => {
     // Get traffic page ID from URL
