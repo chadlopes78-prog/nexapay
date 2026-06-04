@@ -210,43 +210,42 @@ function ProductsPage() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Nome do Produto</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex: Curso de Marketing"
-                    required
-                  />
+                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Curso de Marketing" required />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Breve descrição do produto"
-                  />
+                  <Label htmlFor="pixel_id">ID do Pixel (Facebook)</Label>
+                  <Input id="pixel_id" placeholder="Ex: 123456789" />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="price">Preço (MT)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="1000"
-                      required
-                    />
+                    <Input id="price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="1000" required />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="category">Categoria</Label>
-                    <Input
-                      id="category"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      placeholder="Educação"
-                    />
+                    <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Educação" />
+                  </div>
+                </div>
+                <div className="border-t pt-4">
+                  <Label className="font-semibold mb-2 block">Entrega do Produto</Label>
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                        <Label>Tipo de Entrega</Label>
+                        <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm">
+                            <option value="none">Nenhum</option>
+                            <option value="file">Upload de Arquivo</option>
+                            <option value="link">Link de Acesso</option>
+                            <option value="both">Ambos</option>
+                        </select>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="delivery_file">Arquivo (PDF, ZIP, etc)</Label>
+                        <Input id="delivery_file" type="file" />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="delivery_link">Link de Acesso</Label>
+                        <Input id="delivery_link" placeholder="https://..." />
+                    </div>
                   </div>
                 </div>
               </div>
