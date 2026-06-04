@@ -113,6 +113,22 @@ function buildPaymentReference(saleId: string) {
   return saleId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20);
 }
 
+function getGatewayFailureMessage(
+  status: number,
+  json: PaymentGatewayResponse | null,
+  method: "mpesa" | "emola",
+) {
+  const gatewayMessage = json?.message || json?.error || json?.detail;
+  if (gatewayMessage) return String(gatewayMessage);
+
+  if (status === 402) {
+    const providerName = method === "emola" ? "e-Mola" : "M-Pesa";
+    return `Pagamento não autorizado pelo ${providerName}. Confirme se o número está ativo, tem saldo suficiente e aprove a cobrança no telemóvel.`;
+  }
+
+  return `Falha no pagamento (HTTP ${status})`;
+}
+
 export const processPayment = createServerFn({ method: "POST" })
   .inputValidator(PaymentInput)
   .handler(async ({ data }) => {
@@ -274,11 +290,13 @@ export const processPayment = createServerFn({ method: "POST" })
       });
 
       if (!res.ok || json?.success === false) {
-        const message =
-          json?.message || json?.error || json?.detail || `Falha no pagamento (HTTP ${res.status})`;
+        const message = getGatewayFailureMessage(res.status, json, data.method);
         await supabaseAdmin
           .from("sales")
-          .update({ status: "failed", payment_reference: String(message).slice(0, 200) })
+          .update({
+            status: "failed",
+            payment_reference: String(json?.transaction_id ?? message).slice(0, 200),
+          })
           .eq("id", sale.id);
         return {
           success: false,
