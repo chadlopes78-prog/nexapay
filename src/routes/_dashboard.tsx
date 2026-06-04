@@ -15,7 +15,9 @@ import {
   BarChart3,
   ChevronDown,
   Globe,
+  Bell,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -41,6 +43,32 @@ function DashboardLayout() {
         navigate({ to: "/auth" });
       } else {
         setUser(session.user);
+        
+        // Listen for new sales to show "push" simulation
+        const channel = supabase
+          .channel('schema-db-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'sales',
+              filter: `user_id=eq.${session.user.id}`
+            },
+            (payload: any) => {
+              if (payload.new.status === 'approved') {
+                toast.success(`Nova Venda! MT ${payload.new.amount} via ${payload.new.payment_method}`, {
+                  icon: <CreditCard className="h-4 w-4" />,
+                  duration: 5000,
+                });
+              }
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
       }
     };
     checkAuth();
