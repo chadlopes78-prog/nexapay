@@ -336,37 +336,8 @@ function CheckoutPage() {
             </div>
 
 
-          <CardContent className="p-0 space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="checkout-name" className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                NOME COMPLETO *
-              </Label>
-              <Input
-                id="checkout-name"
-                placeholder="Ex: João Silva"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
-              />
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="checkout-contact-phone" className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                NÚMERO DE CONTACTO (OPCIONAL)
-              </Label>
-              <Input
-                id="checkout-contact-phone"
-                placeholder="Ex: 84xxxxxxx"
-                inputMode="tel"
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
-              />
-              <p className="text-[10px] text-slate-400">
-                Usado apenas para contacto. O número de pagamento é pedido a seguir.
-              </p>
-            </div>
+
 
 
 
