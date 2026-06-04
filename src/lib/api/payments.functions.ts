@@ -48,7 +48,11 @@ async function getAccessToken(): Promise<string> {
 
   const res = await fetch(`${E2PAY_BASE_URL}/oauth/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "User-Agent": "Mozilla/5.0 (compatible; DarkPaymz/1.0)",
+    },
     body: JSON.stringify({
       grant_type: "client_credentials",
       client_id: clientId,
