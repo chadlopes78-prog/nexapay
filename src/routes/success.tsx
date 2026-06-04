@@ -147,7 +147,7 @@ function SuccessPage() {
 
         <div className="text-center">
           <p className="text-sm text-muted-foreground">
-            Enviamos uma cópia do recibo para seu e-mail.
+            Seu pedido foi registrado e está em processamento.
           </p>
         </div>
       </div>
