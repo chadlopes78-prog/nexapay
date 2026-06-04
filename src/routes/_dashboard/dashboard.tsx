@@ -28,49 +28,81 @@ import {
   Cell,
 } from "recharts";
 
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
 export const Route = createFileRoute("/_dashboard/dashboard")({
   component: DashboardPage,
 });
 
-const data = [
-  { name: "Seg", sales: 4000, revenue: 2400 },
-  { name: "Ter", sales: 3000, revenue: 1398 },
-  { name: "Qua", sales: 2000, revenue: 9800 },
-  { name: "Qui", sales: 2780, revenue: 3908 },
-  { name: "Sex", sales: 1890, revenue: 4800 },
-  { name: "Sab", sales: 2390, revenue: 3800 },
-  { name: "Dom", sales: 3490, revenue: 4300 },
-];
-
-const paymentData = [
-  { name: "M-Pesa", value: 65, color: "#2563eb" },
-  { name: "e-Mola", value: 35, color: "#ef4444" },
-];
-
 function DashboardPage() {
-  const stats = [
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const [salesRes, productsRes] = await Promise.all([
+        supabase.from("sales").select("*"),
+        supabase.from("products").select("*")
+      ]);
+
+      const sales = salesRes.data || [];
+      const products = productsRes.data || [];
+      
+      const revenue = sales
+        .filter(s => s.status === "approved")
+        .reduce((acc, s) => acc + Number(s.amount), 0);
+      
+      const approvedSales = sales.filter(s => s.status === "approved").length;
+      const failedSales = sales.filter(s => s.status === "failed").length;
+      const conversion = sales.length > 0 ? (approvedSales / sales.length) * 100 : 0;
+
+      return {
+        revenue,
+        salesCount: approvedSales,
+        failedCount: failedSales,
+        productsCount: products.length,
+        conversion: conversion.toFixed(1) + "%",
+        recentSales: sales.slice(0, 7)
+      };
+    }
+  });
+
+  const statCards = [
     {
       title: "Vendas Realizadas",
-      value: "1,284",
-      change: "+12.5%",
+      value: stats?.salesCount || 0,
       icon: CreditCard,
       positive: true,
+      change: "0%"
     },
     {
       title: "Vendas Perdidas",
-      value: "156",
-      change: "+2.1%",
+      value: stats?.failedCount || 0,
       icon: TrendingDown,
       positive: false,
+      change: "0%"
     },
     {
-      title: "Receita Hoje",
-      value: "24,500 MT",
-      change: "+18.2%",
+      title: "Receita Total",
+      value: `${(stats?.revenue || 0).toLocaleString("pt-MZ")} MT`,
       icon: DollarSign,
       positive: true,
+      change: "0%"
     },
-    { title: "Taxa de Conversão", value: "4.2%", change: "+0.8%", icon: Percent, positive: true },
+    { 
+      title: "Produtos", 
+      value: stats?.productsCount || 0, 
+      icon: ShoppingCart, 
+      positive: true,
+      change: "0%"
+    },
+  ];
+
+  const paymentData = [
+    { name: "M-Pesa", value: 0, color: "#2563eb" },
+    { name: "e-Mola", value: 0, color: "#ef4444" },
   ];
 
   return (
@@ -82,7 +114,7 @@ function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {statCards.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
@@ -90,17 +122,8 @@ function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <p
-                className={cn(
-                  "text-xs flex items-center mt-1",
-                  stat.positive ? "text-green-600" : "text-red-600",
-                )}
-              >
-                {stat.positive ? (
-                  <ArrowUpRight className="h-3 w-3 mr-1" />
-                ) : (
-                  <ArrowDownRight className="h-3 w-3 mr-1" />
-                )}
+              <p className={cn("text-xs flex items-center mt-1", stat.positive ? "text-green-600" : "text-red-600")}>
+                {stat.positive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
                 {stat.change} desde ontem
               </p>
             </CardContent>
@@ -109,72 +132,58 @@ function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Sales Chart */}
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Visão Geral de Receita</CardTitle>
             <CardDescription>Receita gerada nos últimos 7 dias.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#2563eb"
-                  fillOpacity={1}
-                  fill="url(#colorRevenue)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {stats?.salesCount === 0 ? (
+              <div className="h-full flex items-center justify-center text-muted-foreground italic">
+                Sem dados de vendas para exibir o gráfico.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={[]}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="#2563eb1a" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
-        {/* Payment Methods */}
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Métodos de Pagamento</CardTitle>
             <CardDescription>Distribuição entre M-Pesa e e-Mola.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] flex flex-col items-center justify-center">
-            <ResponsiveContainer width="100%" height="80%">
-              <PieChart>
-                <Pie
-                  data={paymentData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {paymentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex gap-4 mt-4 text-sm">
-              {paymentData.map((entry) => (
-                <div key={entry.name} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                  <span>
-                    {entry.name} ({entry.value}%)
-                  </span>
-                </div>
-              ))}
-            </div>
+            {stats?.salesCount === 0 ? (
+              <div className="text-muted-foreground italic">Sem vendas registradas.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="80%">
+                <PieChart>
+                  <Pie
+                    data={paymentData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {paymentData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
