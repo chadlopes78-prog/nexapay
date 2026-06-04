@@ -179,3 +179,5 @@ function SettingsPage() {
     </div>
   );
 }
+
+const Separator = () => <div className="h-px bg-slate-100 dark:bg-slate-800 w-full" />;
