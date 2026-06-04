@@ -1,38 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  CreditCard, 
-  DollarSign, 
-  ArrowUpRight, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  CreditCard,
+  DollarSign,
+  ArrowUpRight,
   ArrowDownRight,
   ShoppingCart,
-  Percent
+  Percent,
 } from "lucide-react";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from "@/components/ui/card";
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   BarChart,
   Bar,
   PieChart,
   Pie,
-  Cell
+  Cell,
 } from "recharts";
 
-export const Route = createFileRoute("/_dashboard/dashboard" as any)({
+export const Route = createFileRoute("/_dashboard/dashboard")({
   component: DashboardPage,
 });
 
@@ -53,9 +49,27 @@ const paymentData = [
 
 function DashboardPage() {
   const stats = [
-    { title: "Vendas Realizadas", value: "1,284", change: "+12.5%", icon: CreditCard, positive: true },
-    { title: "Vendas Perdidas", value: "156", change: "+2.1%", icon: TrendingDown, positive: false },
-    { title: "Receita Hoje", value: "24,500 MT", change: "+18.2%", icon: DollarSign, positive: true },
+    {
+      title: "Vendas Realizadas",
+      value: "1,284",
+      change: "+12.5%",
+      icon: CreditCard,
+      positive: true,
+    },
+    {
+      title: "Vendas Perdidas",
+      value: "156",
+      change: "+2.1%",
+      icon: TrendingDown,
+      positive: false,
+    },
+    {
+      title: "Receita Hoje",
+      value: "24,500 MT",
+      change: "+18.2%",
+      icon: DollarSign,
+      positive: true,
+    },
     { title: "Taxa de Conversão", value: "4.2%", change: "+0.8%", icon: Percent, positive: true },
   ];
 
@@ -76,11 +90,17 @@ function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <p className={cn(
-                "text-xs flex items-center mt-1",
-                stat.positive ? "text-green-600" : "text-red-600"
-              )}>
-                {stat.positive ? <ArrowUpRight className="h-3 w-3 mr-1" /> : <ArrowDownRight className="h-3 w-3 mr-1" />}
+              <p
+                className={cn(
+                  "text-xs flex items-center mt-1",
+                  stat.positive ? "text-green-600" : "text-red-600",
+                )}
+              >
+                {stat.positive ? (
+                  <ArrowUpRight className="h-3 w-3 mr-1" />
+                ) : (
+                  <ArrowDownRight className="h-3 w-3 mr-1" />
+                )}
                 {stat.change} desde ontem
               </p>
             </CardContent>
@@ -100,15 +120,21 @@ function DashboardPage() {
               <AreaChart data={data}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Area type="monotone" dataKey="revenue" stroke="#2563eb" fillOpacity={1} fill="url(#colorRevenue)" />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#2563eb"
+                  fillOpacity={1}
+                  fill="url(#colorRevenue)"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -143,7 +169,9 @@ function DashboardPage() {
               {paymentData.map((entry) => (
                 <div key={entry.name} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                  <span>{entry.name} ({entry.value}%)</span>
+                  <span>
+                    {entry.name} ({entry.value}%)
+                  </span>
                 </div>
               ))}
             </div>
@@ -154,7 +182,3 @@ function DashboardPage() {
   );
 }
 
-// Simple CN helper for dashboard page
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(" ");
-}

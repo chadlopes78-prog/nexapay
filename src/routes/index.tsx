@@ -1,20 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { 
-  ShieldCheck, 
-  Smartphone, 
-  BarChart3, 
-  Zap, 
-  Users, 
+import {
+  ShieldCheck,
+  Smartphone,
+  BarChart3,
+  Zap,
+  Users,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "CheckoutPro Mozambique | SaaS Profissional de Checkout" },
-      { name: "description", content: "A plataforma de checkout mais completa para Moçambique. Aceite M-Pesa e e-Mola com facilidade." },
+      {
+        name: "description",
+        content:
+          "A plataforma de checkout mais completa para Moçambique. Aceite M-Pesa e e-Mola com facilidade.",
+      },
     ],
   }),
   component: Index,
@@ -29,13 +33,21 @@ function Index() {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <ShieldCheck className="text-white h-5 w-5" />
           </div>
-          <span className="text-xl font-bold tracking-tight">CheckoutPro <span className="text-primary">MZ</span></span>
+          <span className="text-xl font-bold tracking-tight">
+            CheckoutPro <span className="text-primary">MZ</span>
+          </span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link to="/auth" className="text-sm font-medium hover:text-primary transition-colors py-2 px-4 rounded-md">
+          <Link
+            to="/auth"
+            className="text-sm font-medium hover:text-primary transition-colors py-2 px-4 rounded-md"
+          >
             Entrar
           </Link>
-          <Link to="/auth" className="text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors py-2 px-4 rounded-md">
+          <Link
+            to="/auth"
+            className="text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors py-2 px-4 rounded-md"
+          >
             Criar Conta
           </Link>
         </nav>
@@ -55,13 +67,15 @@ function Index() {
                   <span className="text-primary">M-Pesa e e-Mola</span>
                 </h1>
                 <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400 mt-4">
-                  Checkout de alta conversão, gestão de vendas completa e integrações locais. 
-                  A solução profissional para infoprodutores e e-commerce em Moçambique.
+                  Checkout de alta conversão, gestão de vendas completa e integrações locais. A
+                  solução profissional para infoprodutores e e-commerce em Moçambique.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 mt-8">
                 <Button size="lg" className="px-8 h-12 text-base" asChild>
-                  <Link to="/auth">Começar Agora <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                  <Link to="/auth">
+                    Começar Agora <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
                 </Button>
                 <Button size="lg" variant="outline" className="px-8 h-12 text-base">
                   Ver Demonstração
@@ -94,7 +108,8 @@ function Index() {
                 </div>
                 <h3 className="text-xl font-bold">Checkout de Alta Conversão</h3>
                 <p className="text-gray-500">
-                  Páginas otimizadas para mobile e carregamento instantâneo. Venda mais com menos esforço.
+                  Páginas otimizadas para mobile e carregamento instantâneo. Venda mais com menos
+                  esforço.
                 </p>
               </div>
               <div className="flex flex-col items-center space-y-4 text-center p-6 rounded-2xl border bg-white shadow-sm transition-all hover:shadow-md">
@@ -103,7 +118,8 @@ function Index() {
                 </div>
                 <h3 className="text-xl font-bold">Dashboard Completo</h3>
                 <p className="text-gray-500">
-                  Acompanhe suas vendas, receita e carrinhos abandonados em tempo real com gráficos profissionais.
+                  Acompanhe suas vendas, receita e carrinhos abandonados em tempo real com gráficos
+                  profissionais.
                 </p>
               </div>
             </div>
@@ -142,7 +158,8 @@ function Index() {
                 Pronto para profissionalizar suas vendas?
               </h2>
               <p className="text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Junte-se a centenas de empreendedores em Moçambique que já usam o CheckoutPro para gerir seus negócios.
+                Junte-se a centenas de empreendedores em Moçambique que já usam o CheckoutPro para
+                gerir seus negócios.
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
                 <Button size="lg" className="px-8 h-12" asChild>
@@ -150,8 +167,12 @@ function Index() {
                 </Button>
               </div>
               <div className="flex items-center justify-center gap-4 mt-6 text-sm text-gray-500">
-                <span className="flex items-center"><CheckCircle2 className="h-4 w-4 mr-1 text-green-500" /> Sem mensalidade</span>
-                <span className="flex items-center"><CheckCircle2 className="h-4 w-4 mr-1 text-green-500" /> Ativação na hora</span>
+                <span className="flex items-center">
+                  <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" /> Sem mensalidade
+                </span>
+                <span className="flex items-center">
+                  <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" /> Ativação na hora
+                </span>
               </div>
             </div>
           </div>
@@ -164,8 +185,12 @@ function Index() {
             © 2026 CheckoutPro Mozambique. Todos os direitos reservados.
           </p>
           <nav className="flex gap-4 sm:gap-6">
-            <Link className="text-xs hover:underline underline-offset-4" to="/">Termos de Serviço</Link>
-            <Link className="text-xs hover:underline underline-offset-4" to="/">Privacidade</Link>
+            <Link className="text-xs hover:underline underline-offset-4" to="/">
+              Termos de Serviço
+            </Link>
+            <Link className="text-xs hover:underline underline-offset-4" to="/">
+              Privacidade
+            </Link>
           </nav>
         </div>
       </footer>

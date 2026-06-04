@@ -1,50 +1,50 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  MoreHorizontal, 
-  ExternalLink, 
+import {
+  Package,
+  Plus,
+  Search,
+  MoreHorizontal,
+  ExternalLink,
   QrCode,
   Edit,
   Trash2,
-  Copy
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
-export const Route = createFileRoute("/_dashboard/products" as any)({
+export const Route = createFileRoute("/_dashboard/products")({
   component: ProductsPage,
 });
 
@@ -52,7 +52,7 @@ function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
+
   // New product state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -65,7 +65,7 @@ function ProductsPage() {
       .from("products")
       .select("*")
       .order("created_at", { ascending: false });
-    
+
     if (error) {
       toast.error("Erro ao buscar produtos");
     } else {
@@ -80,7 +80,9 @@ function ProductsPage() {
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) return;
 
     try {
@@ -92,7 +94,7 @@ function ProductsPage() {
           price: parseFloat(price),
           category,
           user_id: session.user.id,
-          status: 'active'
+          status: "active",
         })
         .select()
         .single();
@@ -148,20 +150,43 @@ function ProductsPage() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Nome do Produto</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Curso de Marketing" required />
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ex: Curso de Marketing"
+                    required
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Descrição</Label>
-                  <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Breve descrição do produto" />
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Breve descrição do produto"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="price">Preço (MT)</Label>
-                    <Input id="price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="1000" required />
+                    <Input
+                      id="price"
+                      type="number"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="1000"
+                      required
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="category">Categoria</Label>
-                    <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Educação" />
+                    <Input
+                      id="category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      placeholder="Educação"
+                    />
                   </div>
                 </div>
               </div>
@@ -213,16 +238,28 @@ function ProductsPage() {
                       <span className="text-xs text-muted-foreground">{product.category}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{product.price.toLocaleString('pt-MZ')} MT</TableCell>
+                  <TableCell>{product.price.toLocaleString("pt-MZ")} MT</TableCell>
                   <TableCell>
-                    <Badge variant={product.status === 'active' ? 'secondary' : 'outline'} className={product.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-100' : ''}>
-                      {product.status === 'active' ? 'Ativo' : 'Inativo'}
+                    <Badge
+                      variant={product.status === "active" ? "secondary" : "outline"}
+                      className={
+                        product.status === "active"
+                          ? "bg-green-100 text-green-700 hover:bg-green-100"
+                          : ""
+                      }
+                    >
+                      {product.status === "active" ? "Ativo" : "Inativo"}
                     </Badge>
                   </TableCell>
                   <TableCell>0</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => copyCheckoutLink(product.id)} title="Copiar Link">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => copyCheckoutLink(product.id)}
+                        title="Copiar Link"
+                      >
                         <Copy className="h-4 w-4" />
                       </Button>
                       <DropdownMenu>
@@ -233,7 +270,9 @@ function ProductsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => window.open(`/p/${product.id}`, '_blank')}>
+                          <DropdownMenuItem
+                            onClick={() => window.open(`/p/${product.id}`, "_blank")}
+                          >
                             <ExternalLink className="mr-2 h-4 w-4" /> Ver Checkout
                           </DropdownMenuItem>
                           <DropdownMenuItem>
