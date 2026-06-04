@@ -256,7 +256,12 @@ export const processPayment = createServerFn({ method: "POST" })
         method: data.method,
         amount,
         reference: paymentReference,
-        endpointHost: new URL(url).host,
+        endpointUrl: url,
+        apiKeyPrefix: apiKey.slice(0, 6),
+        apiKeyLength: apiKey.length,
+        baseUrlEnv: baseUrl ?? null,
+        mpesaEndpointEnv: process.env.PAYMENT_MPESA_ENDPOINT ?? null,
+        emolaEndpointEnv: process.env.PAYMENT_EMOLA_ENDPOINT ?? null,
       });
 
       const controller = new AbortController();
