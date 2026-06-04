@@ -19,6 +19,7 @@ import { Route as DashboardSalesRouteImport } from './routes/_dashboard/sales'
 import { Route as DashboardRecoveryRouteImport } from './routes/_dashboard/recovery'
 import { Route as DashboardProductsRouteImport } from './routes/_dashboard/products'
 import { Route as DashboardPixelRouteImport } from './routes/_dashboard/pixel'
+import { Route as DashboardFilesRouteImport } from './routes/_dashboard/files'
 import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dashboard'
 import { Route as DashboardCustomersRouteImport } from './routes/_dashboard/customers'
 
@@ -71,6 +72,11 @@ const DashboardPixelRoute = DashboardPixelRouteImport.update({
   path: '/pixel',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardFilesRoute = DashboardFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardDashboardRoute = DashboardDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/success': typeof SuccessRoute
   '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
+  '/files': typeof DashboardFilesRoute
   '/pixel': typeof DashboardPixelRoute
   '/products': typeof DashboardProductsRoute
   '/recovery': typeof DashboardRecoveryRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/success': typeof SuccessRoute
   '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
+  '/files': typeof DashboardFilesRoute
   '/pixel': typeof DashboardPixelRoute
   '/products': typeof DashboardProductsRoute
   '/recovery': typeof DashboardRecoveryRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/success': typeof SuccessRoute
   '/_dashboard/customers': typeof DashboardCustomersRoute
   '/_dashboard/dashboard': typeof DashboardDashboardRoute
+  '/_dashboard/files': typeof DashboardFilesRoute
   '/_dashboard/pixel': typeof DashboardPixelRoute
   '/_dashboard/products': typeof DashboardProductsRoute
   '/_dashboard/recovery': typeof DashboardRecoveryRoute
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/customers'
     | '/dashboard'
+    | '/files'
     | '/pixel'
     | '/products'
     | '/recovery'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/customers'
     | '/dashboard'
+    | '/files'
     | '/pixel'
     | '/products'
     | '/recovery'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/success'
     | '/_dashboard/customers'
     | '/_dashboard/dashboard'
+    | '/_dashboard/files'
     | '/_dashboard/pixel'
     | '/_dashboard/products'
     | '/_dashboard/recovery'
@@ -246,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardPixelRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/files': {
+      id: '/_dashboard/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof DashboardFilesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/dashboard': {
       id: '/_dashboard/dashboard'
       path: '/dashboard'
@@ -266,6 +285,7 @@ declare module '@tanstack/react-router' {
 interface DashboardRouteChildren {
   DashboardCustomersRoute: typeof DashboardCustomersRoute
   DashboardDashboardRoute: typeof DashboardDashboardRoute
+  DashboardFilesRoute: typeof DashboardFilesRoute
   DashboardPixelRoute: typeof DashboardPixelRoute
   DashboardProductsRoute: typeof DashboardProductsRoute
   DashboardRecoveryRoute: typeof DashboardRecoveryRoute
@@ -276,6 +296,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardCustomersRoute: DashboardCustomersRoute,
   DashboardDashboardRoute: DashboardDashboardRoute,
+  DashboardFilesRoute: DashboardFilesRoute,
   DashboardPixelRoute: DashboardPixelRoute,
   DashboardProductsRoute: DashboardProductsRoute,
   DashboardRecoveryRoute: DashboardRecoveryRoute,
@@ -297,3 +318,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
