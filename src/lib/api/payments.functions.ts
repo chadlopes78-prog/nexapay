@@ -263,6 +263,8 @@ export const processPayment = createServerFn({ method: "POST" })
         status: res.status,
         gatewayStatus: json?.status,
         gatewaySuccess: json?.success,
+        gatewayBody: text?.slice(0, 500),
+        requestBody: JSON.stringify(body),
       });
 
       if (!res.ok || json?.success === false) {
