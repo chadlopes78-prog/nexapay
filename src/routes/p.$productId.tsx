@@ -169,24 +169,19 @@ function CheckoutPage() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (paymentStep === "info") {
-      setPaymentStep("reference");
-      trackCheckout();
-      return;
-    }
 
-    if (!paymentReference) {
-      toast.error("Por favor, insira o código de referência do pagamento.");
+    if (!phone || phone.replace(/\D/g, "").length < 9) {
+      toast.error("Por favor, insira um número de telefone válido.");
       return;
     }
 
     setLoading(true);
-    toast.info(`Processando pagamento via ${paymentMethod.toUpperCase()}...`);
+    trackCheckout();
+    toast.info(`Enviando pedido de pagamento via ${paymentMethod.toUpperCase()}... Confirme no seu telefone.`);
 
     try {
-      // Find the page ID from the tracking ID (which is a hex string)
-      let finalTrafficPageId = null;
+      // Resolve traffic page id
+      let finalTrafficPageId: string | null = null;
       if (trafficPageId) {
         const { data: pageData } = await supabase
           .from("traffic_pages")
@@ -196,39 +191,72 @@ function CheckoutPage() {
         if (pageData) finalTrafficPageId = pageData.id;
       }
 
-      const { data, error } = await supabase.from("sales").insert({
-        product_id: productId,
-        customer_name: name,
-        customer_phone: phone,
-        amount: product.price,
-        payment_method: paymentMethod,
-        payment_reference: paymentReference,
-        status: "pending",
-        traffic_page_id: finalTrafficPageId,
-      }).select().single();
+      // Create pending sale first to get a stable reference
+      const { data: sale, error: saleErr } = await supabase
+        .from("sales")
+        .insert({
+          product_id: productId,
+          customer_name: name,
+          customer_phone: phone,
+          amount: product.price,
+          payment_method: paymentMethod,
+          status: "pending",
+          traffic_page_id: finalTrafficPageId,
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (saleErr) throw saleErr;
 
-      // Also record a purchase event for the traffic analysis funnel
+      // Call payment gateway
+      const result = await payFn({
+        data: {
+          method: paymentMethod,
+          msisdn: phone,
+          amount: Number(product.price),
+          reference: sale.id.slice(0, 16),
+        },
+      });
+
+      if (!result.success) {
+        await supabase
+          .from("sales")
+          .update({ status: "failed", payment_reference: result.error?.slice(0, 200) })
+          .eq("id", sale.id);
+        toast.error(result.error || "Pagamento recusado.");
+        setLoading(false);
+        return;
+      }
+
+      // Mark as paid
+      const gatewayRef =
+        (result.data && (result.data.transaction_id || result.data.reference || result.data.id)) ||
+        sale.id;
+      await supabase
+        .from("sales")
+        .update({ status: "paid", payment_reference: String(gatewayRef) })
+        .eq("id", sale.id);
+
       if (finalTrafficPageId) {
         await supabase.from("traffic_events").insert({
           page_id: finalTrafficPageId,
           event_type: "purchase",
-          metadata: { saleId: data.id, productId }
+          metadata: { saleId: sale.id, productId },
         });
       }
 
       trackPurchase();
-      toast.success("Pagamento enviado para verificação!");
-      
+      toast.success("Pagamento confirmado!");
+
       setTimeout(() => {
-        window.location.href = `/success?productId=${productId}&saleId=${data.id}`;
-      }, 1000);
+        window.location.href = `/success?productId=${productId}&saleId=${sale.id}`;
+      }, 800);
     } catch (error: any) {
-      toast.error("Erro ao processar pedido: " + error.message);
+      toast.error("Erro ao processar pagamento: " + error.message);
       setLoading(false);
     }
   };
+
 
 
   if (loading) {
