@@ -202,7 +202,7 @@ function CheckoutPage() {
         .insert({
           product_id: productId,
           customer_name: name,
-          customer_phone: phone,
+          customer_phone: contactPhone || phone,
           amount: product.price,
           payment_method: paymentMethod,
           status: "pending",
