@@ -42,7 +42,7 @@ import {
 
 export function TrafficAnalysis() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newPage, setNewPage] = useState({ name: "", url: "" });
+  const [newPage, setNewPage] = useState({ name: "", url: "", type: "normal" });
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
