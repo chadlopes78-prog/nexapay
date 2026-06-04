@@ -333,37 +333,18 @@ function CheckoutPage() {
           </div>
 
           <CardContent className="p-0 space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="checkout-name" className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  NOME COMPLETO *
-                </Label>
-                <Input
-                  id="checkout-name"
-                  placeholder="Ex: João Silva"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="checkout-phone" className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  NÚMERO DE TELEFONE * ({paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"})
-                </Label>
-                <Input
-                  id="checkout-phone"
-                  placeholder="84xxxxxxx ou 86xxxxxxx"
-                  required
-                  inputMode="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
-                />
-                <p className="text-[10px] text-slate-400">
-                  Você receberá um pedido de confirmação no seu telefone.
-                </p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="checkout-name" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                NOME COMPLETO *
+              </Label>
+              <Input
+                id="checkout-name"
+                placeholder="Ex: João Silva"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
+              />
             </div>
 
             <div className="space-y-4">
@@ -373,7 +354,7 @@ function CheckoutPage() {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("mpesa")}
+                  onClick={() => { setPaymentMethod("mpesa"); setPhone(""); }}
                   className={cn(
                     "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
                     paymentMethod === "mpesa"
@@ -388,7 +369,7 @@ function CheckoutPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("emola")}
+                  onClick={() => { setPaymentMethod("emola"); setPhone(""); }}
                   className={cn(
                     "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
                     paymentMethod === "emola"
@@ -403,6 +384,28 @@ function CheckoutPage() {
                 </button>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="checkout-phone" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {paymentMethod === "mpesa" ? "NÚMERO M-PESA *" : "NÚMERO E-MOLA *"}
+              </Label>
+              <Input
+                id="checkout-phone"
+                placeholder={paymentMethod === "mpesa" ? "84xxxxxxx ou 85xxxxxxx" : "86xxxxxxx ou 87xxxxxxx"}
+                required
+                inputMode="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className={cn(
+                  "h-12 border-slate-200 rounded-xl",
+                  paymentMethod === "mpesa" ? "focus:ring-blue-500" : "focus:ring-orange-500",
+                )}
+              />
+              <p className="text-[10px] text-slate-400">
+                Você receberá uma notificação no telemóvel para confirmar o pagamento via {paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}.
+              </p>
+            </div>
+
 
             <Button
               type="submit"
