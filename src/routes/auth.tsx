@@ -95,7 +95,7 @@ function AuthPage() {
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-white mb-4">
             <ShieldCheck className="h-8 w-8" />
           </div>
-          <h2 className="text-3xl font-bold tracking-tight">CheckoutPro Mozambique</h2>
+          <h2 className="text-3xl font-bold tracking-tight">DarkPay Mozambique</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Acesse sua conta para gerir suas vendas
           </p>
