@@ -14,6 +14,8 @@ const PAYMENT_ENDPOINTS = {
   emola: "/emola/c2b/pay/",
 } as const;
 
+const DEFAULT_PAYMENT_API_BASE_URL = "https://h.paymoz.tech";
+
 type PaymentGatewayResponse = {
   success?: boolean;
   message?: string | number | boolean | null;
@@ -42,11 +44,25 @@ export type PaymentResult =
       status?: number;
     };
 
-function buildPaymentUrl(baseUrl: string, method: "mpesa" | "emola") {
-  const cleanBase = baseUrl.replace(/\/+$/, "");
-  const apiBase = cleanBase.includes("/api/v1/pagamentos")
-    ? cleanBase.split("/api/v1/pagamentos")[0] + "/api/v1/pagamentos"
-    : cleanBase + "/api/v1/pagamentos";
+function normalizePaymentBaseUrl(baseUrl: string | undefined) {
+  const candidate = (baseUrl || DEFAULT_PAYMENT_API_BASE_URL).trim();
+  const extractedUrl = candidate.match(/https?:\/\/[^\s]+/)?.[0] ?? candidate;
+
+  if (!/^https?:\/\//i.test(extractedUrl)) {
+    return DEFAULT_PAYMENT_API_BASE_URL;
+  }
+
+  try {
+    const url = new URL(extractedUrl);
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return DEFAULT_PAYMENT_API_BASE_URL;
+  }
+}
+
+function buildPaymentUrl(baseUrl: string | undefined, method: "mpesa" | "emola") {
+  const cleanBase = normalizePaymentBaseUrl(baseUrl).replace(/\/+$/, "");
+  const apiBase = `${cleanBase}/api/v1/pagamentos`;
 
   return `${apiBase}${PAYMENT_ENDPOINTS[method]}`;
 }
@@ -55,7 +71,7 @@ export const processPayment = createServerFn({ method: "POST" })
   .inputValidator(PaymentInput)
   .handler(async ({ data }) => {
     const apiKey = process.env.PAYMENT_API_KEY;
-    const baseUrl = process.env.PAYMENT_API_BASE_URL || "https://h.paymoz.tech";
+    const baseUrl = process.env.PAYMENT_API_BASE_URL;
 
     if (!apiKey) {
       return {
