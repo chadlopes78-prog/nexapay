@@ -206,6 +206,8 @@ function ProductsPage() {
     setDeliveryType("none");
     setDeliveryLink("");
     setDeliveryFile(null);
+    setImageFile(null);
+    setImageUrl("");
   };
 
   const handleEditProduct = (product: any) => {
@@ -218,6 +220,8 @@ function ProductsPage() {
     setPixelId(product.pixel_id || "");
     setDeliveryType(product.delivery_type || "none");
     setDeliveryLink(product.delivery_link || "");
+    setImageUrl(product.image_url || "");
+    setImageFile(null);
     setIsEditDialogOpen(true);
   };
 
