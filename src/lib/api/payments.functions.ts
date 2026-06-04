@@ -16,15 +16,31 @@ const PAYMENT_ENDPOINTS = {
 
 type PaymentGatewayResponse = {
   success?: boolean;
-  message?: unknown;
-  error?: unknown;
-  detail?: unknown;
-  code?: unknown;
-  transaction_id?: unknown;
-  mpesa_transaction_id?: unknown;
-  emola_txid?: unknown;
+  message?: string | number | boolean | null;
+  error?: string | number | boolean | null;
+  detail?: string | number | boolean | null;
+  code?: string | number | boolean | null;
+  transaction_id?: string | number | boolean | null;
+  mpesa_transaction_id?: string | number | boolean | null;
+  emola_txid?: string | number | boolean | null;
+  reference?: string | number | boolean | null;
+  id?: string | number | boolean | null;
   raw?: string;
 };
+
+export type PaymentResult =
+  | {
+      success: true;
+      transactionId: string | null;
+      providerTxId: string | null;
+      data: PaymentGatewayResponse | null;
+    }
+  | {
+      success: false;
+      error: string;
+      code?: string | null;
+      status?: number;
+    };
 
 function buildPaymentUrl(baseUrl: string, method: "mpesa" | "emola") {
   const cleanBase = baseUrl.replace(/\/+$/, "");
@@ -70,11 +86,17 @@ export const processPayment = createServerFn({ method: "POST" })
 
     const localPrefix = msisdn.slice(3, 5);
     if (data.method === "mpesa" && !["84", "85"].includes(localPrefix)) {
-      return { success: false, error: "Para M-Pesa use um número que começa por 84 ou 85." };
+      return {
+        success: false,
+        error: "Para M-Pesa use um número que começa por 84 ou 85.",
+      };
     }
 
     if (data.method === "emola" && !["86", "87"].includes(localPrefix)) {
-      return { success: false, error: "Para e-Mola use um número que começa por 86 ou 87." };
+      return {
+        success: false,
+        error: "Para e-Mola use um número que começa por 86 ou 87.",
+      };
     }
 
     const body: Record<string, unknown> = {
@@ -110,17 +132,20 @@ export const processPayment = createServerFn({ method: "POST" })
         return {
           success: false,
           error: String(message),
-          code: json?.code,
+          code: json?.code == null ? null : String(json.code),
           status: res.status,
-        };
+        } satisfies PaymentResult;
       }
 
       return {
         success: true,
-        transactionId: json?.transaction_id ?? null,
-        providerTxId: json?.mpesa_transaction_id ?? json?.emola_txid ?? null,
+        transactionId: json?.transaction_id == null ? null : String(json.transaction_id),
+        providerTxId:
+          json?.mpesa_transaction_id == null && json?.emola_txid == null
+            ? null
+            : String(json.mpesa_transaction_id ?? json.emola_txid),
         data: json,
-      };
+      } satisfies PaymentResult;
     } catch (err: unknown) {
       console.error("processPayment error:", err);
       return {
