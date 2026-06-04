@@ -256,7 +256,6 @@ export const processPayment = createServerFn({ method: "POST" })
         success: true,
         saleId: sale.id,
         transactionId: transactionId ? String(transactionId) : null,
-        data: json,
       };
     } catch (err: unknown) {
       console.error("processPayment error", err);
