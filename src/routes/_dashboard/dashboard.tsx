@@ -286,7 +286,7 @@ function DashboardPage() {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-sm md:text-base text-muted-foreground">Resumo de desempenho e métricas em tempo real.</p>
         </div>
-        <DateRangePicker onRangeChange={handleRangeChange} initialPreset={preset} />
+        <DateRangePicker onRangeChange={handleRangeChange} initialPreset={preset} initialRange={dateRange} />
       </div>
 
       {isLoading ? (
