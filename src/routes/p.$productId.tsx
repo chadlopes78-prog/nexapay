@@ -12,7 +12,8 @@ import {
   CheckCircle2, 
   Lock,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  Package
 } from "lucide-react";
 import { toast } from "sonner";
 
