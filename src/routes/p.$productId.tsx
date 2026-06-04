@@ -45,8 +45,10 @@ function CheckoutPage() {
 
   // Form state
   const [name, setName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
+
 
   useEffect(() => {
     // Get traffic page ID from URL
@@ -200,7 +202,7 @@ function CheckoutPage() {
         .insert({
           product_id: productId,
           customer_name: name,
-          customer_phone: phone,
+          customer_phone: contactPhone || phone,
           amount: product.price,
           payment_method: paymentMethod,
           status: "pending",
@@ -356,6 +358,25 @@ function CheckoutPage() {
                 className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="checkout-contact-phone" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                NÚMERO DE CONTACTO (OPCIONAL)
+              </Label>
+              <Input
+                id="checkout-contact-phone"
+                placeholder="Ex: 84xxxxxxx"
+                inputMode="tel"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                className="h-12 border-slate-200 rounded-xl focus:ring-blue-500"
+              />
+              <p className="text-[10px] text-slate-400">
+                Usado apenas para contacto. O número de pagamento é pedido a seguir.
+              </p>
+            </div>
+
+
 
             <div className="space-y-4">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">
