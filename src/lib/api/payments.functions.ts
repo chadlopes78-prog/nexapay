@@ -109,6 +109,10 @@ function buildSaleCustomerName(customerName: string, contactPhone?: string) {
   return fullName.slice(0, 100);
 }
 
+function buildPaymentReference(saleId: string) {
+  return saleId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20);
+}
+
 export const processPayment = createServerFn({ method: "POST" })
   .inputValidator(PaymentInput)
   .handler(async ({ data }) => {
@@ -219,10 +223,12 @@ export const processPayment = createServerFn({ method: "POST" })
       };
     }
 
+    const paymentReference = buildPaymentReference(sale.id);
+
     const body: Record<string, unknown> = {
       msisdn,
       amount,
-      reference: sale.id.slice(0, 16),
+      reference: paymentReference,
     };
 
     if (data.method === "emola") {
@@ -233,7 +239,7 @@ export const processPayment = createServerFn({ method: "POST" })
       console.info("processPayment request started", {
         method: data.method,
         amount,
-        reference: sale.id.slice(0, 16),
+        reference: paymentReference,
         endpointHost: new URL(url).host,
       });
 
@@ -259,7 +265,7 @@ export const processPayment = createServerFn({ method: "POST" })
 
       console.info("processPayment response received", {
         method: data.method,
-        reference: sale.id.slice(0, 16),
+        reference: paymentReference,
         status: res.status,
         gatewayStatus: json?.status,
         gatewaySuccess: json?.success,
