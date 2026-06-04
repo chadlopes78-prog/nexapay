@@ -13,6 +13,8 @@ import {
   CreditCard,
   MessageSquare,
   BarChart3,
+  ChevronDown,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -25,6 +27,7 @@ export const Route = createFileRoute("/_dashboard")({
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["Relatórios"]);
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,10 +70,23 @@ function DashboardLayout() {
     { name: "Produtos", icon: Package, path: "/products" },
     { name: "Vendas", icon: CreditCard, path: "/sales" },
     { name: "Clientes", icon: Users, path: "/customers" },
-    { name: "Relatórios", icon: BarChart3, path: "/dashboard" },
+    { 
+      name: "Relatórios", 
+      icon: BarChart3, 
+      path: "/dashboard",
+      subItems: [
+        { name: "Análise de Tráfego", icon: Globe, path: "/reports/traffic" }
+      ]
+    },
     { name: "Pixel Facebook", icon: BarChart3, path: "/pixel" },
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
+
+  const toggleMenu = (name: string) => {
+    setExpandedMenus(prev => 
+      prev.includes(name) ? prev.filter(m => m !== name) : [...prev, name]
+    );
+  };
 
   if (!user) return null;
 
@@ -90,19 +106,62 @@ function DashboardLayout() {
       <Separator />
 
       <nav className="flex-1 space-y-1 p-3">
-        {menuItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
-              location.pathname === item.path ? "bg-primary/5 text-primary" : "text-slate-600",
-            )}
-          >
-            <item.icon className="h-5 w-5 shrink-0" />
-            {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
-          </Link>
-        ))}
+        {menuItems.map((item) => {
+          const isExpanded = expandedMenus.includes(item.name);
+          const hasSubItems = item.subItems && item.subItems.length > 0;
+          const isActive = location.pathname === item.path || (hasSubItems && item.subItems?.some(sub => location.pathname === sub.path));
+
+          return (
+            <div key={item.name} className="space-y-1">
+              {hasSubItems ? (
+                <button
+                  onClick={() => toggleMenu(item.name)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
+                    isActive ? "bg-primary/5 text-primary" : "text-slate-600",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
+                  </div>
+                  {(isSidebarOpen || isMobileMenuOpen) && (
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
+                  )}
+                </button>
+              ) : (
+                <Link
+                  to={item.path}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
+                    location.pathname === item.path ? "bg-primary/5 text-primary" : "text-slate-600",
+                  )}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
+                </Link>
+              )}
+
+              {hasSubItems && isExpanded && (isSidebarOpen || isMobileMenuOpen) && (
+                <div className="ml-4 space-y-1 border-l pl-4">
+                  {item.subItems?.map((subItem) => (
+                    <Link
+                      key={subItem.path}
+                      to={subItem.path}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
+                        location.pathname === subItem.path ? "bg-primary/5 text-primary" : "text-slate-600",
+                      )}
+                    >
+                      <subItem.icon className="h-4 w-4 shrink-0" />
+                      <span>{subItem.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       <div className="p-3">
