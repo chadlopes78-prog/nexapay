@@ -98,7 +98,7 @@ function DashboardLayout() {
             <ShieldCheck className="h-5 w-5 text-white" />
           </div>
           {(isSidebarOpen || isMobileMenuOpen) && (
-            <span className="text-lg font-bold tracking-tight truncate">CheckoutPro</span>
+            <span className="text-lg font-bold tracking-tight truncate">DarkPay</span>
           )}
         </Link>
       </div>
@@ -195,7 +195,7 @@ function DashboardLayout() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <ShieldCheck className="h-5 w-5 text-white" />
           </div>
-          <span className="text-lg font-bold tracking-tight">CheckoutPro</span>
+          <span className="text-lg font-bold tracking-tight">DarkPay</span>
         </Link>
         <Button
           variant="ghost"
