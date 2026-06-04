@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/pixel")({
+export const Route = createFileRoute("/_dashboard/pixel")({
   component: PixelPage,
 });
 
