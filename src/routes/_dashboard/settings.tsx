@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Settings, Shield, Globe, Bell, User } from "lucide-react";
+import { Settings, Shield, Globe, Bell, User, History, MessageSquare, PieChart } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { PushNotificationManager } from "@/components/dashboard/PushNotificationManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
