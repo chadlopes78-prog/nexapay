@@ -22,6 +22,7 @@ import { Route as DashboardPixelRouteImport } from './routes/_dashboard/pixel'
 import { Route as DashboardFilesRouteImport } from './routes/_dashboard/files'
 import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dashboard'
 import { Route as DashboardCustomersRouteImport } from './routes/_dashboard/customers'
+import { Route as ApiPublicE2paymentWebhookRouteImport } from './routes/api/public/e2payment-webhook'
 import { Route as DashboardReportsTrafficRouteImport } from './routes/_dashboard.reports.traffic'
 
 const SuccessRoute = SuccessRouteImport.update({
@@ -88,6 +89,12 @@ const DashboardCustomersRoute = DashboardCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => DashboardRoute,
 } as any)
+const ApiPublicE2paymentWebhookRoute =
+  ApiPublicE2paymentWebhookRouteImport.update({
+    id: '/api/public/e2payment-webhook',
+    path: '/api/public/e2payment-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DashboardReportsTrafficRoute = DashboardReportsTrafficRouteImport.update({
   id: '/reports/traffic',
   path: '/reports/traffic',
@@ -108,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof DashboardSettingsRoute
   '/p/$productId': typeof PProductIdRoute
   '/reports/traffic': typeof DashboardReportsTrafficRoute
+  '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -123,6 +131,7 @@ export interface FileRoutesByTo {
   '/settings': typeof DashboardSettingsRoute
   '/p/$productId': typeof PProductIdRoute
   '/reports/traffic': typeof DashboardReportsTrafficRoute
+  '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -140,6 +149,7 @@ export interface FileRoutesById {
   '/_dashboard/settings': typeof DashboardSettingsRoute
   '/p/$productId': typeof PProductIdRoute
   '/_dashboard/reports/traffic': typeof DashboardReportsTrafficRoute
+  '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/p/$productId'
     | '/reports/traffic'
+    | '/api/public/e2payment-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/p/$productId'
     | '/reports/traffic'
+    | '/api/public/e2payment-webhook'
   id:
     | '__root__'
     | '/'
@@ -188,6 +200,7 @@ export interface FileRouteTypes {
     | '/_dashboard/settings'
     | '/p/$productId'
     | '/_dashboard/reports/traffic'
+    | '/api/public/e2payment-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -196,6 +209,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   SuccessRoute: typeof SuccessRoute
   PProductIdRoute: typeof PProductIdRoute
+  ApiPublicE2paymentWebhookRoute: typeof ApiPublicE2paymentWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -291,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardCustomersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/api/public/e2payment-webhook': {
+      id: '/api/public/e2payment-webhook'
+      path: '/api/public/e2payment-webhook'
+      fullPath: '/api/public/e2payment-webhook'
+      preLoaderRoute: typeof ApiPublicE2paymentWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_dashboard/reports/traffic': {
       id: '/_dashboard/reports/traffic'
       path: '/reports/traffic'
@@ -335,7 +356,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   SuccessRoute: SuccessRoute,
   PProductIdRoute: PProductIdRoute,
+  ApiPublicE2paymentWebhookRoute: ApiPublicE2paymentWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
