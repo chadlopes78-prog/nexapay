@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/p/$productId")({
+export const Route = createFileRoute("/p/$productId" as any)({
   component: CheckoutPage,
 });
 
