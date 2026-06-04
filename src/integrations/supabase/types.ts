@@ -300,6 +300,7 @@ export type Database = {
           customer_phone: string | null
           id: string
           payment_method: string | null
+          payment_reference: string | null
           product_id: string | null
           status: string | null
           transaction_id: string | null
@@ -312,6 +313,7 @@ export type Database = {
           customer_phone?: string | null
           id?: string
           payment_method?: string | null
+          payment_reference?: string | null
           product_id?: string | null
           status?: string | null
           transaction_id?: string | null
@@ -324,6 +326,7 @@ export type Database = {
           customer_phone?: string | null
           id?: string
           payment_method?: string | null
+          payment_reference?: string | null
           product_id?: string | null
           status?: string | null
           transaction_id?: string | null
