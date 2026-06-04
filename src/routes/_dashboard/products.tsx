@@ -293,6 +293,17 @@ function ProductsPage() {
                     <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Educação" />
                   </div>
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="support_phone">Número de Suporte</Label>
+                  <Input
+                    id="support_phone"
+                    inputMode="tel"
+                    value={supportPhone}
+                    onChange={(e) => setSupportPhone(e.target.value)}
+                    placeholder="Ex: 84xxxxxxx ou +258 84xxxxxxx"
+                    required
+                  />
+                </div>
                 <div className="border-t pt-4">
                   <Label className="font-semibold mb-2 block">Entrega do Produto</Label>
                   <div className="grid gap-4">
@@ -376,6 +387,17 @@ function ProductsPage() {
                       placeholder="Educação"
                     />
                   </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-support_phone">Número de Suporte</Label>
+                  <Input
+                    id="edit-support_phone"
+                    inputMode="tel"
+                    value={supportPhone}
+                    onChange={(e) => setSupportPhone(e.target.value)}
+                    placeholder="Ex: 84xxxxxxx ou +258 84xxxxxxx"
+                    required
+                  />
                 </div>
                 <div className="border-t pt-4">
                   <Label className="font-semibold mb-2 block">Entrega do Produto</Label>
