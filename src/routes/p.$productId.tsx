@@ -213,6 +213,7 @@ function CheckoutPage() {
           msisdn: phone,
           amount: Number(product.price),
           reference: sale.id.slice(0, 16),
+          customerName: name,
         },
       });
 
