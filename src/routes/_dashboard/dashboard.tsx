@@ -46,11 +46,20 @@ export const Route = createFileRoute("/_dashboard/dashboard")({
 });
 
 function DashboardPage() {
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: startOfDay(subDays(new Date(), 6)),
-    to: endOfDay(new Date()),
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>(() => {
+    const saved = sessionStorage.getItem("dashboard-date-range");
+    if (saved) {
+      const { from, to } = JSON.parse(saved);
+      return { from: new Date(from), to: new Date(to) };
+    }
+    return {
+      from: startOfDay(subDays(new Date(), 6)),
+      to: endOfDay(new Date()),
+    };
   });
-  const [preset, setPreset] = useState<DateRangePreset>("last7days");
+  const [preset, setPreset] = useState<DateRangePreset>(() => {
+    return (sessionStorage.getItem("dashboard-preset") as DateRangePreset) || "last7days";
+  });
 
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ["dashboard-data", dateRange.from.toISOString(), dateRange.to.toISOString()],
@@ -257,6 +266,8 @@ function DashboardPage() {
   const handleRangeChange = (range: { from: Date; to: Date }, newPreset: DateRangePreset) => {
     setDateRange(range);
     setPreset(newPreset);
+    sessionStorage.setItem("dashboard-date-range", JSON.stringify(range));
+    sessionStorage.setItem("dashboard-preset", newPreset);
   };
 
   return (
