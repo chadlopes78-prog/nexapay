@@ -18,6 +18,7 @@ const DEFAULT_PAYMENT_API_BASE_URL = "https://h.paymoz.tech";
 
 type PaymentGatewayResponse = {
   success?: boolean;
+  status?: string | number | boolean | null;
   message?: string | number | boolean | null;
   error?: string | number | boolean | null;
   detail?: string | number | boolean | null;
@@ -84,10 +85,14 @@ function buildPaymentUrl(baseUrl: string | undefined, method: "mpesa" | "emola")
   return `${apiBase}${PAYMENT_ENDPOINTS[method]}`;
 }
 
+function normalizeApiKey(apiKey: string | undefined) {
+  return apiKey?.trim().replace(/^ApiKey\s+/i, "");
+}
+
 export const processPayment = createServerFn({ method: "POST" })
   .inputValidator(PaymentInput)
   .handler(async ({ data }) => {
-    const apiKey = process.env.PAYMENT_API_KEY;
+    const apiKey = normalizeApiKey(process.env.PAYMENT_API_KEY);
     const baseUrl = process.env.PAYMENT_API_BASE_URL;
 
     if (!apiKey) {
@@ -143,6 +148,15 @@ export const processPayment = createServerFn({ method: "POST" })
     }
 
     try {
+      console.info("processPayment request started", {
+        method: data.method,
+        amount: data.amount,
+        reference: data.reference,
+        endpointHost: new URL(url).host,
+      });
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45_000);
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -150,7 +164,9 @@ export const processPayment = createServerFn({ method: "POST" })
           Authorization: `ApiKey ${apiKey}`,
         },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       const text = await res.text();
       let json: PaymentGatewayResponse | null = null;
@@ -159,6 +175,14 @@ export const processPayment = createServerFn({ method: "POST" })
       } catch {
         json = { raw: text };
       }
+
+      console.info("processPayment response received", {
+        method: data.method,
+        reference: data.reference,
+        status: res.status,
+        gatewayStatus: json?.status,
+        gatewaySuccess: json?.success,
+      });
 
       if (!res.ok || json?.success === false) {
         const message =
@@ -185,7 +209,11 @@ export const processPayment = createServerFn({ method: "POST" })
       return {
         success: false,
         error:
-          err instanceof Error ? err.message : "Erro de rede ao contactar o gateway de pagamento.",
+          err instanceof Error && err.name === "AbortError"
+            ? "O gateway de pagamento demorou demais para responder. Verifique a BASE URL/endpoint ou tente novamente."
+            : err instanceof Error
+              ? err.message
+              : "Erro de rede ao contactar o gateway de pagamento.",
       };
     }
   });
