@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Settings, Shield, Globe, Bell, User, History, MessageSquare, PieChart } from "lucide-react";
+import { Settings, Shield, Globe, Bell, User, History, MessageSquare, PieChart, Smartphone } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { PushNotificationManager } from "@/components/dashboard/PushNotificationManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -123,6 +123,39 @@ function SettingsPage() {
               <Input id="new-password" type="password" placeholder="••••••••" />
             </div>
             <Button variant="outline">Alterar Senha</Button>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-primary/10">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-primary" />
+              <CardTitle>Instalar App (PWA)</CardTitle>
+            </div>
+            <CardDescription>Use o DarkPay como um aplicativo nativo no seu iPhone ou Android.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-white dark:bg-slate-900 border shadow-sm">
+                <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-primary">1</span>
+                </div>
+                <div className="text-sm">
+                  <p className="font-semibold">No iPhone (iOS):</p>
+                  <p className="text-muted-foreground">Abra no Safari, clique no ícone de <span className="font-bold">Compartilhar</span> e selecione <span className="font-bold">"Adicionar à Tela de Início"</span>.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-white dark:bg-slate-900 border shadow-sm">
+                <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-primary">2</span>
+                </div>
+                <div className="text-sm">
+                  <p className="font-semibold">No Android:</p>
+                  <p className="text-muted-foreground">Clique nos três pontos do navegador e selecione <span className="font-bold">"Instalar Aplicativo"</span>.</p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
