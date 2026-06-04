@@ -21,6 +21,12 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/p/$productId")({
   component: CheckoutPage,
 });
+declare global {
+  interface Window {
+    fbq: any;
+    _fbq: any;
+  }
+}
 
 
 function CheckoutPage() {
@@ -35,6 +41,46 @@ function CheckoutPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
+
+  // Facebook Pixel integration
+  useEffect(() => {
+    if (product?.pixel_id) {
+      // @ts-ignore
+      if (window.fbq) {
+        // @ts-ignore
+        window.fbq('track', 'ViewContent', {
+          content_name: product.name,
+          content_category: product.category,
+          content_ids: [product.id],
+          content_type: 'product',
+          value: product.price,
+          currency: 'MZN'
+        });
+      }
+    }
+  }, [product]);
+
+  const trackCheckout = () => {
+    if (product?.pixel_id && window.fbq) {
+      // @ts-ignore
+      window.fbq('track', 'InitiateCheckout', {
+        content_name: product.name,
+        value: product.price,
+        currency: 'MZN'
+      });
+    }
+  };
+
+  const trackPurchase = () => {
+    if (product?.pixel_id && window.fbq) {
+      // @ts-ignore
+      window.fbq('track', 'Purchase', {
+        content_name: product.name,
+        value: product.price,
+        currency: 'MZN'
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,6 +111,27 @@ function CheckoutPage() {
     if (productId) fetchData();
   }, [productId]);
 
+  useEffect(() => {
+    if (product?.pixel_id) {
+      // Initialize FB Pixel if it's not already there
+      // @ts-ignore
+      if (!window.fbq) {
+        // @ts-ignore
+        const initFB = (f,b,e,v,n,t,s) => {
+          if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s);
+        };
+        initFB(window, document,'script','https://connect.facebook.net/en_US/fbevents.js', null, null, null);
+      }
+      window.fbq('init', product.pixel_id);
+      window.fbq('track', 'PageView');
+    }
+  }, [product?.pixel_id]);
+
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone) {
@@ -76,21 +143,25 @@ function CheckoutPage() {
     toast.info(`Iniciando pagamento via ${paymentMethod.toUpperCase()}...`);
 
     try {
-      const { error } = await supabase.from("sales").insert({
+      trackCheckout();
+      const { data, error } = await supabase.from("sales").insert({
         product_id: productId,
         customer_name: name,
         customer_phone: phone,
         amount: product.price,
         payment_method: paymentMethod,
         status: "pending",
-      });
+      }).select().single();
 
       if (error) throw error;
 
       // Simulate the USSD push delay
       setTimeout(() => {
+        trackPurchase();
         toast.success("Solicitação de pagamento enviada! Verifique seu celular para confirmar.");
         setLoading(false);
+        // Redirect to success page
+        window.location.href = `/success?productId=${productId}&saleId=${data.id}`;
       }, 1500);
     } catch (error: any) {
       toast.error("Erro ao processar pedido: " + error.message);

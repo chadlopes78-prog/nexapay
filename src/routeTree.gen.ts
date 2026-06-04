@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SuccessRouteImport } from './routes/success'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,9 +19,15 @@ import { Route as DashboardSalesRouteImport } from './routes/_dashboard/sales'
 import { Route as DashboardRecoveryRouteImport } from './routes/_dashboard/recovery'
 import { Route as DashboardProductsRouteImport } from './routes/_dashboard/products'
 import { Route as DashboardPixelRouteImport } from './routes/_dashboard/pixel'
+import { Route as DashboardFilesRouteImport } from './routes/_dashboard/files'
 import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dashboard'
 import { Route as DashboardCustomersRouteImport } from './routes/_dashboard/customers'
 
+const SuccessRoute = SuccessRouteImport.update({
+  id: '/success',
+  path: '/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -65,6 +72,11 @@ const DashboardPixelRoute = DashboardPixelRouteImport.update({
   path: '/pixel',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardFilesRoute = DashboardFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardDashboardRoute = DashboardDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -79,8 +91,10 @@ const DashboardCustomersRoute = DashboardCustomersRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/success': typeof SuccessRoute
   '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
+  '/files': typeof DashboardFilesRoute
   '/pixel': typeof DashboardPixelRoute
   '/products': typeof DashboardProductsRoute
   '/recovery': typeof DashboardRecoveryRoute
@@ -91,8 +105,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/success': typeof SuccessRoute
   '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
+  '/files': typeof DashboardFilesRoute
   '/pixel': typeof DashboardPixelRoute
   '/products': typeof DashboardProductsRoute
   '/recovery': typeof DashboardRecoveryRoute
@@ -105,8 +121,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_dashboard': typeof DashboardRouteWithChildren
   '/auth': typeof AuthRoute
+  '/success': typeof SuccessRoute
   '/_dashboard/customers': typeof DashboardCustomersRoute
   '/_dashboard/dashboard': typeof DashboardDashboardRoute
+  '/_dashboard/files': typeof DashboardFilesRoute
   '/_dashboard/pixel': typeof DashboardPixelRoute
   '/_dashboard/products': typeof DashboardProductsRoute
   '/_dashboard/recovery': typeof DashboardRecoveryRoute
@@ -119,8 +137,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/success'
     | '/customers'
     | '/dashboard'
+    | '/files'
     | '/pixel'
     | '/products'
     | '/recovery'
@@ -131,8 +151,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/success'
     | '/customers'
     | '/dashboard'
+    | '/files'
     | '/pixel'
     | '/products'
     | '/recovery'
@@ -144,8 +166,10 @@ export interface FileRouteTypes {
     | '/'
     | '/_dashboard'
     | '/auth'
+    | '/success'
     | '/_dashboard/customers'
     | '/_dashboard/dashboard'
+    | '/_dashboard/files'
     | '/_dashboard/pixel'
     | '/_dashboard/products'
     | '/_dashboard/recovery'
@@ -158,11 +182,19 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   AuthRoute: typeof AuthRoute
+  SuccessRoute: typeof SuccessRoute
   PProductIdRoute: typeof PProductIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/success': {
+      id: '/success'
+      path: '/success'
+      fullPath: '/success'
+      preLoaderRoute: typeof SuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -226,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardPixelRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/files': {
+      id: '/_dashboard/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof DashboardFilesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/dashboard': {
       id: '/_dashboard/dashboard'
       path: '/dashboard'
@@ -246,6 +285,7 @@ declare module '@tanstack/react-router' {
 interface DashboardRouteChildren {
   DashboardCustomersRoute: typeof DashboardCustomersRoute
   DashboardDashboardRoute: typeof DashboardDashboardRoute
+  DashboardFilesRoute: typeof DashboardFilesRoute
   DashboardPixelRoute: typeof DashboardPixelRoute
   DashboardProductsRoute: typeof DashboardProductsRoute
   DashboardRecoveryRoute: typeof DashboardRecoveryRoute
@@ -256,6 +296,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardCustomersRoute: DashboardCustomersRoute,
   DashboardDashboardRoute: DashboardDashboardRoute,
+  DashboardFilesRoute: DashboardFilesRoute,
   DashboardPixelRoute: DashboardPixelRoute,
   DashboardProductsRoute: DashboardProductsRoute,
   DashboardRecoveryRoute: DashboardRecoveryRoute,
@@ -271,6 +312,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
   AuthRoute: AuthRoute,
+  SuccessRoute: SuccessRoute,
   PProductIdRoute: PProductIdRoute,
 }
 export const routeTree = rootRouteImport
