@@ -1,7 +1,7 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { processPayment } from "@/lib/api/payments.functions";
+import { processPayment, type PaymentResult } from "@/lib/api/payments.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -207,7 +207,7 @@ function CheckoutPage() {
       if (saleErr) throw saleErr;
 
       // Call payment gateway
-      const result = await payFn({
+      const result = (await payFn({
         data: {
           method: paymentMethod,
           msisdn: phone,
@@ -215,7 +215,7 @@ function CheckoutPage() {
           reference: sale.id.slice(0, 16),
           customerName: name,
         },
-      });
+      })) as PaymentResult;
 
       if (!result.success) {
         await supabase
