@@ -1,6 +1,6 @@
 import * as React from "react";
-import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, isSameDay } from "date-fns";
-import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
+import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
@@ -33,14 +33,16 @@ interface DateRangePickerProps {
   className?: string;
   onRangeChange: (range: { from: Date; to: Date }, preset: DateRangePreset) => void;
   initialPreset?: DateRangePreset;
+  initialRange?: { from: Date; to: Date };
 }
 
 export function DateRangePicker({
   className,
   onRangeChange,
   initialPreset = "last7days",
+  initialRange,
 }: DateRangePickerProps) {
-  const [date, setDate] = React.useState<DateRange | undefined>();
+  const [date, setDate] = React.useState<DateRange | undefined>(initialRange);
   const [preset, setPreset] = React.useState<DateRangePreset>(initialPreset);
 
   const getRangeFromPreset = (p: DateRangePreset): { from: Date; to: Date } => {
@@ -63,19 +65,11 @@ export function DateRangePicker({
       case "thisYear":
         return { from: startOfYear(now), to: endOfYear(now) };
       case "custom":
-        return { 
-          from: date?.from || startOfDay(subDays(now, 6)), 
-          to: date?.to || endOfDay(now) 
-        };
+        return initialRange || { from: startOfDay(subDays(now, 6)), to: endOfDay(now) };
       default:
         return { from: startOfDay(subDays(now, 6)), to: endOfDay(now) };
     }
   };
-
-  React.useEffect(() => {
-    const range = getRangeFromPreset(initialPreset);
-    setDate({ from: range.from, to: range.to });
-  }, []);
 
   const handlePresetChange = (value: string) => {
     const newPreset = value as DateRangePreset;
@@ -97,7 +91,7 @@ export function DateRangePicker({
   return (
     <div className={cn("flex flex-col sm:flex-row gap-2", className)}>
       <Select value={preset} onValueChange={handlePresetChange}>
-        <SelectTrigger className="w-full sm:w-[180px]">
+        <SelectTrigger className="w-full sm:w-[180px] bg-white dark:bg-slate-900">
           <SelectValue placeholder="Selecione o período" />
         </SelectTrigger>
         <SelectContent>
@@ -112,14 +106,14 @@ export function DateRangePicker({
         </SelectContent>
       </Select>
 
-      <div className={cn("grid gap-2", preset !== "custom" && "hidden sm:grid")}>
+      <div className={cn("grid gap-2", preset !== "custom" && "hidden lg:grid")}>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               id="date"
               variant={"outline"}
               className={cn(
-                "w-full sm:w-[300px] justify-start text-left font-normal",
+                "w-full sm:w-[260px] justify-start text-left font-normal bg-white dark:bg-slate-900",
                 !date && "text-muted-foreground"
               )}
               disabled={preset !== "custom"}
@@ -139,7 +133,7 @@ export function DateRangePicker({
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0" align="end">
             <Calendar
               initialFocus
               mode="range"
