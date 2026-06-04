@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export const Route = createFileRoute("/_dashboard/sales")({
+export const Route = createFileRoute("/sales")({
   component: SalesPage,
 });
 

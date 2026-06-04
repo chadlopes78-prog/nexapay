@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-export const Route = createFileRoute("/_dashboard/recovery")({
+export const Route = createFileRoute("/recovery")({
   component: RecoveryPage,
 });
 

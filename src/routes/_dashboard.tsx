@@ -57,13 +57,13 @@ function DashboardLayout() {
   };
 
   const menuItems = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard/dashboard" },
-    { name: "Produtos", icon: Package, path: "/dashboard/products" },
-    { name: "Vendas", icon: CreditCard, path: "/dashboard/sales" },
-    { name: "Clientes", icon: Users, path: "/dashboard/customers" },
-    { name: "Relatórios", icon: BarChart3, path: "/dashboard/dashboard" },
-    { name: "Pixel Facebook", icon: BarChart3, path: "/dashboard/pixel" },
-    { name: "Configurações", icon: Settings, path: "/dashboard/settings" },
+    { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { name: "Produtos", icon: Package, path: "/products" },
+    { name: "Vendas", icon: CreditCard, path: "/sales" },
+    { name: "Clientes", icon: Users, path: "/customers" },
+    { name: "Relatórios", icon: BarChart3, path: "/dashboard" },
+    { name: "Pixel Facebook", icon: BarChart3, path: "/pixel" },
+    { name: "Configurações", icon: Settings, path: "/settings" },
   ];
 
   if (!user) return null;
@@ -80,7 +80,7 @@ function DashboardLayout() {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center px-6">
-            <Link to="/dashboard/dashboard" className="flex items-center gap-2 overflow-hidden">
+            <Link to="/dashboard" className="flex items-center gap-2 overflow-hidden">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
                 <ShieldCheck className="h-5 w-5 text-white" />
               </div>
