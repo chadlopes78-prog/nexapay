@@ -67,13 +67,39 @@ function CheckoutPage() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!phone) {
+      toast.error("Por favor, insira seu número de celular.");
+      return;
+    }
+
+    setLoading(true);
     toast.info(`Iniciando pagamento via ${paymentMethod.toUpperCase()}...`);
 
-    // Simulate payment process
-    setTimeout(() => {
-      toast.success("Pagamento solicitado! Verifique seu celular.");
-    }, 1500);
+    try {
+      const { error } = await supabase.from("orders").insert({
+        product_id: productId,
+        merchant_id: product.user_id,
+        customer_name: name,
+        customer_email: email,
+        customer_phone: phone,
+        amount: product.price,
+        payment_method: paymentMethod,
+        status: "pending",
+      });
+
+      if (error) throw error;
+
+      // Simulate the USSD push delay
+      setTimeout(() => {
+        toast.success("Solicitação de pagamento enviada! Verifique seu celular para confirmar.");
+        setLoading(false);
+      }, 1500);
+    } catch (error: any) {
+      toast.error("Erro ao processar pedido: " + error.message);
+      setLoading(false);
+    }
   };
+
 
   if (loading) {
     return (
