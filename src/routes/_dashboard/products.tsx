@@ -61,10 +61,28 @@ function ProductsPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
+  const [supportPhone, setSupportPhone] = useState("");
   const [pixelId, setPixelId] = useState("");
   const [deliveryType, setDeliveryType] = useState("none");
   const [deliveryLink, setDeliveryLink] = useState("");
   const [deliveryFile, setDeliveryFile] = useState<File | null>(null);
+
+  const normalizeSupportPhone = (value: string) => {
+    let digits = value.replace(/\D/g, "");
+    if (digits.startsWith("258")) return digits;
+    if (digits.startsWith("0") && digits.length === 10) digits = digits.slice(1);
+    if (digits.length === 9) return `258${digits}`;
+    return digits;
+  };
+
+  const getValidSupportPhone = () => {
+    const normalized = normalizeSupportPhone(supportPhone);
+    if (!/^258\d{9}$/.test(normalized)) {
+      toast.error("Informe um número de suporte válido. Ex: 84xxxxxxx ou +258 84xxxxxxx");
+      return null;
+    }
+    return normalized;
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -97,6 +115,9 @@ function ProductsPage() {
     if (!user) return;
 
     try {
+      const validSupportPhone = getValidSupportPhone();
+      if (!validSupportPhone) return;
+
       let deliveryFileUrl = "";
 
       if (deliveryFile) {
@@ -124,6 +145,7 @@ function ProductsPage() {
           description,
           price: parseFloat(price),
           category,
+          support_phone: validSupportPhone,
           user_id: user.id,
           status: "active",
           pixel_id: pixelId,
@@ -157,6 +179,7 @@ function ProductsPage() {
     setDescription("");
     setPrice("");
     setCategory("");
+    setSupportPhone("");
     setPixelId("");
     setDeliveryType("none");
     setDeliveryLink("");
@@ -169,6 +192,7 @@ function ProductsPage() {
     setDescription(product.description || "");
     setPrice(product.price.toString());
     setCategory(product.category || "");
+    setSupportPhone(product.support_phone || "");
     setPixelId(product.pixel_id || "");
     setDeliveryType(product.delivery_type || "none");
     setDeliveryLink(product.delivery_link || "");
@@ -180,6 +204,9 @@ function ProductsPage() {
     if (!editingProduct) return;
 
     try {
+      const validSupportPhone = getValidSupportPhone();
+      if (!validSupportPhone) return;
+
       const { error } = await supabase
         .from("products")
         .update({
@@ -187,6 +214,7 @@ function ProductsPage() {
           description,
           price: parseFloat(price),
           category,
+          support_phone: validSupportPhone,
           pixel_id: pixelId,
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
