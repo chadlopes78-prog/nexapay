@@ -261,6 +261,7 @@ export type Database = {
           pixel_token: string | null
           price: number
           status: string | null
+          support_phone: string | null
           updated_at: string
           user_id: string
           warranty_days: number | null
@@ -281,6 +282,7 @@ export type Database = {
           pixel_token?: string | null
           price: number
           status?: string | null
+          support_phone?: string | null
           updated_at?: string
           user_id: string
           warranty_days?: number | null
@@ -301,6 +303,7 @@ export type Database = {
           pixel_token?: string | null
           price?: number
           status?: string | null
+          support_phone?: string | null
           updated_at?: string
           user_id?: string
           warranty_days?: number | null
