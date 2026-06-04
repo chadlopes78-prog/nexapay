@@ -17,7 +17,6 @@ export type PaymentResult =
       success: true;
       saleId: string;
       transactionId: string | null;
-      data: unknown;
     }
   | {
       success: false;
