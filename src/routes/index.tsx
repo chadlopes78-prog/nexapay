@@ -164,8 +164,8 @@ function Index() {
             © 2026 CheckoutPro Mozambique. Todos os direitos reservados.
           </p>
           <nav className="flex gap-4 sm:gap-6">
-            <Link className="text-xs hover:underline underline-offset-4" href="#">Termos de Serviço</Link>
-            <Link className="text-xs hover:underline underline-offset-4" href="#">Privacidade</Link>
+            <Link className="text-xs hover:underline underline-offset-4" to="/">Termos de Serviço</Link>
+            <Link className="text-xs hover:underline underline-offset-4" to="/">Privacidade</Link>
           </nav>
         </div>
       </footer>
