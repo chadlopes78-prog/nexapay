@@ -82,95 +82,90 @@ function CheckoutPage() {
     }
   }, [productId]);
 
-  // Facebook Pixel integration
+  // Load product + checkout in parallel (faster mobile first paint)
   useEffect(() => {
-    if (product?.pixel_id) {
-      // @ts-ignore
-      if (window.fbq) {
-        // @ts-ignore
-        window.fbq('track', 'ViewContent', {
-          content_name: product.name,
-          content_category: product.category,
-          content_ids: [product.id],
-          content_type: 'product',
-          value: product.price,
-          currency: 'MZN'
-        });
-      }
-    }
-  }, [product]);
-
-  const trackCheckout = () => {
-    if (product?.pixel_id && window.fbq) {
-      // @ts-ignore
-      window.fbq('track', 'InitiateCheckout', {
-        content_name: product.name,
-        value: product.price,
-        currency: 'MZN'
-      });
-    }
-  };
-
-  const trackPurchase = () => {
-    if (product?.pixel_id && window.fbq) {
-      // @ts-ignore
-      window.fbq('track', 'Purchase', {
-        content_name: product.name,
-        value: product.price,
-        currency: 'MZN'
-      });
-    }
-  };
-
-  useEffect(() => {
+    if (!productId) return;
+    let cancelled = false;
     const fetchData = async () => {
       setLoading(true);
-      const { data: productData, error: productError } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", productId)
-        .single();
-
-      if (productError) {
-        toast.error("Produto não encontrado");
-        setLoading(false);
-        return;
+      try {
+        const [productRes, checkoutRes] = await Promise.all([
+          supabase.from("products").select("*").eq("id", productId).single(),
+          supabase.from("checkouts").select("*").eq("product_id", productId).maybeSingle(),
+        ]);
+        if (cancelled) return;
+        if (productRes.error || !productRes.data) {
+          toast.error("Produto não encontrado");
+        } else {
+          setProduct(productRes.data);
+          setCheckout(checkoutRes.data ?? null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Checkout load error:", err);
+          toast.error("Erro ao carregar checkout");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      const { data: checkoutData } = await supabase
-        .from("checkouts")
-        .select("*")
-        .eq("product_id", productId)
-        .single();
-
-      setProduct(productData);
-      setCheckout(checkoutData);
-      setLoading(false);
     };
-
-    if (productId) fetchData();
+    fetchData();
+    return () => { cancelled = true; };
   }, [productId]);
 
+  // Facebook Pixel: init + ViewContent in one effect (no race, no crash)
   useEffect(() => {
-    if (product?.pixel_id) {
-      // Initialize FB Pixel if it's not already there
+    if (!product?.pixel_id) return;
+    try {
       // @ts-ignore
       if (!window.fbq) {
         // @ts-ignore
-        const initFB = (f,b,e,v,n,t,s) => {
-          if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-          n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s);
+        const initFB = (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) => {
+          if (f.fbq) return;
+          n = f.fbq = function () {
+            n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+          };
+          if (!f._fbq) f._fbq = n;
+          n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
+          t = b.createElement(e); t.async = !0; t.src = v;
+          s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
         };
-        initFB(window, document,'script','https://connect.facebook.net/en_US/fbevents.js', null, null, null);
+        initFB(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
       }
       window.fbq('init', product.pixel_id);
       window.fbq('track', 'PageView');
+      window.fbq('track', 'ViewContent', {
+        content_name: product.name,
+        content_category: product.category,
+        content_ids: [product.id],
+        content_type: 'product',
+        value: product.price,
+        currency: 'MZN'
+      });
+    } catch (e) {
+      console.error('FB Pixel error:', e);
     }
-  }, [product?.pixel_id]);
+  }, [product?.pixel_id, product?.id]);
+
+  const trackCheckout = () => {
+    try {
+      if (product?.pixel_id && window.fbq) {
+        window.fbq('track', 'InitiateCheckout', {
+          content_name: product.name, value: product.price, currency: 'MZN',
+        });
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const trackPurchase = () => {
+    try {
+      if (product?.pixel_id && window.fbq) {
+        window.fbq('track', 'Purchase', {
+          content_name: product.name, value: product.price, currency: 'MZN',
+        });
+      }
+    } catch (e) { console.error(e); }
+  };
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
