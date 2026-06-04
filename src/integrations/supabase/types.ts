@@ -406,6 +406,7 @@ export type Database = {
           id: string
           name: string
           tracking_id: string
+          type: string
           updated_at: string
           url: string
           user_id: string
@@ -415,6 +416,7 @@ export type Database = {
           id?: string
           name: string
           tracking_id?: string
+          type?: string
           updated_at?: string
           url: string
           user_id: string
@@ -424,6 +426,7 @@ export type Database = {
           id?: string
           name?: string
           tracking_id?: string
+          type?: string
           updated_at?: string
           url?: string
           user_id?: string
