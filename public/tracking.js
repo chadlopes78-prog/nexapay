@@ -7,7 +7,7 @@
   const trackingId = urlParams.get('id');
 
   if (!trackingId) {
-    console.error('CheckoutPro Tracking: Missing tracking ID');
+    console.error('DarkPay Tracking: Missing tracking ID');
     return;
   }
 
