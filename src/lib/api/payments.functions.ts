@@ -9,6 +9,20 @@ const PaymentInput = z.object({
   customerName: z.string().max(100).optional(),
 });
 
+const PAYMENT_ENDPOINTS = {
+  mpesa: "/c2b/pay/",
+  emola: "/emola/c2b/pay/",
+} as const;
+
+function buildPaymentUrl(baseUrl: string, method: "mpesa" | "emola") {
+  const cleanBase = baseUrl.replace(/\/+$/, "");
+  const apiBase = cleanBase.includes("/api/v1/pagamentos")
+    ? cleanBase.split("/api/v1/pagamentos")[0] + "/api/v1/pagamentos"
+    : cleanBase + "/api/v1/pagamentos";
+
+  return `${apiBase}${PAYMENT_ENDPOINTS[method]}`;
+}
+
 export const processPayment = createServerFn({ method: "POST" })
   .inputValidator(PaymentInput)
   .handler(async ({ data }) => {
@@ -19,12 +33,7 @@ export const processPayment = createServerFn({ method: "POST" })
       return { success: false, error: "API key de pagamento não configurada no servidor." };
     }
 
-    const path =
-      data.method === "mpesa"
-        ? "/api/v1/pagamentos/c2b/pay/"
-        : "/api/v1/pagamentos/emola/c2b/pay/";
-
-    const url = `${baseUrl.replace(/\/$/, "")}${path}`;
+    const url = buildPaymentUrl(baseUrl, data.method);
 
     // Normalize Mozambican phone to 258XXXXXXXXX (12 digits)
     let msisdn = data.msisdn.replace(/\D/g, "");
@@ -38,6 +47,15 @@ export const processPayment = createServerFn({ method: "POST" })
 
     if (!/^258\d{9}$/.test(msisdn)) {
       return { success: false, error: "Número de telefone inválido. Use o formato 84xxxxxxx, 85xxxxxxx, 86xxxxxxx ou 87xxxxxxx." };
+    }
+
+    const localPrefix = msisdn.slice(3, 5);
+    if (data.method === "mpesa" && !["84", "85"].includes(localPrefix)) {
+      return { success: false, error: "Para M-Pesa use um número que começa por 84 ou 85." };
+    }
+
+    if (data.method === "emola" && !["86", "87"].includes(localPrefix)) {
+      return { success: false, error: "Para e-Mola use um número que começa por 86 ou 87." };
     }
 
     const body: Record<string, unknown> = {
