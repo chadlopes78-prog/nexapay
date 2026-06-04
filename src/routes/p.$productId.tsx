@@ -421,8 +421,8 @@ function CheckoutPage() {
                 className={cn(
                   "rounded-xl border p-4 text-sm font-medium",
                   paymentErrorMessage
-                    ? "border-red-200 bg-red-50 text-red-700"
-                    : "border-blue-200 bg-blue-50 text-blue-700",
+                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                    : "border-primary/30 bg-primary/10 text-primary",
                 )}
               >
                 {paymentErrorMessage || paymentStatusMessage}
