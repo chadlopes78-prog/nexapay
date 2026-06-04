@@ -61,8 +61,8 @@ function DashboardLayout() {
     { name: "Produtos", icon: Package, path: "/dashboard/products" },
     { name: "Vendas", icon: CreditCard, path: "/dashboard/sales" },
     { name: "Clientes", icon: Users, path: "/dashboard/customers" },
+    { name: "Relatórios", icon: BarChart3, path: "/dashboard/dashboard" }, // Point to dashboard or create new reports page
     { name: "Pixel Facebook", icon: BarChart3, path: "/dashboard/pixel" },
-    { name: "Recuperação", icon: MessageSquare, path: "/dashboard/recovery" },
     { name: "Configurações", icon: Settings, path: "/dashboard/settings" },
   ];
 

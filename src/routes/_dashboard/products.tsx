@@ -61,9 +61,13 @@ function ProductsPage() {
 
   const fetchProducts = async () => {
     setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const { data, error } = await supabase
       .from("products")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -81,9 +85,9 @@ function ProductsPage() {
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) return;
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
 
     try {
       const { data, error } = await supabase
@@ -93,7 +97,7 @@ function ProductsPage() {
           description,
           price: parseFloat(price),
           category,
-          user_id: session.user.id,
+          user_id: user.id,
           status: "active",
         })
         .select()
