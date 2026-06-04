@@ -116,6 +116,7 @@ export type Database = {
           payment_method: string | null
           product_id: string
           status: string | null
+          traffic_page_id: string | null
           transaction_id: string | null
         }
         Insert: {
@@ -130,6 +131,7 @@ export type Database = {
           payment_method?: string | null
           product_id: string
           status?: string | null
+          traffic_page_id?: string | null
           transaction_id?: string | null
         }
         Update: {
@@ -144,6 +146,7 @@ export type Database = {
           payment_method?: string | null
           product_id?: string
           status?: string | null
+          traffic_page_id?: string | null
           transaction_id?: string | null
         }
         Relationships: [
@@ -152,6 +155,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_traffic_page_id_fkey"
+            columns: ["traffic_page_id"]
+            isOneToOne: false
+            referencedRelation: "traffic_pages"
             referencedColumns: ["id"]
           },
         ]
@@ -303,6 +313,7 @@ export type Database = {
           payment_reference: string | null
           product_id: string | null
           status: string | null
+          traffic_page_id: string | null
           transaction_id: string | null
         }
         Insert: {
@@ -316,6 +327,7 @@ export type Database = {
           payment_reference?: string | null
           product_id?: string | null
           status?: string | null
+          traffic_page_id?: string | null
           transaction_id?: string | null
         }
         Update: {
@@ -329,6 +341,7 @@ export type Database = {
           payment_reference?: string | null
           product_id?: string | null
           status?: string | null
+          traffic_page_id?: string | null
           transaction_id?: string | null
         }
         Relationships: [
@@ -344,6 +357,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_traffic_page_id_fkey"
+            columns: ["traffic_page_id"]
+            isOneToOne: false
+            referencedRelation: "traffic_pages"
             referencedColumns: ["id"]
           },
         ]
