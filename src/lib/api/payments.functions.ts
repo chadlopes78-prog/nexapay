@@ -60,10 +60,27 @@ function normalizePaymentBaseUrl(baseUrl: string | undefined) {
   }
 }
 
+function extractUrl(value: string | undefined): string | null {
+  if (!value) return null;
+  const match = value.trim().match(/https?:\/\/[^\s]+/);
+  if (!match) return null;
+  try {
+    new URL(match[0]);
+    return match[0];
+  } catch {
+    return null;
+  }
+}
+
 function buildPaymentUrl(baseUrl: string | undefined, method: "mpesa" | "emola") {
+  // Prefer per-method full endpoint env var if provided
+  const endpointEnv =
+    method === "mpesa" ? process.env.PAYMENT_MPESA_ENDPOINT : process.env.PAYMENT_EMOLA_ENDPOINT;
+  const fullEndpoint = extractUrl(endpointEnv);
+  if (fullEndpoint) return fullEndpoint;
+
   const cleanBase = normalizePaymentBaseUrl(baseUrl).replace(/\/+$/, "");
   const apiBase = `${cleanBase}/api/v1/pagamentos`;
-
   return `${apiBase}${PAYMENT_ENDPOINTS[method]}`;
 }
 
