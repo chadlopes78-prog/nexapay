@@ -128,7 +128,8 @@ export const processPayment = createServerFn({ method: "POST" })
       }
 
       if (!res.ok || json?.success === false) {
-        const message = json?.message || json?.error || json?.detail || `Falha no pagamento (HTTP ${res.status})`;
+        const message =
+          json?.message || json?.error || json?.detail || `Falha no pagamento (HTTP ${res.status})`;
         return {
           success: false,
           error: String(message),
@@ -150,7 +151,8 @@ export const processPayment = createServerFn({ method: "POST" })
       console.error("processPayment error:", err);
       return {
         success: false,
-        error: err instanceof Error ? err.message : "Erro de rede ao contactar o gateway de pagamento.",
+        error:
+          err instanceof Error ? err.message : "Erro de rede ao contactar o gateway de pagamento.",
       };
     }
   });
