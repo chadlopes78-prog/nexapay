@@ -79,11 +79,11 @@ function SalesPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">Carregando vendas...</TableCell>
+                  <TableCell colSpan={8} className="text-center py-12">Carregando vendas...</TableCell>
                 </TableRow>
               ) : !sales || sales.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     Sem vendas registradas ainda.
                   </TableCell>
                 </TableRow>
