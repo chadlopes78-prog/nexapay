@@ -16,6 +16,8 @@ import {
   ChevronDown,
   Globe,
   Bell,
+  Menu,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -245,8 +247,9 @@ function DashboardLayout() {
           variant="ghost"
           size="icon"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="rounded-full hover:bg-slate-100"
         >
-          <LayoutDashboard className="h-6 w-6" />
+          {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </Button>
       </div>
 
