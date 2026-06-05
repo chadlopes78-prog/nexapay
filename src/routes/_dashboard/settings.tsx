@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Settings, Shield, Globe, Bell, User, History, MessageSquare, PieChart, Smartphone } from "lucide-react";
+import { Settings, Shield, Globe, Bell, User, History, MessageSquare, PieChart, Smartphone, Lock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { PushNotificationManager } from "@/components/dashboard/PushNotificationManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -109,7 +109,7 @@ function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
@@ -118,11 +118,20 @@ function SettingsPage() {
             <CardDescription>Gerencie sua senha e autenticação.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-password">Nova Senha</Label>
-              <Input id="new-password" type="password" placeholder="••••••••" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">Nova Senha</Label>
+                <Input id="new-password" type="password" placeholder="••••••••" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+                <Input id="confirm-password" type="password" placeholder="••••••••" />
+              </div>
             </div>
-            <Button variant="outline">Alterar Senha</Button>
+            <Button variant="outline" className="gap-2">
+              <Lock className="h-4 w-4" />
+              Alterar Senha
+            </Button>
           </CardContent>
         </Card>
 
