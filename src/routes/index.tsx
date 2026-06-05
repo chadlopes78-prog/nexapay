@@ -8,8 +8,11 @@ function Index() {
   return (
     <div className="flex flex-col min-h-screen">
       <header className="px-4 lg:px-6 h-16 flex items-center border-b">
-        <Link className="flex items-center justify-center" to="/">
-          <span className="font-bold text-2xl tracking-tighter text-primary">DarkPay</span>
+        <Link className="flex items-center justify-center gap-2 group" to="/">
+          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center group-hover:rotate-6 transition-transform">
+             <div className="h-4 w-4 border-2 border-white" />
+          </div>
+          <span className="font-extrabold text-2xl tracking-tighter text-slate-900">DarkPay</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link className="text-sm font-medium hover:underline underline-offset-4" to="/auth">
