@@ -81,15 +81,15 @@ function DashboardPage() {
       const [currentSalesRes, prevSalesRes, productsRes] = await Promise.all([
         supabase
           .from("sales")
-          .select("*")
+          .select("id, amount, status, payment_method, customer_phone, customer_id, created_at")
           .gte("created_at", dateRange.from.toISOString())
           .lte("created_at", dateRange.to.toISOString()),
         supabase
           .from("sales")
-          .select("*")
+          .select("id, amount, status, payment_method, customer_phone, customer_id, created_at")
           .gte("created_at", prevFrom.toISOString())
           .lte("created_at", prevTo.toISOString()),
-        supabase.from("products").select("id")
+        supabase.from("products").select("id", { count: "estimated" })
       ]);
 
       const currentSales = currentSalesRes.data || [];
