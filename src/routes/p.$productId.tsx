@@ -346,31 +346,41 @@ function CheckoutPage() {
                   type="button"
                   onClick={() => { setPaymentMethod("mpesa"); setPhone(""); }}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
+                    "flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border-2 transition-all font-bold group relative overflow-hidden",
                     paymentMethod === "mpesa"
-                      ? "border-blue-600 bg-blue-50 text-blue-600"
-                      : "border-slate-100 hover:border-slate-200 text-slate-500",
+                      ? "border-blue-600 bg-blue-50 text-blue-600 ring-4 ring-blue-600/10"
+                      : "border-slate-100 hover:border-slate-200 text-slate-500 bg-white",
                   )}
                 >
-                  <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
+                  {paymentMethod === "mpesa" && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                    </div>
+                  )}
+                  <div className="h-14 w-14 rounded-xl overflow-hidden border border-slate-100 shadow-md group-hover:scale-110 transition-transform">
                     <img src="/mpesa-logo.jpg" className="h-full w-full object-cover" alt="M-Pesa" />
                   </div>
-                  <span className="text-sm">M-Pesa</span>
+                  <span className="text-sm tracking-tight">M-Pesa</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => { setPaymentMethod("emola"); setPhone(""); }}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-3 p-4 rounded-xl border-2 transition-all font-bold group",
+                    "flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border-2 transition-all font-bold group relative overflow-hidden",
                     paymentMethod === "emola"
-                      ? "border-orange-500 bg-orange-50 text-orange-600"
-                      : "border-slate-100 hover:border-slate-200 text-slate-500",
+                      ? "border-orange-500 bg-orange-50 text-orange-600 ring-4 ring-orange-500/10"
+                      : "border-slate-100 hover:border-slate-200 text-slate-500 bg-white",
                   )}
                 >
-                  <div className="h-12 w-12 rounded-lg overflow-hidden border border-slate-100 shadow-sm group-hover:scale-105 transition-transform">
+                  {paymentMethod === "emola" && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle2 className="h-4 w-4 text-orange-600" />
+                    </div>
+                  )}
+                  <div className="h-14 w-14 rounded-xl overflow-hidden border border-slate-100 shadow-md group-hover:scale-110 transition-transform">
                     <img src="/emola-logo.jpg" className="h-full w-full object-cover" alt="e-Mola" />
                   </div>
-                  <span className="text-sm">e-Mola</span>
+                  <span className="text-sm tracking-tight">e-Mola</span>
                 </button>
               </div>
             </div>
