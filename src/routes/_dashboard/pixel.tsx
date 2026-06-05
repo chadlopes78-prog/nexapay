@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_dashboard/pixel")({
   component: PixelPage,
@@ -28,7 +29,7 @@ function PixelPage() {
               <Label htmlFor="fb-pixel">Pixel ID</Label>
               <Input id="fb-pixel" placeholder="Ex: 1234567890" />
             </div>
-            <Button>Salvar Configurações</Button>
+            <Button onClick={() => toast.success("Configurações do Facebook Pixel salvas!")}>Salvar Configurações</Button>
           </CardContent>
         </Card>
 
@@ -42,7 +43,7 @@ function PixelPage() {
               <Label htmlFor="google-tag">Tag ID</Label>
               <Input id="google-tag" placeholder="Ex: G-ABC123XYZ" />
             </div>
-            <Button>Salvar Configurações</Button>
+            <Button onClick={() => toast.success("Configurações do Google salvas!")}>Salvar Configurações</Button>
           </CardContent>
         </Card>
       </div>

@@ -16,6 +16,8 @@ import {
   ChevronDown,
   Globe,
   Bell,
+  Menu,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -177,11 +179,11 @@ function DashboardLayout() {
                 <Link
                   to={item.path}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
-                    location.pathname === item.path ? "bg-primary/5 text-primary" : "text-slate-600",
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100 active:scale-95",
+                    location.pathname === item.path ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-600",
                   )}
                 >
-                  <item.icon className="h-5 w-5 shrink-0" />
+                  <item.icon className={cn("h-5 w-5 shrink-0", location.pathname === item.path ? "text-white" : "text-slate-500")} />
                   {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
                 </Link>
               )}
@@ -245,8 +247,9 @@ function DashboardLayout() {
           variant="ghost"
           size="icon"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="rounded-full hover:bg-slate-100"
         >
-          <LayoutDashboard className="h-6 w-6" />
+          {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </Button>
       </div>
 
