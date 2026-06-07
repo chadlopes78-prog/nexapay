@@ -338,7 +338,7 @@ function CheckoutPage() {
                     </div>
                   )}
                   <div className="h-14 w-14 rounded-xl overflow-hidden border border-slate-100 shadow-md group-hover:scale-110 transition-transform">
-                    <img src="/mpesa-logo.jpg" className="h-full w-full object-cover" alt="M-Pesa" />
+                    <img src="/mpesa-logo.jpg" className="h-full w-full object-cover" alt="M-Pesa" loading="lazy" decoding="async" />
                   </div>
                   <span className="text-sm tracking-tight">M-Pesa</span>
                 </button>
@@ -358,8 +358,9 @@ function CheckoutPage() {
                     </div>
                   )}
                   <div className="h-14 w-14 rounded-xl overflow-hidden border border-slate-100 shadow-md group-hover:scale-110 transition-transform">
-                    <img src="/emola-logo.jpg" className="h-full w-full object-cover" alt="e-Mola" />
+                    <img src="/emola-logo.jpg" className="h-full w-full object-cover" alt="e-Mola" loading="lazy" decoding="async" />
                   </div>
+
                   <span className="text-sm tracking-tight">e-Mola</span>
                 </button>
               </div>
