@@ -18,6 +18,8 @@ import {
   Bell,
   Menu,
   X,
+  Target,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
