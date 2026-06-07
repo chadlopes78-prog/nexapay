@@ -261,7 +261,7 @@ function CheckoutPage() {
                 {product.price.toLocaleString("pt-MZ")}MT
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-black" />
                 <span>Compra 100% segura</span>
               </div>
             </div>
@@ -411,7 +411,7 @@ function CheckoutPage() {
               <Button
                 type="submit"
                 disabled={processingPayment}
-                className="w-full h-14 text-lg font-bold bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="w-full h-14 text-lg font-bold bg-black hover:bg-slate-900 text-white rounded-xl shadow-xl disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 {processingPayment ? (
                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

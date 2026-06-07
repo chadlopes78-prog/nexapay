@@ -9,8 +9,8 @@ function Index() {
     <div className="flex flex-col min-h-screen">
       <header className="px-4 lg:px-6 h-16 flex items-center border-b">
         <Link className="flex items-center justify-center gap-2 group" to="/">
-          <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center group-hover:rotate-6 transition-transform">
-             <div className="h-4 w-4 border-2 border-white" />
+          <div className="h-9 w-9 bg-black rounded-xl flex items-center justify-center group-hover:rotate-6 transition-all border border-slate-800 shadow-lg">
+             <span className="text-white font-black text-lg">P</span>
           </div>
           <span className="font-extrabold text-2xl tracking-tighter text-slate-900">Paymentblack</span>
         </Link>
