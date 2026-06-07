@@ -6,14 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   ShieldCheck,
-  CreditCard,
-  Smartphone,
   CheckCircle2,
   Lock,
-  ChevronRight,
   ShieldAlert,
   Package,
   User,
@@ -23,8 +20,36 @@ import { cn } from "@/lib/utils";
 import mozFlag from "@/assets/moz-flag.png.asset.json";
 
 export const Route = createFileRoute("/p/$productId")({
+  loader: async ({ params: { productId } }) => {
+    const [productRes, checkoutRes] = await Promise.all([
+      supabase.from("products").select("*").eq("id", productId).single(),
+      supabase.from("checkouts").select("*").eq("product_id", productId).maybeSingle(),
+    ]);
+
+    if (productRes.error || !productRes.data) {
+      return { product: null, checkout: null };
+    }
+
+    return {
+      product: productRes.data,
+      checkout: checkoutRes.data ?? null,
+    };
+  },
+  head: ({ loaderData }) => {
+    const product = loaderData?.product;
+    if (!product) return {};
+    return {
+      meta: [
+        { title: `${product.name} | DarkPay Mozambique` },
+        { name: "description", content: product.description || "Checkout seguro via M-Pesa e e-Mola" },
+        { property: "og:title", content: product.name },
+        { property: "og:image", content: product.image_url || "" },
+      ],
+    };
+  },
   component: CheckoutPage,
 });
+
 declare global {
   interface Window {
     fbq: any;
@@ -32,15 +57,12 @@ declare global {
   }
 }
 
-
 function CheckoutPage() {
   const payFn = useServerFn(processPayment);
   const { productId } = useParams({ from: "/p/$productId" });
-  const [product, setProduct] = useState<any>(null);
-  const [checkout, setCheckout] = useState<any>(null);
+  const { product, checkout } = Route.useLoaderData();
+  
   const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
-
-  const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
@@ -51,7 +73,6 @@ function CheckoutPage() {
   const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
 
-
   useEffect(() => {
     // Get traffic page ID from URL
     const params = new URLSearchParams(window.location.search);
@@ -59,10 +80,6 @@ function CheckoutPage() {
     if (tp_id) {
       setTrafficPageId(tp_id);
       
-      // If we have a tracking ID, record a click event
-      // This ensures that even if the tracking script on the landing page 
-      // didn't record the click (e.g. adblocker on the landing page but not here), 
-      // we still count it.
       const recordClick = async () => {
         try {
           await supabase.functions.invoke('track-event', {
@@ -82,36 +99,6 @@ function CheckoutPage() {
     }
   }, [productId]);
 
-  // Load product + checkout in parallel (faster mobile first paint)
-  useEffect(() => {
-    if (!productId) return;
-    let cancelled = false;
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [productRes, checkoutRes] = await Promise.all([
-          supabase.from("products").select("*").eq("id", productId).single(),
-          supabase.from("checkouts").select("*").eq("product_id", productId).maybeSingle(),
-        ]);
-        if (cancelled) return;
-        if (productRes.error || !productRes.data) {
-          toast.error("Produto não encontrado");
-        } else {
-          setProduct(productRes.data);
-          setCheckout(checkoutRes.data ?? null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Checkout load error:", err);
-          toast.error("Erro ao carregar checkout");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchData();
-    return () => { cancelled = true; };
-  }, [productId]);
 
   // Facebook Pixel: init + ViewContent in one effect (no race, no crash)
   useEffect(() => {
