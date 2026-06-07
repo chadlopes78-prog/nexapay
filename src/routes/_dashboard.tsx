@@ -59,25 +59,29 @@ function DashboardLayout() {
             },
             (payload: any) => {
               if (payload.new.status === 'approved') {
+                const amount = payload.new.amount;
                 // Browser Toast
                 toast.success(
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-bold text-sm">Nova venda:</span>
-                    <span className="text-base">Pingou🎉 +{payload.new.amount} MT</span>
+                    <span className="font-bold text-sm">🔔 Nova Venda</span>
+                    <span className="text-base font-semibold">💰 Pingou🎉 {amount} MT</span>
                   </div>,
                   {
-                    icon: <div className="bg-green-100 p-1 rounded-full"><CreditCard className="h-4 w-4 text-green-600" /></div>,
-                    duration: 8000,
+                    icon: (
+                      <div className="bg-black p-1.5 rounded-lg border border-slate-800 shadow-sm flex items-center justify-center">
+                        <span className="text-[10px] font-black text-white leading-none">P</span>
+                      </div>
+                    ),
+                    duration: 10000,
                   }
                 );
 
-                // native Push Notification (if permission granted and app is open/PWA)
+                // native Push Notification
                 if ("Notification" in window && Notification.permission === "granted") {
-                  new Notification("Nova venda:", {
-                    body: `Pingou🎉 +${payload.new.amount} MT`,
+                  new Notification("🔔 Nova Venda", {
+                    body: `💰 Pingou🎉 ${amount} MT`,
                     icon: "/notification-icon.png",
                     badge: "/notification-icon.png",
-
                   });
                 }
               }
@@ -141,8 +145,8 @@ function DashboardLayout() {
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center px-6">
         <Link to="/dashboard" className="flex items-center gap-2 overflow-hidden">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
-            <ShieldCheck className="h-5 w-5 text-white" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black border border-slate-800 shadow-lg">
+            <span className="text-lg font-black text-white">P</span>
           </div>
           {(isSidebarOpen || isMobileMenuOpen) && (
             <span className="text-lg font-bold tracking-tight truncate">Paymentblack</span>
@@ -239,8 +243,8 @@ function DashboardLayout() {
       {/* Mobile Header */}
       <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
         <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <ShieldCheck className="h-5 w-5 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-black border border-slate-800 shadow-sm">
+            <span className="text-lg font-black text-white">P</span>
           </div>
           <span className="text-lg font-bold tracking-tight">Paymentblack</span>
         </Link>
