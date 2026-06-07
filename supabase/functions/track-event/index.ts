@@ -18,7 +18,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { trackingId, eventType, url, referrer, metadata } = await req.json()
+    const { trackingId, eventType, url, referrer, metadata, campaignId, adId, source, medium } = await req.json()
 
     if (!trackingId || !eventType) {
       return new Response(JSON.stringify({ error: 'Missing parameters' }), {
