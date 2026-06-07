@@ -12,7 +12,7 @@ function Index() {
           <div className="h-9 w-9 bg-black rounded-xl flex items-center justify-center group-hover:rotate-6 transition-all border border-slate-800 shadow-lg">
              <span className="text-white font-black text-lg">P</span>
           </div>
-          <span className="font-extrabold text-2xl tracking-tighter text-slate-900">Paymentblack</span>
+          <span className="font-black text-3xl tracking-tighter text-slate-900">PaymentBlack</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link className="text-sm font-medium hover:underline underline-offset-4" to="/auth">
