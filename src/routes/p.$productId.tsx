@@ -412,11 +412,11 @@ function CheckoutPage() {
             )}
 
 
-            <div className="sticky bottom-0 bg-white pt-2 pb-2 md:relative md:bg-transparent md:p-0">
+            <div className="sticky bottom-0 bg-white/80 backdrop-blur-md pt-2 pb-2 md:relative md:bg-transparent md:p-0 z-20">
               <Button
                 type="submit"
                 disabled={processingPayment}
-                className="w-full h-14 text-lg font-bold bg-black hover:bg-slate-900 text-white rounded-xl shadow-xl disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="w-full h-16 text-xl font-black bg-black hover:bg-slate-900 text-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-3 border-b-4 border-slate-800"
               >
                 {processingPayment ? (
                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
