@@ -302,7 +302,7 @@ function DashboardPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-8">
+      <Tabs defaultValue={tab || "overview"} value={tab} onValueChange={(val) => navigate({ to: '/dashboard', search: { tab: val } })} className="space-y-8">
         <TabsList className="bg-white/50 dark:bg-slate-900/50 p-1 border h-auto flex-wrap sm:flex-nowrap gap-1 rounded-xl">
           <TabsTrigger value="overview" className="rounded-lg py-2.5 px-6 data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-wider">
             Visão Geral
