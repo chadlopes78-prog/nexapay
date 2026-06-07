@@ -187,7 +187,10 @@ function DashboardPage() {
         previous: prevStats,
         productsCount,
         chartData,
-        recentSales: currentSales.slice(0, 10)
+        recentSales: currentSales.slice(0, 10),
+        funnel,
+        recentEvents,
+        alerts
       };
     }
   });
