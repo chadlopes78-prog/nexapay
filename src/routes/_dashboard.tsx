@@ -63,16 +63,17 @@ function DashboardLayout() {
                 // Browser Toast
                 toast.success(
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-bold text-sm">🔔 Nova Venda</span>
-                    <span className="text-base font-semibold">💰 Pingou🎉 {amount} MT</span>
+                    <span className="font-black text-sm uppercase tracking-widest text-emerald-600">🔔 Nova Venda</span>
+                    <span className="text-lg font-black text-slate-900 leading-none">💰 Pingou🎉 {amount} MT</span>
                   </div>,
                   {
                     icon: (
-                      <div className="bg-black p-1.5 rounded-lg border border-slate-800 shadow-sm flex items-center justify-center">
-                        <span className="text-[10px] font-black text-white leading-none">P</span>
+                      <div className="bg-black p-2 rounded-xl border border-slate-800 shadow-2xl flex items-center justify-center animate-bounce">
+                        <span className="text-sm font-black text-white leading-none">P</span>
                       </div>
                     ),
                     duration: 10000,
+                    className: "bg-white border-2 border-slate-100 shadow-[0_30px_60px_rgba(0,0,0,0.12)] rounded-2xl p-4",
                   }
                 );
 
