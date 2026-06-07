@@ -95,7 +95,7 @@ function AuthPage() {
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-black text-white mb-6 shadow-xl shadow-black/20 animate-in zoom-in duration-500">
             <span className="text-3xl font-black">P</span>
           </div>
-          <h2 className="text-3xl font-bold tracking-tight">PaymentBlack Mozambique</h2>
+          <h2 className="text-4xl font-black tracking-tight text-slate-900">PaymentBlack</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Acesse sua conta para gerir suas vendas
           </p>
