@@ -21,11 +21,13 @@ import {
   BarChart3,
   MousePointer2,
   Zap,
+  Globe,
 } from "lucide-react";
 import { PushNotificationManager } from "@/components/dashboard/PushNotificationManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   AreaChart,
@@ -102,12 +104,12 @@ function DashboardPage() {
         supabase.from("marketing_alerts").select("*").order('created_at', { ascending: false }).limit(5)
       ]);
 
-      const currentSales = currentSalesRes.data || [];
-      const prevSales = prevSalesRes.data || [];
+      const currentSales = (currentSalesRes.data as any[]) || [];
+      const prevSales = (prevSalesRes.data as any[]) || [];
       const productsCount = productsRes.data?.length || 0;
       const funnel = funnelRes.data || { total_visitors: 0, product_views: 0, checkout_initiations: 0, total_purchases: 0 };
-      const recentEvents = eventsRes.data || [];
-      const alerts = alertsRes.data || [];
+      const recentEvents = (eventsRes.data as any[]) || [];
+      const alerts = (alertsRes.data as any[]) || [];
 
       const calculateStats = (sales: any[]) => {
         const approved = sales.filter(s => s.status === "approved");
@@ -137,14 +139,13 @@ function DashboardPage() {
           emolaRevenue,
           failedCount: failed.length,
           totalCount: sales.length,
-          // Intelligence Center specific metrics (simulated with available data)
-          cpm: 12.5, // Total Cost per 1000 impressions (placeholder)
-          cpc: 0.85, // Cost per click
-          ctr: 4.2,  // Click through rate
-          cpa: 15.0, // Cost per acquisition
-          roas: 5.4, // Return on ad spend
-          rpc: revenue / (funnel.total_visitors || 1), // Revenue per customer (visitor)
-          rpv: revenue / (funnel.total_visitors || 1), // Revenue per visitor
+          cpm: 12.5,
+          cpc: 0.85,
+          ctr: 4.2,
+          cpa: 15.0,
+          roas: 5.4,
+          rpc: revenue / (funnel.total_visitors || 1),
+          rpv: revenue / (funnel.total_visitors || 1),
         };
       };
 
@@ -213,7 +214,6 @@ function DashboardPage() {
         icon: DollarSign,
         change: calculateChange(current.revenue, previous.revenue),
         positive: current.revenue >= previous.revenue,
-        description: "Total aprovado"
       },
       {
         title: "Vendas",
@@ -221,7 +221,6 @@ function DashboardPage() {
         icon: CreditCard,
         change: calculateChange(current.salesCount, previous.salesCount),
         positive: current.salesCount >= previous.salesCount,
-        description: "Pedidos aprovados"
       },
       {
         title: "Taxa de Conversão",
@@ -229,7 +228,6 @@ function DashboardPage() {
         icon: Percent,
         change: calculateChange(current.conversion, previous.conversion),
         positive: current.conversion >= previous.conversion,
-        description: "Aprovadas vs Total"
       },
       {
         title: "Ticket Médio",
@@ -237,7 +235,6 @@ function DashboardPage() {
         icon: Receipt,
         change: calculateChange(current.ticketMedio, previous.ticketMedio),
         positive: current.ticketMedio >= previous.ticketMedio,
-        description: "Média por venda"
       },
       {
         title: "Lucro Estimado",
@@ -245,7 +242,6 @@ function DashboardPage() {
         icon: TrendingUp,
         change: calculateChange(current.lucroEstimado, previous.lucroEstimado),
         positive: current.lucroEstimado >= previous.lucroEstimado,
-        description: "Após taxas (est.)"
       },
       {
         title: "Reembolsos",
@@ -253,7 +249,6 @@ function DashboardPage() {
         icon: RotateCcw,
         change: calculateChange(current.refunds, previous.refunds),
         positive: current.refunds <= previous.refunds,
-        description: "Vendas estornadas"
       },
       {
         title: "Clientes Únicos",
@@ -261,7 +256,6 @@ function DashboardPage() {
         icon: Users,
         change: calculateChange(current.uniqueCustomers, previous.uniqueCustomers),
         positive: current.uniqueCustomers >= previous.uniqueCustomers,
-        description: "Por telefone/ID"
       },
       {
         title: "Produtos Vendidos",
@@ -269,33 +263,8 @@ function DashboardPage() {
         icon: Package,
         change: calculateChange(current.productsSold, previous.productsSold),
         positive: current.productsSold >= previous.productsSold,
-        description: "Volume total"
       },
-      {
-        title: "Total M-Pesa",
-        value: `${current.mpesaRevenue.toLocaleString("pt-MZ")} MT`,
-        icon: Smartphone,
-        change: calculateChange(current.mpesaRevenue, previous.mpesaRevenue),
-        positive: current.mpesaRevenue >= previous.mpesaRevenue,
-        description: "Processado"
-      },
-      {
-        title: "Total e-Mola",
-        value: `${current.emolaRevenue.toLocaleString("pt-MZ")} MT`,
-        icon: Smartphone,
-        change: calculateChange(current.emolaRevenue, previous.emolaRevenue),
-        positive: current.emolaRevenue >= previous.emolaRevenue,
-        description: "Processado"
-      }
     ];
-  }, [dashboardData]);
-
-  const paymentData = useMemo(() => {
-    if (!dashboardData) return [];
-    return [
-      { name: "M-Pesa", value: dashboardData.current.mpesaRevenue, color: "#2563eb" },
-      { name: "e-Mola", value: dashboardData.current.emolaRevenue, color: "#ef4444" },
-    ].filter(d => d.value > 0);
   }, [dashboardData]);
 
   const handleRangeChange = (range: { from: Date; to: Date }, newPreset: DateRangePreset) => {
@@ -305,13 +274,15 @@ function DashboardPage() {
     sessionStorage.setItem("dashboard-preset", newPreset);
   };
 
+  if (isLoading) return <div className="p-12 text-center font-black animate-pulse">CARREGANDOPaymentBlack...</div>;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-12 max-w-[1600px] mx-auto">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b pb-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-bold px-3">PRO VERSION</Badge>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enterprise Ready</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-primary">Enterprise Ready</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900">Dashboard</h1>
           <p className="text-sm md:text-base text-muted-foreground font-medium">Bem-vindo ao centro de comando do <span className="text-slate-900 font-bold">PaymentBlack</span>.</p>
@@ -347,16 +318,6 @@ function DashboardPage() {
         <TabsContent value="overview" className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-3 space-y-6">
-              {isLoading ? (
-                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                  {[...Array(8)].map((_, i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardHeader className="h-20" />
-                      <CardContent className="h-16" />
-                    </Card>
-                  ))}
-                </div>
-              ) : (
                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                   {stats.slice(0, 8).map((stat) => (
                     <Card key={stat.title} className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-none bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
@@ -380,218 +341,168 @@ function DashboardPage() {
                             {stat.positive ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
                             {stat.change}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">vs anterior</span>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-              )}
             </div>
             <div className="lg:col-span-1 space-y-6">
                <PushNotificationManager />
-               
                {dashboardData?.alerts && dashboardData.alerts.length > 0 && (
                  <Card className="border-none shadow-md bg-black text-white overflow-hidden">
-                   <CardHeader className="pb-3 border-b border-white/10">
-                     <CardTitle className="text-sm font-bold flex items-center gap-2">
-                        <Bell className="h-4 w-4 text-primary" /> Alertas de Marketing
-                     </CardTitle>
-                   </CardHeader>
-                   <CardContent className="p-0">
-                     {dashboardData.alerts.map((alert: any) => (
-                       <div key={alert.id} className="p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors cursor-pointer group">
-                         <div className="flex items-start gap-3">
-                            <div className={cn(
-                              "mt-1.5 h-2 w-2 rounded-full shrink-0",
-                              alert.type === 'danger' ? 'bg-red-500' : 'bg-yellow-500'
-                            )} />
-                            <div className="space-y-1">
-                               <p className="text-xs font-bold leading-none group-hover:text-primary transition-colors">{alert.title}</p>
-                               <p className="text-[10px] text-slate-400 line-clamp-2">{alert.message}</p>
-                            </div>
-                         </div>
-                       </div>
-                     ))}
-                   </CardContent>
+                    <CardHeader className="pb-3 border-b border-white/10">
+                      <CardTitle className="text-sm font-bold flex items-center gap-2">
+                         <Bell className="h-4 w-4 text-primary" /> Alertas
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      {dashboardData.alerts.map((alert: any) => (
+                        <div key={alert.id} className="p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                           <p className="text-xs font-bold leading-none">{alert.title}</p>
+                           <p className="text-[10px] text-slate-400 mt-1">{alert.message}</p>
+                        </div>
+                      ))}
+                    </CardContent>
                  </Card>
                )}
             </div>
           </div>
+        </TabsContent>
 
-      {isLoading ? null : (
-        <>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-            {stats.slice(8).map((stat) => (
-              <Card key={stat.title} className="group hover:shadow-md transition-all duration-300 border-none bg-white dark:bg-slate-900 shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.title}</CardTitle>
-                  <stat.icon className="h-3.5 w-3.5 text-primary/60" />
+        <TabsContent value="intelligence" className="animate-in slide-in-from-right-8 duration-500 space-y-8">
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { label: 'CPM (Custo p/ 1000)', value: `MT ${dashboardData?.current.cpm.toFixed(2)}`, desc: 'Custo por mil impressões', icon: Activity },
+              { label: 'CPC (Custo p/ Clique)', value: `MT ${dashboardData?.current.cpc.toFixed(2)}`, desc: 'Custo médio por clique', icon: MousePointer2 },
+              { label: 'CTR (Taxa de Clique)', value: `${dashboardData?.current.ctr.toFixed(1)}%`, desc: 'Cliques vs Visualizações', icon: Target },
+              { label: 'CPA (Custo p/ Aquisição)', value: `MT ${dashboardData?.current.cpa.toFixed(2)}`, desc: 'Custo por venda aprovada', icon: CreditCard },
+              { label: 'ROAS', value: `${dashboardData?.current.roas.toFixed(1)}x`, desc: 'Retorno sobre investimento', icon: TrendingUp },
+              { label: 'Valor p/ Cliente', value: `MT ${dashboardData?.current.rpc.toFixed(2)}`, desc: 'Receita média por cliente', icon: Users },
+              { label: 'Receita p/ Visitante', value: `MT ${dashboardData?.current.rpv.toFixed(2)}`, desc: 'Valor gerado por cada clique', icon: DollarSign },
+              { label: 'Lucro Líquido (Est.)', value: `MT ${dashboardData?.current.lucroEstimado.toLocaleString("pt-MZ")}`, desc: 'Após taxas e custos', icon: Zap },
+            ].map((m, i) => (
+              <Card key={i} className="border-none shadow-sm hover:shadow-md transition-all group overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{m.label}</p>
+                    <m.icon className="h-4 w-4 text-slate-300 group-hover:text-black transition-colors" />
+                  </div>
+                  <CardTitle className="text-2xl font-black">{m.value}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-xl font-bold truncate tracking-tight">{stat.value}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className={cn(
-                      "text-[10px] font-bold flex items-center",
-                      stat.positive ? "text-emerald-600" : "text-rose-600"
-                    )}>
-                      {stat.positive ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
-                      {stat.change}
-                    </span>
-                  </div>
+                  <p className="text-[10px] text-muted-foreground font-medium">{m.desc}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
+        </TabsContent>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="shadow-sm border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold">Gráfico de Faturamento</CardTitle>
-                <CardDescription>Comparação de receita com o período anterior.</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[350px]">
-                {dashboardData?.current.totalCount === 0 ? (
-                  <div className="h-full flex items-center justify-center text-muted-foreground italic">
-                    Nenhum dado encontrado para este período.
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={dashboardData?.chartData}>
-                      <defs>
-                        <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} tickFormatter={(val) => val >= 1000 ? `${val/1000}k` : val} />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                        formatter={(value: any) => [value.toLocaleString("pt-MZ") + " MT", ""]}
-                      />
-                      <Legend verticalAlign="top" height={36} iconType="circle"/>
-                      <Area 
-                        name="Período Atual"
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="#2563eb" 
-                        strokeWidth={3}
-                        fillOpacity={1} 
-                        fill="url(#colorRev)" 
-                      />
-                      <Area 
-                        name="Período Anterior"
-                        type="monotone" 
-                        dataKey="prevRevenue" 
-                        stroke="#94a3b8" 
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        fill="transparent" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
+        <TabsContent value="funnel" className="animate-in slide-in-from-right-8 duration-500">
+           <Card className="border-none shadow-xl overflow-hidden bg-white">
+             <CardHeader className="pb-8 border-b">
+               <CardTitle className="text-2xl font-black flex items-center gap-2">
+                 <Target className="h-6 w-6 text-primary" /> Funil de Conversão
+               </CardTitle>
+             </CardHeader>
+             <CardContent className="pt-12 pb-16">
+               <div className="relative max-w-4xl mx-auto space-y-4">
+                   {[
+                     { label: 'Visitantes', value: dashboardData?.funnel.total_visitors || 0, color: 'bg-slate-900', width: 'w-full' },
+                     { label: 'Visualização Produto', value: dashboardData?.funnel.product_views || 0, color: 'bg-slate-800', width: 'w-[85%]' },
+                     { label: 'Início Checkout', value: dashboardData?.funnel.checkout_initiations || 0, color: 'bg-slate-700', width: 'w-[70%]' },
+                     { label: 'Compra Aprovada', value: dashboardData?.funnel.total_purchases || 0, color: 'bg-black', width: 'w-[55%]' },
+                   ].map((step, i, arr) => {
+                     const prevValue = i > 0 ? arr[i-1].value : step.value;
+                     const dropRate = i > 0 ? (step.value / (prevValue || 1) * 100).toFixed(1) : '100';
+                     return (
+                       <div key={i} className="flex items-center gap-6">
+                            <div className="w-48 shrink-0 text-right">
+                               <p className="text-xs font-black uppercase tracking-widest text-slate-400">{step.label}</p>
+                               <p className="text-xl font-black">{step.value.toLocaleString()}</p>
+                            </div>
+                            <div className="flex-1 h-14 relative">
+                               <div className={cn("h-full rounded-2xl shadow-lg flex items-center px-6", step.color, step.width)}>
+                                  <span className="text-white/40 text-[10px] font-black uppercase tracking-tighter">{dropRate}% conversão</span>
+                               </div>
+                            </div>
+                       </div>
+                     )
+                   })}
+               </div>
+             </CardContent>
+           </Card>
+        </TabsContent>
 
-            <Card className="shadow-sm border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold">Gráfico de Vendas</CardTitle>
-                <CardDescription>Volume de pedidos aprovados por dia.</CardDescription>
+        <TabsContent value="realtime" className="animate-in slide-in-from-right-8 duration-500">
+           <Card className="border-none shadow-sm overflow-hidden bg-white max-w-3xl">
+              <CardHeader className="border-b bg-slate-50/30">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                   <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                   Sessões Recentes
+                </CardTitle>
               </CardHeader>
-              <CardContent className="h-[350px]">
-                {dashboardData?.current.totalCount === 0 ? (
-                  <div className="h-full flex items-center justify-center text-muted-foreground italic">
-                    Nenhum dado encontrado.
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dashboardData?.chartData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} />
-                      <Tooltip 
-                        cursor={{fill: 'rgba(0,0,0,0.05)'}}
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      />
-                      <Legend verticalAlign="top" height={36} iconType="circle"/>
-                      <Bar name="Vendas Atuais" dataKey="sales" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                      <Bar name="Vendas Anteriores" dataKey="prevSales" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm lg:col-span-1">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold">Métodos de Pagamento</CardTitle>
-                <CardDescription>Distribuição de receita por canal.</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[350px] flex flex-col items-center justify-center">
-                {paymentData.length === 0 ? (
-                  <div className="text-muted-foreground italic">Sem dados de pagamento.</div>
-                ) : (
-                  <>
-                    <ResponsiveContainer width="100%" height="80%">
-                      <PieChart>
-                        <Pie
-                          data={paymentData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={70}
-                          outerRadius={90}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {paymentData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: any) => [value.toLocaleString("pt-MZ") + " MT", ""]} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="flex flex-wrap justify-center gap-4 mt-4">
-                      {paymentData.map((item) => (
-                        <div key={item.name} className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                          <span className="text-sm font-semibold">{item.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({((item.value / (dashboardData?.current.revenue || 1)) * 100).toFixed(0)}%)
-                          </span>
-                        </div>
-                      ))}
+              <CardContent className="p-0 divide-y max-h-[500px] overflow-y-auto">
+                 {dashboardData?.recentEvents.map((event: any, i: number) => (
+                    <div key={i} className="p-4 flex items-center justify-between">
+                       <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                             <Activity className="h-5 w-5 text-slate-600" />
+                          </div>
+                          <div>
+                             <p className="text-sm font-bold uppercase tracking-tight">{event.event_type}</p>
+                             <p className="text-[10px] text-slate-400">{format(parseISO(event.created_at), 'HH:mm:ss')}</p>
+                          </div>
+                       </div>
+                       <Badge variant="outline" className="text-[10px]">{event.source || 'Direto'}</Badge>
                     </div>
-                  </>
-                )}
+                 ))}
               </CardContent>
-            </Card>
+           </Card>
+        </TabsContent>
 
-            <Card className="shadow-sm border-none bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm lg:col-span-1">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold">Evolução da Conversão</CardTitle>
-                <CardDescription>Taxa de aprovação diária no período.</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[350px]">
+        <TabsContent value="ai" className="animate-in slide-in-from-right-8 duration-500">
+           <div className="max-w-4xl mx-auto py-24 text-center space-y-6">
+              <Zap className="h-16 w-16 text-primary mx-auto animate-bounce" />
+              <h2 className="text-4xl font-black tracking-tight">Assistente Marketing IA</h2>
+              <p className="text-lg text-muted-foreground">Estou analisando seu funil... Recomendações em tempo real disponíveis em breve.</p>
+           </div>
+        </TabsContent>
+      </Tabs>
+
+      <div className="mt-16 opacity-30 grayscale hover:opacity-100 transition-all duration-700 space-y-8">
+         <Separator />
+         <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="shadow-sm border-none bg-white">
+              <CardHeader><CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-400">Faturamento Histórico</CardTitle></CardHeader>
+              <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dashboardData?.chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 11 }} tickFormatter={(val) => `${val}%`} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      formatter={(value: any) => [`${value}%`, "Conversão"]}
-                    />
-                    <Line type="monotone" dataKey="conversion" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', r: 4 }} activeDot={{ r: 6 }} />
-                  </LineChart>
+                  <AreaChart data={dashboardData?.chartData}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="revenue" stroke="#000" fill="#000" fillOpacity={0.05} strokeWidth={2} />
+                  </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-          </div>
-        </>
-      )}
+            <Card className="shadow-sm border-none bg-white">
+              <CardHeader><CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-400">Volume de Vendas</CardTitle></CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dashboardData?.chartData}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="sales" fill="#000" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+         </div>
+      </div>
     </div>
   );
 }
+
+const Separator = () => <div className="h-px bg-slate-200 dark:bg-slate-800 w-full" />;
