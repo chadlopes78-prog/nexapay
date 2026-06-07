@@ -18,6 +18,8 @@ import {
   Bell,
   Menu,
   X,
+  Target,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -63,16 +65,17 @@ function DashboardLayout() {
                 // Browser Toast
                 toast.success(
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-bold text-sm">🔔 Nova Venda</span>
-                    <span className="text-base font-semibold">💰 Pingou🎉 {amount} MT</span>
+                    <span className="font-black text-sm uppercase tracking-widest text-emerald-600">🔔 Nova Venda</span>
+                    <span className="text-lg font-black text-slate-900 leading-none">💰 Pingou🎉 {amount} MT</span>
                   </div>,
                   {
                     icon: (
-                      <div className="bg-black p-1.5 rounded-lg border border-slate-800 shadow-sm flex items-center justify-center">
-                        <span className="text-[10px] font-black text-white leading-none">P</span>
+                      <div className="bg-black p-2 rounded-xl border border-slate-800 shadow-2xl flex items-center justify-center animate-bounce">
+                        <span className="text-sm font-black text-white leading-none">P</span>
                       </div>
                     ),
                     duration: 10000,
+                    className: "bg-white border-2 border-slate-100 shadow-[0_30px_60px_rgba(0,0,0,0.12)] rounded-2xl p-4",
                   }
                 );
 
@@ -118,6 +121,7 @@ function DashboardLayout() {
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { name: "Intelligence Center", icon: BarChart3, path: "/dashboard", params: { tab: 'intelligence' } },
     { name: "Produtos", icon: Package, path: "/products" },
     { name: "Vendas", icon: CreditCard, path: "/sales" },
     { name: "Clientes", icon: Users, path: "/customers" },
@@ -129,7 +133,8 @@ function DashboardLayout() {
         { name: "Análise de Tráfego", icon: Globe, path: "/reports/traffic" }
       ]
     },
-    { name: "Pixel Facebook", icon: BarChart3, path: "/pixel" },
+    { name: "Pixel Facebook", icon: Target, path: "/pixel" },
+    { name: "Assistente IA", icon: Zap, path: "/dashboard", params: { tab: 'ai' } },
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
 
@@ -183,12 +188,13 @@ function DashboardLayout() {
               ) : (
                 <Link
                   to={item.path}
+                  search={item.params}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100 active:scale-95",
-                    location.pathname === item.path ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-600",
+                    location.pathname === item.path && (!item.params || Object.keys(item.params).every(k => (new URLSearchParams(location.search)).get(k) === (item.params as any)[k])) ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-600",
                   )}
                 >
-                  <item.icon className={cn("h-5 w-5 shrink-0", location.pathname === item.path ? "text-white" : "text-slate-500")} />
+                  <item.icon className={cn("h-5 w-5 shrink-0", location.pathname === item.path && (!item.params || Object.keys(item.params).every(k => (new URLSearchParams(location.search)).get(k) === (item.params as any)[k])) ? "text-white" : "text-slate-500")} />
                   {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
                 </Link>
               )}
