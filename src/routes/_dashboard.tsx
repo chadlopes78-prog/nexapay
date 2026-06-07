@@ -119,6 +119,7 @@ function DashboardLayout() {
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { name: "Intelligence Center", icon: BarChart3, path: "/dashboard", params: { tab: 'intelligence' } },
     { name: "Produtos", icon: Package, path: "/products" },
     { name: "Vendas", icon: CreditCard, path: "/sales" },
     { name: "Clientes", icon: Users, path: "/customers" },
@@ -130,7 +131,8 @@ function DashboardLayout() {
         { name: "Análise de Tráfego", icon: Globe, path: "/reports/traffic" }
       ]
     },
-    { name: "Pixel Facebook", icon: BarChart3, path: "/pixel" },
+    { name: "Pixel Facebook", icon: Target, path: "/pixel" },
+    { name: "Assistente IA", icon: Zap, path: "/dashboard", params: { tab: 'ai' } },
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
 
