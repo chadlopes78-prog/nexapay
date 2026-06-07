@@ -1,27 +1,31 @@
-Auditoria e Otimização do SaaS:
+text
+1. Performance & Infrastructure Optimization
+- Implement strict separation of user data in all dashboard queries.
+- Optimize database indexes and queries for high performance.
+- Implement comprehensive event tracking (ViewContent, AddToCart, InitiateCheckout, Purchase, Lead, PageView).
+- Ensure 100% responsiveness across all requested viewports (320px to 1920px).
 
-1. **Responsividade e UX:**
-   - Padronizar os botões em todo o sistema (produtos, vendas, settings) para garantir área de toque suficiente e estado hover/active correto.
-   - Revisar componentes de formulário em dispositivos mobile (tamanho de input, alinhamento, padding).
-   - Ajustar o Dashboard para não sofrer com quebras de layout em resoluções menores.
+2. Rebranding & UI/UX Elevation (Human Engineering)
+- Deep scan and removal of "DarkPay" references.
+- Visual refinement of the "PaymentBlack" identity (Premium Fintech look).
+- Redesign notification icons and toasts to match the premium "P" branding.
+- Polish spacings, typography, and component layouts to eliminate "AI-generated" feel.
 
-2. **Otimização de Desempenho:**
-   - Revisar carregamento de dados nas rotas do dashboard (usar `prefetch` e garantir cache eficiente).
-   - Implementar `React.lazy` e `Suspense` para rotas pesadas.
-   - Otimizar renderização de tabelas grandes (uso de `memo`).
-   - Corrigir erros de console e avisos de React.
+3. New Dashboard Modules
+- Implement "Intelligence Center" (📊 Metrics: Revenue, Profit, CPM, CPC, CTR, CPA, ROAS, Average Ticket, Conversion Rate, RPC, RPV).
+- Implement "Conversion Funnel" (🎯 Funnel stages: Visitors -> Product View -> Checkout -> Payment -> Purchase).
+- Implement "Live Sessions" (🔴 Real-time visitors: source, device, page, time).
+- Implement "Traffic Origins" visualization (Facebook, Instagram, WhatsApp, Google, TikTok, Direct, Organic, Affiliates).
+- Implement "Smart Alerts" system (Alerts for low CTR, slow checkout, high CPA, etc.).
+- Implement "AI Marketing Assistant" interface for recommendations and bottleneck detection.
 
-3. **Interface Premium:**
-   - Adicionar ícone e branding visual consistente em todas as páginas (favicon, logos).
-   - Refinar o esquema de cores e espaçamentos seguindo diretrizes de SaaS moderno.
-   - Melhorar estados de loading e feedback de ações (toasts, placeholders).
+4. Checkout Ultra Optimization
+- Audit and refine checkout load times (< 1s target).
+- Implement progress indicators and lazy loading for heavy assets.
+- Ensure cross-device stability and prevent memory leaks.
 
-4. **Funcionalidades e Segurança:**
-   - Auditoria de todas as rotas `_dashboard` para garantir que botões e links estejam vinculados a ações funcionais.
-   - Corrigir eventuais bugs de segurança (verificar policies do Supabase via código se possível).
-   - Implementar tratamento de erro robusto em todas as chamadas de API.
-   - Garantir que nenhum botão fique inativo (adicionar feedback visual de "em breve" ou desabilitar se necessário).
-
-5. **Notificações:**
-   - Refinar o estilo visual das notificações (PWA e toast).
-   - Garantir entrega confiável em mobile.
+Technical Details:
+- Frontend: React (TanStack Router + Query), Tailwind CSS, Lucide icons.
+- Analytics: Use the existing `traffic_events` table for granular tracking.
+- Security: Review RLS policies to ensure user data isolation.
+- State: Local and session storage for performance cache.
