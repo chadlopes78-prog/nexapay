@@ -262,7 +262,7 @@ function CheckoutPage() {
               <h1 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
                 {product.name}
               </h1>
-              <div className="text-2xl md:text-3xl font-black text-black">
+              <div className="text-3xl md:text-4xl font-black text-black tracking-tighter">
                 {product.price.toLocaleString("pt-MZ")}MT
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
