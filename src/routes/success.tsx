@@ -16,37 +16,32 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/success")({
+  loader: async ({ search }) => {
+    const productId = search.productId as string;
+    const saleId = search.saleId as string;
+    
+    if (!productId || !saleId) return { sale: null, product: null };
+    
+    const { data: saleData } = await supabase
+      .from("sales")
+      .select("*, products(*)")
+      .eq("id", saleId)
+      .single();
+      
+    if (!saleData) return { sale: null, product: null };
+    
+    return {
+      sale: saleData,
+      product: saleData.products,
+    };
+  },
   component: SuccessPage,
 });
 
 function SuccessPage() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const productId = searchParams.get("productId");
-  const saleId = searchParams.get("saleId");
-  
-  const [product, setProduct] = useState<any>(null);
-  const [sale, setSale] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { sale, product } = Route.useLoaderData();
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!productId || !saleId) return;
-      
-      const { data: saleData } = await supabase
-        .from("sales")
-        .select("*, products(*)")
-        .eq("id", saleId)
-        .single();
-        
-      if (saleData) {
-        setSale(saleData);
-        setProduct(saleData.products);
-      }
-      setLoading(false);
-    };
-    
-    fetchData();
-  }, [productId, saleId]);
 
   if (loading) {
     return (
