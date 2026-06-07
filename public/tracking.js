@@ -17,6 +17,7 @@
   
   // Helper to send events
   async function sendEvent(eventType, metadata = {}) {
+    const params = new URLSearchParams(window.location.search);
     try {
       const response = await fetch(`${BASE_URL}/functions/v1/track-event`, {
         method: 'POST',
@@ -28,6 +29,10 @@
           eventType: eventType,
           url: window.location.href,
           referrer: document.referrer,
+          campaignId: params.get('utm_campaign'),
+          adId: params.get('utm_id') || params.get('fbclid'),
+          source: params.get('utm_source'),
+          medium: params.get('utm_medium'),
           metadata: metadata
         })
       });
