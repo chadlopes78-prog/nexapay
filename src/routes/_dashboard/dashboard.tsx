@@ -85,10 +85,10 @@ function DashboardPage() {
       const prevFrom = subDays(dateRange.from, daysDiff);
       const prevTo = subSeconds(dateRange.from, 1);
 
-      const [currentSalesRes, prevSalesRes, productsRes] = await Promise.all([
+      const [currentSalesRes, prevSalesRes, productsRes, funnelRes, eventsRes, alertsRes] = await Promise.all([
         supabase
           .from("sales")
-          .select("id, amount, status, payment_method, customer_phone, customer_id, created_at")
+          .select("id, amount, status, payment_method, customer_phone, customer_id, created_at, traffic_page_tracking_id")
           .gte("created_at", dateRange.from.toISOString())
           .lte("created_at", dateRange.to.toISOString()),
         supabase
@@ -96,7 +96,10 @@ function DashboardPage() {
           .select("id, amount, status, payment_method, customer_phone, customer_id, created_at")
           .gte("created_at", prevFrom.toISOString())
           .lte("created_at", prevTo.toISOString()),
-        supabase.from("products").select("id", { count: "estimated" })
+        supabase.from("products").select("id", { count: "estimated" }),
+        supabase.from("funnel_stats").select("*").maybeSingle(),
+        supabase.from("traffic_events").select("*").order('created_at', { ascending: false }).limit(50),
+        supabase.from("marketing_alerts").select("*").order('created_at', { ascending: false }).limit(5)
       ]);
 
       const currentSales = currentSalesRes.data || [];
