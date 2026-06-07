@@ -92,12 +92,10 @@ function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-white mb-6 shadow-xl shadow-primary/20 animate-in zoom-in duration-500">
-            <div className="h-8 w-8 border-4 border-white rounded-sm flex items-center justify-center">
-               <div className="h-2 w-2 bg-white" />
-            </div>
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-black text-white mb-6 shadow-xl shadow-black/20 animate-in zoom-in duration-500">
+            <span className="text-3xl font-black">P</span>
           </div>
-          <h2 className="text-3xl font-bold tracking-tight">DarkPay Mozambique</h2>
+          <h2 className="text-3xl font-bold tracking-tight">PaymentBlack Mozambique</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Acesse sua conta para gerir suas vendas
           </p>

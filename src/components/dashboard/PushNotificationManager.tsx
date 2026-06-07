@@ -126,7 +126,7 @@ export function PushNotificationManager() {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <CardTitle className="text-xl font-bold flex items-center gap-2">
-              Notificações DarkPay
+              Notificações PaymentBlack
               {isSubscribed ? (
                 <span className="flex h-2 w-2 rounded-full bg-green-500" />
               ) : (
