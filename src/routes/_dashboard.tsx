@@ -75,8 +75,9 @@ function DashboardLayout() {
                 if ("Notification" in window && Notification.permission === "granted") {
                   new Notification("Nova venda:", {
                     body: `Pingou🎉 +${payload.new.amount} MT`,
-                    icon: "/favicon.ico",
-                    badge: "/favicon.ico",
+                    icon: "/notification-icon.png",
+                    badge: "/notification-icon.png",
+
                   });
                 }
               }
