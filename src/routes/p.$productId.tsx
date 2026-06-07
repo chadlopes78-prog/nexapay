@@ -395,7 +395,7 @@ function CheckoutPage() {
             {(paymentStatusMessage || paymentErrorMessage) && (
               <div
                 className={cn(
-                  "rounded-xl border p-4 text-sm font-medium",
+                  "rounded-xl border p-4 text-sm font-medium animate-in fade-in slide-in-from-top-2",
                   paymentErrorMessage
                     ? "border-destructive/30 bg-destructive/10 text-destructive"
                     : "border-primary/30 bg-primary/10 text-primary",
@@ -406,14 +406,17 @@ function CheckoutPage() {
             )}
 
 
-            <Button
-              type="submit"
-              disabled={processingPayment}
-              className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60"
-            >
-              <Lock className="mr-2 h-5 w-5" />
-              {processingPayment ? "A aguardar confirmação..." : `Finalizar compra (${product.price.toLocaleString("pt-MZ")} MT)`}
-            </Button>
+            <div className="sticky bottom-0 bg-white pt-2 pb-2 md:relative md:bg-transparent md:p-0">
+              <Button
+                type="submit"
+                disabled={processingPayment}
+                className="w-full h-14 text-lg font-bold bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60 transition-all active:scale-95"
+              >
+                <Lock className="mr-2 h-5 w-5" />
+                {processingPayment ? "A aguardar confirmação..." : `Finalizar compra (${product.price.toLocaleString("pt-MZ")} MT)`}
+              </Button>
+            </div>
+
 
           </CardContent>
           
