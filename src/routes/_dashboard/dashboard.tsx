@@ -306,62 +306,118 @@ function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8 animate-in fade-in duration-700 pb-12 max-w-[1600px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b pb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Resumo de desempenho e métricas em tempo real.</p>
+          <div className="flex items-center gap-2 mb-2">
+            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 font-bold px-3">PRO VERSION</Badge>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enterprise Ready</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground font-medium">Bem-vindo ao centro de comando do <span className="text-slate-900 font-bold">PaymentBlack</span>.</p>
         </div>
-        <DateRangePicker onRangeChange={handleRangeChange} initialPreset={preset} initialRange={dateRange} />
+        <div className="flex flex-wrap items-center gap-3">
+           <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100 animate-pulse">
+             <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+             LIVE: {dashboardData?.recentEvents.filter(e => isWithinInterval(parseISO(e.created_at), { start: subSeconds(new Date(), 300), end: new Date() })).length || 0} visitantes agora
+           </div>
+           <DateRangePicker onRangeChange={handleRangeChange} initialPreset={preset} initialRange={dateRange} />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {isLoading ? (
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              {[...Array(8)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader className="h-20" />
-                  <CardContent className="h-16" />
-                </Card>
-              ))}
+      <Tabs defaultValue="overview" className="space-y-8">
+        <TabsList className="bg-white/50 dark:bg-slate-900/50 p-1 border h-auto flex-wrap sm:flex-nowrap gap-1 rounded-xl">
+          <TabsTrigger value="overview" className="rounded-lg py-2.5 px-6 data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-wider">
+            Visão Geral
+          </TabsTrigger>
+          <TabsTrigger value="intelligence" className="rounded-lg py-2.5 px-6 data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+            <BarChart3 className="h-3.5 w-3.5" /> Intelligence Center
+          </TabsTrigger>
+          <TabsTrigger value="funnel" className="rounded-lg py-2.5 px-6 data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+            <Target className="h-3.5 w-3.5" /> Funil de Conversão
+          </TabsTrigger>
+          <TabsTrigger value="realtime" className="rounded-lg py-2.5 px-6 data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+            <Activity className="h-3.5 w-3.5" /> Sessões ao Vivo
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="rounded-lg py-2.5 px-6 data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-lg transition-all font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5" /> Assistente IA
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="lg:col-span-3 space-y-6">
+              {isLoading ? (
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                  {[...Array(8)].map((_, i) => (
+                    <Card key={i} className="animate-pulse">
+                      <CardHeader className="h-20" />
+                      <CardContent className="h-16" />
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                  {stats.slice(0, 8).map((stat) => (
+                    <Card key={stat.title} className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-none bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+                      <div className={cn(
+                        "h-1.5 w-full",
+                        stat.positive ? "bg-black" : "bg-rose-500"
+                      )} />
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-black transition-colors">{stat.title}</CardTitle>
+                        <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
+                          <stat.icon className="h-4 w-4" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-3xl font-black truncate tracking-tighter text-slate-900">{stat.value}</div>
+                        <div className="flex items-center gap-2 mt-3">
+                          <span className={cn(
+                            "text-[10px] font-black flex items-center px-2.5 py-1 rounded-full shadow-sm",
+                            stat.positive ? "text-emerald-700 bg-emerald-50 border border-emerald-100" : "text-rose-700 bg-rose-50 border border-rose-100"
+                          )}>
+                            {stat.positive ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+                            {stat.change}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">vs anterior</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              {stats.slice(0, 8).map((stat) => (
-                <Card key={stat.title} className="group hover:shadow-md hover:-translate-y-1 transition-all duration-300 border-none bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-                  <div className={cn(
-                    "h-1 w-full",
-                    stat.positive ? "bg-emerald-500" : "bg-rose-500"
-                  )} />
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.title}</CardTitle>
-                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors">
-                      <stat.icon className="h-4 w-4 text-primary" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-black truncate tracking-tight">{stat.value}</div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className={cn(
-                        "text-[10px] font-bold flex items-center px-2 py-0.5 rounded-full",
-                        stat.positive ? "text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30" : "text-rose-700 bg-rose-100 dark:bg-rose-900/30"
-                      )}>
-                        {stat.positive ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
-                        {stat.change}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-medium">vs anterior</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="lg:col-span-1 space-y-6">
+               <PushNotificationManager />
+               
+               {dashboardData?.alerts && dashboardData.alerts.length > 0 && (
+                 <Card className="border-none shadow-md bg-black text-white overflow-hidden">
+                   <CardHeader className="pb-3 border-b border-white/10">
+                     <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <Bell className="h-4 w-4 text-primary" /> Alertas de Marketing
+                     </CardTitle>
+                   </CardHeader>
+                   <CardContent className="p-0">
+                     {dashboardData.alerts.map((alert: any) => (
+                       <div key={alert.id} className="p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors cursor-pointer group">
+                         <div className="flex items-start gap-3">
+                            <div className={cn(
+                              "mt-1.5 h-2 w-2 rounded-full shrink-0",
+                              alert.type === 'danger' ? 'bg-red-500' : 'bg-yellow-500'
+                            )} />
+                            <div className="space-y-1">
+                               <p className="text-xs font-bold leading-none group-hover:text-primary transition-colors">{alert.title}</p>
+                               <p className="text-[10px] text-slate-400 line-clamp-2">{alert.message}</p>
+                            </div>
+                         </div>
+                       </div>
+                     ))}
+                   </CardContent>
+                 </Card>
+               )}
             </div>
-          )}
-        </div>
-        <div className="lg:col-span-1">
-          <PushNotificationManager />
-        </div>
-      </div>
+          </div>
 
       {isLoading ? null : (
         <>
