@@ -234,7 +234,7 @@ function CheckoutPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
         <form onSubmit={handlePayment} className="p-6 md:p-8 space-y-6">
           {/* Product Header */}
           <div className="flex gap-4 items-start border-b border-slate-50 pb-6">
@@ -244,6 +244,8 @@ function CheckoutPage() {
                   src={product.image_url}
                   alt={product.name}
                   className="w-full h-full object-cover"
+                  loading="eager"
+                  decoding="async"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-slate-300">
@@ -260,10 +262,11 @@ function CheckoutPage() {
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                 <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
-                <span>Compra segura</span>
+                <span>Compra 100% segura</span>
               </div>
             </div>
           </div>
+
 
           <CardContent className="p-0 space-y-6">
             <div className="space-y-2">
