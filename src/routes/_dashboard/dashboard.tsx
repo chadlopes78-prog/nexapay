@@ -105,6 +105,9 @@ function DashboardPage() {
       const currentSales = currentSalesRes.data || [];
       const prevSales = prevSalesRes.data || [];
       const productsCount = productsRes.data?.length || 0;
+      const funnel = funnelRes.data || { total_visitors: 0, product_views: 0, checkout_initiations: 0, total_purchases: 0 };
+      const recentEvents = eventsRes.data || [];
+      const alerts = alertsRes.data || [];
 
       const calculateStats = (sales: any[]) => {
         const approved = sales.filter(s => s.status === "approved");
@@ -133,7 +136,15 @@ function DashboardPage() {
           mpesaRevenue,
           emolaRevenue,
           failedCount: failed.length,
-          totalCount: sales.length
+          totalCount: sales.length,
+          // Intelligence Center specific metrics (simulated with available data)
+          cpm: 12.5, // Total Cost per 1000 impressions (placeholder)
+          cpc: 0.85, // Cost per click
+          ctr: 4.2,  // Click through rate
+          cpa: 15.0, // Cost per acquisition
+          roas: 5.4, // Return on ad spend
+          rpc: revenue / (funnel.total_visitors || 1), // Revenue per customer (visitor)
+          rpv: revenue / (funnel.total_visitors || 1), // Revenue per visitor
         };
       };
 
