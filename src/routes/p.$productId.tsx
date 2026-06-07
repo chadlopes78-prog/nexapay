@@ -328,13 +328,13 @@ function CheckoutPage() {
                   className={cn(
                     "flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border-2 transition-all font-bold group relative overflow-hidden",
                     paymentMethod === "mpesa"
-                      ? "border-blue-600 bg-blue-50 text-blue-600 ring-4 ring-blue-600/10"
+                      ? "border-black bg-slate-50 text-black ring-4 ring-black/5"
                       : "border-slate-100 hover:border-slate-200 text-slate-500 bg-white",
                   )}
                 >
                   {paymentMethod === "mpesa" && (
                     <div className="absolute top-2 right-2">
-                      <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                      <CheckCircle2 className="h-4 w-4 text-black" />
                     </div>
                   )}
                   <div className="h-14 w-14 rounded-xl overflow-hidden border border-slate-100 shadow-md group-hover:scale-110 transition-transform">
@@ -384,7 +384,7 @@ function CheckoutPage() {
                   onChange={(e) => setPhone(e.target.value)}
                   className={cn(
                     "h-12 pl-24 border-slate-200 rounded-xl",
-                    paymentMethod === "mpesa" ? "focus:ring-blue-500" : "focus:ring-orange-500",
+                    paymentMethod === "mpesa" ? "focus:ring-black" : "focus:ring-orange-500",
                   )}
                 />
               </div>
