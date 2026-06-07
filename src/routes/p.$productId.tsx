@@ -228,8 +228,8 @@ function CheckoutPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-4 md:py-12 px-4">
       {/* Top Banner - Urgency */}
       <div className="w-full mb-4 -mx-4 md:-mx-0 md:-mt-12 md:mb-6">
-        <div className="bg-[#8B0000] text-white text-sm md:text-xl py-4 px-6 md:py-5 md:px-8 flex items-center justify-center gap-2 md:gap-3 font-bold shadow-lg rounded-none sticky top-0 z-50">
-          <span className="animate-pulse text-base md:text-2xl">●</span>
+        <div className="bg-black text-white text-sm md:text-xl py-4 px-6 md:py-5 md:px-8 flex items-center justify-center gap-2 md:gap-3 font-bold shadow-lg rounded-none sticky top-0 z-50">
+          <span className="animate-pulse text-base md:text-2xl text-red-500">●</span>
           Oferta por tempo limitado — expira em 10:00
         </div>
       </div>
@@ -257,11 +257,11 @@ function CheckoutPage() {
               <h1 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
                 {product.name}
               </h1>
-              <div className="text-2xl md:text-3xl font-black text-blue-600">
+              <div className="text-2xl md:text-3xl font-black text-black">
                 {product.price.toLocaleString("pt-MZ")}MT
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-black" />
                 <span>Compra 100% segura</span>
               </div>
             </div>
@@ -328,13 +328,13 @@ function CheckoutPage() {
                   className={cn(
                     "flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border-2 transition-all font-bold group relative overflow-hidden",
                     paymentMethod === "mpesa"
-                      ? "border-blue-600 bg-blue-50 text-blue-600 ring-4 ring-blue-600/10"
+                      ? "border-black bg-slate-50 text-black ring-4 ring-black/5"
                       : "border-slate-100 hover:border-slate-200 text-slate-500 bg-white",
                   )}
                 >
                   {paymentMethod === "mpesa" && (
                     <div className="absolute top-2 right-2">
-                      <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                      <CheckCircle2 className="h-4 w-4 text-black" />
                     </div>
                   )}
                   <div className="h-14 w-14 rounded-xl overflow-hidden border border-slate-100 shadow-md group-hover:scale-110 transition-transform">
@@ -384,7 +384,7 @@ function CheckoutPage() {
                   onChange={(e) => setPhone(e.target.value)}
                   className={cn(
                     "h-12 pl-24 border-slate-200 rounded-xl",
-                    paymentMethod === "mpesa" ? "focus:ring-blue-500" : "focus:ring-orange-500",
+                    paymentMethod === "mpesa" ? "focus:ring-black" : "focus:ring-orange-500",
                   )}
                 />
               </div>
@@ -411,7 +411,7 @@ function CheckoutPage() {
               <Button
                 type="submit"
                 disabled={processingPayment}
-                className="w-full h-14 text-lg font-bold bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="w-full h-14 text-lg font-bold bg-black hover:bg-slate-900 text-white rounded-xl shadow-xl disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 {processingPayment ? (
                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
