@@ -62,6 +62,7 @@ export const Route = createFileRoute("/_dashboard/dashboard")({
 });
 
 function DashboardPage() {
+  const { tab } = Route.useSearch();
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>(() => {
     const saved = sessionStorage.getItem("dashboard-date-range");
     if (saved) {
