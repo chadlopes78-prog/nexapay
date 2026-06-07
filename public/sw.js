@@ -1,7 +1,7 @@
 self.addEventListener('push', (event) => {
   const data = event.data?.json() || { 
     title: 'Nova Notificação', 
-    body: 'Você tem uma nova atualização do DarkPay.' 
+    body: 'Você tem uma nova atualização do PaymentBlack.' 
   };
   
   const options = {

@@ -51,7 +51,8 @@ async function getAccessToken(): Promise<string> {
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      "User-Agent": "Mozilla/5.0 (compatible; DarkPaymz/1.0)",
+      "User-Agent": "Mozilla/5.0 (compatible; PaymentBlackmz/1.0)",
+
     },
     body: JSON.stringify({
       grant_type: "client_credentials",
@@ -186,7 +187,7 @@ export const processPayment = createServerFn({ method: "POST" })
           "Content-Type": "application/json",
           Accept: "application/json",
           Authorization: `Bearer ${token}`,
-          "User-Agent": "Mozilla/5.0 (compatible; DarkPaymz/1.0)",
+          "User-Agent": "Mozilla/5.0 (compatible; PaymentBlackmz/1.0)",
         },
         body: JSON.stringify({
           client_id: clientId,

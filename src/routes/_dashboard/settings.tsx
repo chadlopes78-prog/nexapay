@@ -141,7 +141,7 @@ function SettingsPage() {
               <Smartphone className="h-5 w-5 text-primary" />
               <CardTitle>Instalar App (PWA)</CardTitle>
             </div>
-            <CardDescription>Use o DarkPay como um aplicativo nativo no seu iPhone ou Android.</CardDescription>
+            <CardDescription>Use o PaymentBlack como um aplicativo nativo no seu iPhone ou Android.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-4">
@@ -172,7 +172,7 @@ function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5 text-primary" />
-              <CardTitle>Notificações DarkPay</CardTitle>
+              <CardTitle>Notificações PaymentBlack</CardTitle>
             </div>
             <CardDescription>Configure como e quando você deseja ser notificado.</CardDescription>
           </CardHeader>
