@@ -48,6 +48,10 @@ serve(async (req) => {
         {
           page_id: page.id,
           event_type: eventType,
+          campaign_id: campaignId,
+          ad_id: adId,
+          source: source,
+          medium: medium,
           metadata: {
             ...metadata,
             url,
