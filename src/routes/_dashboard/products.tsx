@@ -187,10 +187,21 @@ function ProductsPage() {
         subtitle: description.substring(0, 100),
       });
 
-      toast.success("Produto criado com sucesso!");
+      const checkoutLink = `${window.location.origin}/p/${data.id}`;
+      toast.success("Produto criado com sucesso!", {
+        description: "O link de checkout já está pronto para uso.",
+        action: {
+          label: "Copiar Link",
+          onClick: () => {
+            navigator.clipboard.writeText(checkoutLink);
+            toast.success("Link copiado!");
+          }
+        }
+      });
       setIsDialogOpen(false);
       resetForm();
       fetchProducts();
+
     } catch (error: any) {
       toast.error(error.message);
     }
