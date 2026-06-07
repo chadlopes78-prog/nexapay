@@ -53,6 +53,11 @@ import { format, subDays, differenceInDays, startOfDay, endOfDay, isWithinInterv
 import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/_dashboard/dashboard")({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      tab: (search.tab as string) || "overview",
+    };
+  },
   component: DashboardPage,
 });
 
