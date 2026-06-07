@@ -541,15 +541,25 @@ function ProductsPage() {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">0</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1.5 sm:gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="hidden lg:flex items-center gap-2 h-8 px-3 text-xs"
+                        onClick={() => copyCheckoutLink(product.id)}
+                      >
+                        <Copy className="h-3 w-3" /> Link
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="lg:hidden h-8 w-8"
                         onClick={() => copyCheckoutLink(product.id)}
                         title="Copiar Link"
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
+
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
