@@ -6,14 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   ShieldCheck,
-  CreditCard,
-  Smartphone,
   CheckCircle2,
   Lock,
-  ChevronRight,
   ShieldAlert,
   Package,
   User,
@@ -23,8 +20,36 @@ import { cn } from "@/lib/utils";
 import mozFlag from "@/assets/moz-flag.png.asset.json";
 
 export const Route = createFileRoute("/p/$productId")({
+  loader: async ({ params: { productId } }) => {
+    const [productRes, checkoutRes] = await Promise.all([
+      supabase.from("products").select("*").eq("id", productId).single(),
+      supabase.from("checkouts").select("*").eq("product_id", productId).maybeSingle(),
+    ]);
+
+    if (productRes.error || !productRes.data) {
+      return { product: null, checkout: null };
+    }
+
+    return {
+      product: productRes.data,
+      checkout: checkoutRes.data ?? null,
+    };
+  },
+  head: ({ loaderData }) => {
+    const product = loaderData?.product;
+    if (!product) return {};
+    return {
+      meta: [
+        { title: `${product.name} | DarkPay Mozambique` },
+        { name: "description", content: product.description || "Checkout seguro via M-Pesa e e-Mola" },
+        { property: "og:title", content: product.name },
+        { property: "og:image", content: product.image_url || "" },
+      ],
+    };
+  },
   component: CheckoutPage,
 });
+
 declare global {
   interface Window {
     fbq: any;
@@ -32,15 +57,12 @@ declare global {
   }
 }
 
-
 function CheckoutPage() {
   const payFn = useServerFn(processPayment);
   const { productId } = useParams({ from: "/p/$productId" });
-  const [product, setProduct] = useState<any>(null);
-  const [checkout, setCheckout] = useState<any>(null);
+  const { product, checkout } = Route.useLoaderData();
+  
   const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
-
-  const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
@@ -51,7 +73,6 @@ function CheckoutPage() {
   const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
 
-
   useEffect(() => {
     // Get traffic page ID from URL
     const params = new URLSearchParams(window.location.search);
@@ -59,10 +80,6 @@ function CheckoutPage() {
     if (tp_id) {
       setTrafficPageId(tp_id);
       
-      // If we have a tracking ID, record a click event
-      // This ensures that even if the tracking script on the landing page 
-      // didn't record the click (e.g. adblocker on the landing page but not here), 
-      // we still count it.
       const recordClick = async () => {
         try {
           await supabase.functions.invoke('track-event', {
@@ -82,36 +99,6 @@ function CheckoutPage() {
     }
   }, [productId]);
 
-  // Load product + checkout in parallel (faster mobile first paint)
-  useEffect(() => {
-    if (!productId) return;
-    let cancelled = false;
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [productRes, checkoutRes] = await Promise.all([
-          supabase.from("products").select("*").eq("id", productId).single(),
-          supabase.from("checkouts").select("*").eq("product_id", productId).maybeSingle(),
-        ]);
-        if (cancelled) return;
-        if (productRes.error || !productRes.data) {
-          toast.error("Produto não encontrado");
-        } else {
-          setProduct(productRes.data);
-          setCheckout(checkoutRes.data ?? null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Checkout load error:", err);
-          toast.error("Erro ao carregar checkout");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchData();
-    return () => { cancelled = true; };
-  }, [productId]);
 
   // Facebook Pixel: init + ViewContent in one effect (no race, no crash)
   useEffect(() => {
@@ -219,16 +206,6 @@ function CheckoutPage() {
 
 
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="text-center space-y-4">
-          <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-muted-foreground">Carregando checkout seguro...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!product) {
     return (
@@ -257,7 +234,7 @@ function CheckoutPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
         <form onSubmit={handlePayment} className="p-6 md:p-8 space-y-6">
           {/* Product Header */}
           <div className="flex gap-4 items-start border-b border-slate-50 pb-6">
@@ -267,6 +244,8 @@ function CheckoutPage() {
                   src={product.image_url}
                   alt={product.name}
                   className="w-full h-full object-cover"
+                  loading="eager"
+                  decoding="async"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-slate-300">
@@ -283,10 +262,11 @@ function CheckoutPage() {
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                 <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
-                <span>Compra segura</span>
+                <span>Compra 100% segura</span>
               </div>
             </div>
           </div>
+
 
           <CardContent className="p-0 space-y-6">
             <div className="space-y-2">
@@ -358,7 +338,7 @@ function CheckoutPage() {
                     </div>
                   )}
                   <div className="h-14 w-14 rounded-xl overflow-hidden border border-slate-100 shadow-md group-hover:scale-110 transition-transform">
-                    <img src="/mpesa-logo.jpg" className="h-full w-full object-cover" alt="M-Pesa" />
+                    <img src="/mpesa-logo.jpg" className="h-full w-full object-cover" alt="M-Pesa" loading="lazy" decoding="async" />
                   </div>
                   <span className="text-sm tracking-tight">M-Pesa</span>
                 </button>
@@ -378,8 +358,9 @@ function CheckoutPage() {
                     </div>
                   )}
                   <div className="h-14 w-14 rounded-xl overflow-hidden border border-slate-100 shadow-md group-hover:scale-110 transition-transform">
-                    <img src="/emola-logo.jpg" className="h-full w-full object-cover" alt="e-Mola" />
+                    <img src="/emola-logo.jpg" className="h-full w-full object-cover" alt="e-Mola" loading="lazy" decoding="async" />
                   </div>
+
                   <span className="text-sm tracking-tight">e-Mola</span>
                 </button>
               </div>
@@ -415,7 +396,7 @@ function CheckoutPage() {
             {(paymentStatusMessage || paymentErrorMessage) && (
               <div
                 className={cn(
-                  "rounded-xl border p-4 text-sm font-medium",
+                  "rounded-xl border p-4 text-sm font-medium animate-in fade-in slide-in-from-top-2",
                   paymentErrorMessage
                     ? "border-destructive/30 bg-destructive/10 text-destructive"
                     : "border-primary/30 bg-primary/10 text-primary",
@@ -426,14 +407,22 @@ function CheckoutPage() {
             )}
 
 
-            <Button
-              type="submit"
-              disabled={processingPayment}
-              className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60"
-            >
-              <Lock className="mr-2 h-5 w-5" />
-              {processingPayment ? "A aguardar confirmação..." : `Finalizar compra (${product.price.toLocaleString("pt-MZ")} MT)`}
-            </Button>
+            <div className="sticky bottom-0 bg-white pt-2 pb-2 md:relative md:bg-transparent md:p-0">
+              <Button
+                type="submit"
+                disabled={processingPayment}
+                className="w-full h-14 text-lg font-bold bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                {processingPayment ? (
+                   <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Lock className="h-5 w-5" />
+                )}
+                {processingPayment ? "Aguarde..." : `Finalizar compra (${product.price.toLocaleString("pt-MZ")} MT)`}
+              </Button>
+
+            </div>
+
 
           </CardContent>
           

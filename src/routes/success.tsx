@@ -15,38 +15,42 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { z } from "zod";
+
+const successSearchSchema = z.object({
+  productId: z.string().optional(),
+  saleId: z.string().optional(),
+});
+
 export const Route = createFileRoute("/success")({
+  validateSearch: successSearchSchema,
+  loaderDeps: ({ search }) => ({ productId: search.productId, saleId: search.saleId }),
+  loader: async ({ deps: { productId, saleId } }) => {
+
+
+    
+    if (!productId || !saleId) return { sale: null, product: null };
+    
+    const { data: saleData } = await supabase
+      .from("sales")
+      .select("*, products(*)")
+      .eq("id", saleId)
+      .single();
+      
+    if (!saleData) return { sale: null, product: null };
+    
+    return {
+      sale: saleData,
+      product: saleData.products,
+    };
+  },
   component: SuccessPage,
 });
 
 function SuccessPage() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const productId = searchParams.get("productId");
-  const saleId = searchParams.get("saleId");
-  
-  const [product, setProduct] = useState<any>(null);
-  const [sale, setSale] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { sale, product } = Route.useLoaderData();
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!productId || !saleId) return;
-      
-      const { data: saleData } = await supabase
-        .from("sales")
-        .select("*, products(*)")
-        .eq("id", saleId)
-        .single();
-        
-      if (saleData) {
-        setSale(saleData);
-        setProduct(saleData.products);
-      }
-      setLoading(false);
-    };
-    
-    fetchData();
-  }, [productId, saleId]);
 
   if (loading) {
     return (
