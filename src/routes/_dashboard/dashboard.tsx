@@ -88,7 +88,7 @@ function DashboardPage() {
       const [currentSalesRes, prevSalesRes, productsRes, funnelRes, eventsRes, alertsRes] = await Promise.all([
         supabase
           .from("sales")
-          .select("id, amount, status, payment_method, customer_phone, customer_id, created_at, traffic_page_tracking_id")
+          .select("id, amount, status, payment_method, customer_phone, customer_id, created_at, traffic_page_id")
           .gte("created_at", dateRange.from.toISOString())
           .lte("created_at", dateRange.to.toISOString()),
         supabase
