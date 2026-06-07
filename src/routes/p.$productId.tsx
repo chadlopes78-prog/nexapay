@@ -239,7 +239,7 @@ function CheckoutPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
+      <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden relative animate-in fade-in zoom-in-95 duration-500">
         <form onSubmit={handlePayment} className="p-6 md:p-8 space-y-6">
           {/* Product Header */}
           <div className="flex gap-4 items-start border-b border-slate-50 pb-6">
