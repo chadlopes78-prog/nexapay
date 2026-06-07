@@ -15,7 +15,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { z } from "zod";
+
+const successSearchSchema = z.object({
+  productId: z.string().optional(),
+  saleId: z.string().optional(),
+});
+
 export const Route = createFileRoute("/success")({
+  validateSearch: successSearchSchema,
+
   loader: async ({ search }) => {
     const productId = search.productId as string;
     const saleId = search.saleId as string;
