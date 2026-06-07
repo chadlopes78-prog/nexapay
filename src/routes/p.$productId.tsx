@@ -410,11 +410,16 @@ function CheckoutPage() {
               <Button
                 type="submit"
                 disabled={processingPayment}
-                className="w-full h-14 text-lg font-bold bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60 transition-all active:scale-95"
+                className="w-full h-14 text-lg font-bold bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-xl shadow-lg shadow-green-200 disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
-                <Lock className="mr-2 h-5 w-5" />
-                {processingPayment ? "A aguardar confirmação..." : `Finalizar compra (${product.price.toLocaleString("pt-MZ")} MT)`}
+                {processingPayment ? (
+                   <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Lock className="h-5 w-5" />
+                )}
+                {processingPayment ? "Aguarde..." : `Finalizar compra (${product.price.toLocaleString("pt-MZ")} MT)`}
               </Button>
+
             </div>
 
 
