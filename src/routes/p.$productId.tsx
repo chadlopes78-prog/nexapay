@@ -225,12 +225,17 @@ function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center py-4 md:py-12 px-4">
-      {/* Top Banner - Urgency */}
-      <div className="w-full mb-4 -mx-4 md:-mx-0 md:-mt-12 md:mb-6">
-        <div className="bg-black text-white text-sm md:text-xl py-4 px-6 md:py-5 md:px-8 flex items-center justify-center gap-2 md:gap-3 font-bold shadow-lg rounded-none sticky top-0 z-50">
-          <span className="animate-pulse text-base md:text-2xl text-red-500">●</span>
-          Oferta por tempo limitado — expira em 10:00
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center py-4 md:py-12 px-4 transition-all duration-300">
+      {/* Top Banner - Urgency with real logic or faster appearance */}
+      <div className="w-full mb-4 -mx-4 md:-mx-0 md:-mt-12 md:mb-6 animate-in slide-in-from-top duration-500">
+        <div className="bg-black text-white text-sm md:text-xl py-4 px-6 md:py-5 md:px-8 flex items-center justify-center gap-2 md:gap-3 font-bold shadow-2xl rounded-none sticky top-0 z-50">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+            </span>
+            <span>Oferta por tempo limitado — expira em 10:00</span>
+          </div>
         </div>
       </div>
 
