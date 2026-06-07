@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   TrendingUp,
   TrendingDown,
@@ -16,9 +16,16 @@ import {
   Calendar as CalendarIcon,
   Smartphone,
   Bell,
+  Activity,
+  Target,
+  BarChart3,
+  MousePointer2,
+  Zap,
 } from "lucide-react";
 import { PushNotificationManager } from "@/components/dashboard/PushNotificationManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   AreaChart,
