@@ -24,9 +24,9 @@ const successSearchSchema = z.object({
 
 export const Route = createFileRoute("/success")({
   validateSearch: successSearchSchema,
+  loaderDeps: ({ search }) => ({ productId: search.productId, saleId: search.saleId }),
+  loader: async ({ deps: { productId, saleId } }) => {
 
-  loader: async ({ search }) => {
-    const { productId, saleId } = search;
 
     
     if (!productId || !saleId) return { sale: null, product: null };
