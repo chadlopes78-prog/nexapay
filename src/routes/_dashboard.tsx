@@ -188,12 +188,13 @@ function DashboardLayout() {
               ) : (
                 <Link
                   to={item.path}
+                  search={item.params}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100 active:scale-95",
-                    location.pathname === item.path ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-600",
+                    location.pathname === item.path && (!item.params || Object.keys(item.params).every(k => (new URLSearchParams(location.search)).get(k) === item.params[k])) ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-600",
                   )}
                 >
-                  <item.icon className={cn("h-5 w-5 shrink-0", location.pathname === item.path ? "text-white" : "text-slate-500")} />
+                  <item.icon className={cn("h-5 w-5 shrink-0", location.pathname === item.path && (!item.params || Object.keys(item.params).every(k => (new URLSearchParams(location.search)).get(k) === item.params[k])) ? "text-white" : "text-slate-500")} />
                   {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
                 </Link>
               )}
