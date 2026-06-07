@@ -103,6 +103,36 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_alerts: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications_log: {
         Row: {
           body: string
@@ -436,25 +466,37 @@ export type Database = {
       }
       traffic_events: {
         Row: {
+          ad_id: string | null
+          campaign_id: string | null
           created_at: string
           event_type: string
           id: string
+          medium: string | null
           metadata: Json | null
           page_id: string
+          source: string | null
         }
         Insert: {
+          ad_id?: string | null
+          campaign_id?: string | null
           created_at?: string
           event_type: string
           id?: string
+          medium?: string | null
           metadata?: Json | null
           page_id: string
+          source?: string | null
         }
         Update: {
+          ad_id?: string | null
+          campaign_id?: string | null
           created_at?: string
           event_type?: string
           id?: string
+          medium?: string | null
           metadata?: Json | null
           page_id?: string
+          source?: string | null
         }
         Relationships: [
           {
@@ -501,7 +543,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      funnel_stats: {
+        Row: {
+          checkout_initiations: number | null
+          product_views: number | null
+          total_purchases: number | null
+          total_visitors: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       is_product_publicly_visible: {
