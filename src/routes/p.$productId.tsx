@@ -40,7 +40,7 @@ export const Route = createFileRoute("/p/$productId")({
     if (!product) return {};
     return {
       meta: [
-        { title: `${product.name} | DarkPay Mozambique` },
+        { title: `${product.name} | Paymentblack Mozambique` },
         { name: "description", content: product.description || "Checkout seguro via M-Pesa e e-Mola" },
         { property: "og:title", content: product.name },
         { property: "og:image", content: product.image_url || "" },

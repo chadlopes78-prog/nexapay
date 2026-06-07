@@ -12,7 +12,7 @@ function Index() {
           <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center group-hover:rotate-6 transition-transform">
              <div className="h-4 w-4 border-2 border-white" />
           </div>
-          <span className="font-extrabold text-2xl tracking-tighter text-slate-900">DarkPay</span>
+          <span className="font-extrabold text-2xl tracking-tighter text-slate-900">Paymentblack</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link className="text-sm font-medium hover:underline underline-offset-4" to="/auth">
@@ -62,7 +62,7 @@ function Index() {
         </section>
       </main>
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-        <p className="text-xs text-gray-500">© 2026 DarkPay Mozambique. Todos os direitos reservados.</p>
+        <p className="text-xs text-gray-500">© 2026 Paymentblack Mozambique. Todos os direitos reservados.</p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
           <Link className="text-xs hover:underline underline-offset-4" to="/">
             Termos de Serviço
