@@ -26,8 +26,8 @@ export const Route = createFileRoute("/success")({
   validateSearch: successSearchSchema,
 
   loader: async ({ search }) => {
-    const productId = search.productId as string;
-    const saleId = search.saleId as string;
+    const { productId, saleId } = search;
+
     
     if (!productId || !saleId) return { sale: null, product: null };
     
