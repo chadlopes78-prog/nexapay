@@ -84,8 +84,7 @@ function DashboardLayout() {
               id: session.user.id,
               full_name: session.user.user_metadata?.full_name || '',
               status: 'pending',
-              role: 'user',
-              email: session.user.email || ''
+              role: 'user'
             })
             .select()
             .maybeSingle();
