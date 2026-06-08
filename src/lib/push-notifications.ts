@@ -14,8 +14,12 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export async function subscribeToPushNotifications(silent = false) {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    if (!silent) console.warn("[Push] Notificações não são suportadas neste navegador.");
+  // Check browser support dynamically based on capabilities, not version strings
+  const isPushSupported = "serviceWorker" in navigator && "PushManager" in window;
+  const isNotificationSupported = "Notification" in window;
+
+  if (!isPushSupported || !isNotificationSupported) {
+    if (!silent) console.warn("[Push] Notificações não são suportadas pelas capacidades deste dispositivo/navegador.");
     return;
   }
 
@@ -36,7 +40,7 @@ export async function subscribeToPushNotifications(silent = false) {
       return;
     }
 
-    // Subscribe with VAPID key
+    // Subscribe with VAPID key - Standard Web Push protocol (works on iOS 16.4+)
     console.log("[Push] Inscrevendo no Push Manager...");
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
@@ -55,6 +59,10 @@ export async function subscribeToPushNotifications(silent = false) {
     const p256dh = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(subscription.getKey("p256dh")!))));
     const auth = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(subscription.getKey("auth")!))));
 
+    // Store push type metadata to handle potential forward compatibility strategies
+    // We categorize it as 'web-push' which is the universal standard iOS now follows
+    const pushType = "web-push";
+
     // Save to database
     const { error } = await supabase.from("push_subscriptions").upsert({
       user_id: session.user.id,
@@ -62,6 +70,11 @@ export async function subscribeToPushNotifications(silent = false) {
       p256dh,
       auth,
       updated_at: new Date().toISOString(),
+      metadata: { 
+        push_type: pushType,
+        user_agent: navigator.userAgent,
+        platform: navigator.platform
+      }
     }, {
       onConflict: 'user_id,endpoint'
     });
