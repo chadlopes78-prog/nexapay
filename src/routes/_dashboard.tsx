@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useNavigate, useLocation } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
@@ -18,15 +18,56 @@ import {
   X,
   Target,
   Zap,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const Route = createFileRoute("/_dashboard")({
-  component: DashboardLayout,
+  component: DashboardLayoutWrapper,
+  errorComponent: ({ error, reset }) => <ErrorFallback error={error} reset={reset} />,
 });
+
+function ErrorFallback({ error, reset }: { error: any; reset: () => void }) {
+  return (
+    <div className="flex h-[400px] w-full flex-col items-center justify-center p-6 text-center">
+      <Alert variant="destructive" className="max-w-md bg-white border-red-100 shadow-xl rounded-2xl p-6">
+        <AlertCircle className="h-6 w-6 mb-4 mx-auto text-red-500" />
+        <AlertTitle className="text-xl font-black text-slate-900 mb-2">Erro ao carregar painel</AlertTitle>
+        <AlertDescription className="text-slate-500 font-medium mb-6">
+          {error?.message || "Houve um problema técnico ao renderizar esta seção."}
+        </AlertDescription>
+        <Button 
+          onClick={() => reset()} 
+          className="w-full bg-black hover:bg-slate-900 text-white font-bold rounded-xl h-12"
+        >
+          Tentar novamente
+        </Button>
+      </Alert>
+    </div>
+  );
+}
+
+function DashboardLayoutWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm font-black text-slate-400 uppercase tracking-widest animate-pulse">
+            Carregando PaymentBlack...
+          </p>
+        </div>
+      </div>
+    }>
+      <DashboardLayout />
+    </Suspense>
+  );
+}
 
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
