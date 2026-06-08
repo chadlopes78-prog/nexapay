@@ -146,7 +146,8 @@ function DashboardLayout() {
         // Update last login
         await supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("id", session.user.id);
 
-        // Listen for new sales
+        /* 
+        // Realtime sales notification removed in favor of native push notifications
         const channel = supabase
           .channel('schema-db-changes')
           .on(
@@ -182,6 +183,8 @@ function DashboardLayout() {
         return () => {
           supabase.removeChannel(channel);
         };
+        */
+        return () => {};
       } catch (err) {
         console.error("Auth check error:", err);
         navigate({ to: "/auth" });
