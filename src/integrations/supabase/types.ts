@@ -447,6 +447,7 @@ export type Database = {
           status: string | null
           traffic_page_id: string | null
           transaction_id: string | null
+          user_id: string | null
         }
         Insert: {
           amount: number
@@ -461,6 +462,7 @@ export type Database = {
           status?: string | null
           traffic_page_id?: string | null
           transaction_id?: string | null
+          user_id?: string | null
         }
         Update: {
           amount?: number
@@ -475,6 +477,7 @@ export type Database = {
           status?: string | null
           traffic_page_id?: string | null
           transaction_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -591,6 +594,10 @@ export type Database = {
       }
     }
     Functions: {
+      get_dashboard_metrics: {
+        Args: { p_end_date: string; p_start_date: string; p_user_id: string }
+        Returns: Json
+      }
       is_product_publicly_visible: {
         Args: { _product_id: string }
         Returns: boolean
