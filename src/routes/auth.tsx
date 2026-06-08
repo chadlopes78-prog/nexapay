@@ -32,6 +32,7 @@ function AuthPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         if (session.user.email === "chadlopesff@gmail.com") {
+          // Bypass total para o admin mestre
           navigate({ to: "/admin" });
         } else {
           navigate({ to: "/dashboard" });

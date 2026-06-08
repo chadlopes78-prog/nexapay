@@ -11,6 +11,16 @@ export const Route = createFileRoute("/blocked")({
 function BlockedPage() {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const checkBypass = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.email === "chadlopesff@gmail.com") {
+        navigate({ to: "/admin" });
+      }
+    };
+    checkBypass();
+  }, [navigate]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
