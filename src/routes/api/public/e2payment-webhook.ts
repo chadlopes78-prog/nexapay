@@ -77,7 +77,13 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
 
         // Trigger push notification if paid
         if (isBecomingPaid) {
-          const userId = (saleData.products as any)?.user_id;
+          let userId = null;
+          if (Array.isArray(saleData.products)) {
+            userId = saleData.products[0]?.user_id;
+          } else {
+            userId = (saleData.products as any)?.user_id;
+          }
+
           if (userId) {
             console.log("Triggering push notification for user:", userId);
             
