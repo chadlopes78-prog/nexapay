@@ -21,8 +21,6 @@ import {
   AlertTriangle,
   RefreshCcw
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -169,7 +168,9 @@ function AdminControlCenter() {
       toast.success(`Usuário ${status} com sucesso.`);
       
       // Update local state for immediate feedback
-      setUsers(users.map(u => u.id === userId ? { ...u, status } : u));
+      if (users) {
+        setUsers(users.map(u => u.id === userId ? { ...u, status } : u));
+      }
       
       // Recalculate stats locally to avoid extra query
       fetchUsers(); 
@@ -177,6 +178,44 @@ function AdminControlCenter() {
       toast.error("Erro na operação: " + error.message);
     }
   };
+
+  const LoadingSkeleton = () => (
+    <div className="space-y-4 p-6">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center space-x-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full max-w-[250px]" />
+            <Skeleton className="h-4 w-full max-w-[200px]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const ErrorState = ({ message }: { message: string }) => (
+    <div className="p-10 text-center space-y-4">
+      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-600 mb-2">
+        <AlertTriangle className="h-8 w-8" />
+      </div>
+      <h3 className="text-xl font-bold text-slate-900">Falha ao carregar dados</h3>
+      <p className="text-slate-500 max-w-md mx-auto">{message}</p>
+      <Button onClick={fetchUsers} variant="outline" className="mt-4">
+        <RefreshCcw className="mr-2 h-4 w-4" />
+        Tentar Novamente
+      </Button>
+    </div>
+  );
+
+  const EmptyState = () => (
+    <div className="p-20 text-center">
+      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-400 mb-4">
+        <Search className="h-8 w-8" />
+      </div>
+      <h3 className="text-lg font-bold text-slate-900">Nenhum utilizador encontrado</h3>
+      <p className="text-slate-500">Ajuste seus filtros ou tente uma busca diferente.</p>
+    </div>
+  );
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -273,15 +312,21 @@ function AdminControlCenter() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i} className="animate-pulse h-20">
-                      <TableCell colSpan={5} className="bg-slate-50/20"></TableCell>
-                    </TableRow>
-                  ))
-                ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-40 text-center text-slate-400 font-medium">
-                      Nenhum resultado para os critérios de busca.
+                    <TableCell colSpan={5} className="p-0">
+                      <LoadingSkeleton />
+                    </TableCell>
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="p-0">
+                      <ErrorState message={error} />
+                    </TableCell>
+                  </TableRow>
+                ) : users === null || users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="p-0">
+                      <EmptyState />
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -303,7 +348,7 @@ function AdminControlCenter() {
                       </TableCell>
                       <TableCell>{getStatusBadge(user.status)}</TableCell>
                       <TableCell className="text-sm text-slate-600 font-medium">
-                        {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                        {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : "-"}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600 font-medium">
                         {user.last_login ? new Date(user.last_login).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : "Nunca acessou"}
@@ -355,7 +400,7 @@ function AdminControlCenter() {
           
           <div className="p-6 border-t border-slate-100 flex items-center justify-between bg-white">
             <p className="text-sm font-bold text-slate-400">
-              {stats.total > 0 ? `Exibindo ${users.length} de ${stats.total} registros` : "Nenhum registro encontrado"}
+              {stats.total > 0 ? `Exibindo ${users?.length || 0} de ${stats.total} registros` : "Nenhum registro encontrado"}
             </p>
             <div className="flex items-center gap-1.5">
               <Button 
@@ -374,7 +419,7 @@ function AdminControlCenter() {
                 variant="outline" 
                 size="icon" 
                 className="h-9 w-9 rounded-lg border-slate-200"
-                disabled={users.length < PAGE_SIZE}
+                disabled={!users || users.length < PAGE_SIZE}
                 onClick={() => setPage(p => p + 1)}
               >
                 <ChevronRight className="h-4 w-4" />
