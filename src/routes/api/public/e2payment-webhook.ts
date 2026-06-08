@@ -78,10 +78,13 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
 
         // Trigger push notification if paid
         if (isBecomingPaid) {
+          console.log("[Webhook] Sale became paid, triggering notification for:", saleData.id);
           // Fire and forget notification trigger
           triggerSaleApprovedNotification(saleData.id).catch(err => 
             console.error("Error triggering sale notification:", err)
           );
+        } else if (status === "failed" && saleData.status !== "failed") {
+          console.log("[Webhook] Sale failed, updating status for:", saleData.id);
         }
 
         return Response.json({ ok: true });
