@@ -43,6 +43,21 @@ serve(async (req) => {
 
     if (subError) throw subError;
 
+    // Log the notification attempt
+    const { data: logEntry, error: logError } = await supabaseClient
+      .from("notifications_log")
+      .insert({
+        user_id,
+        title,
+        body,
+        type: "push",
+        metadata: { url, attempts: 1 }
+      })
+      .select()
+      .single();
+
+    if (logError) console.error("Error logging notification:", logError);
+
     if (!subscriptions || subscriptions.length === 0) {
       console.log(`No subscriptions found for user ${user_id}`);
       return new Response(JSON.stringify({ success: true, message: "No subscriptions" }), {
@@ -81,11 +96,25 @@ serve(async (req) => {
           console.log(`Removed invalid subscription: ${sub.id}`);
         }
         
-        return { success: false, endpoint: sub.endpoint, error: err.message };
+        return { success: false, endpoint: sub.endpoint, error: err.message, statusCode: err.statusCode };
       }
     });
 
     const results = await Promise.all(notifications);
+    
+    // Update log with results
+    if (logEntry) {
+      await supabaseClient
+        .from("notifications_log")
+        .update({
+          metadata: { 
+            url, 
+            results,
+            sent_at: new Date().toISOString()
+          }
+        })
+        .eq("id", logEntry.id);
+    }
 
     return new Response(JSON.stringify({ success: true, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
