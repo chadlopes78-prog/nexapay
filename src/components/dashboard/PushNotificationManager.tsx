@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { subscribeToPushNotifications, unsubscribeFromPushNotifications } from "@/lib/push-notifications";
 
 export function PushNotificationManager() {
   const [isSupported, setIsSupported] = useState(true);
@@ -29,35 +30,21 @@ export function PushNotificationManager() {
   }, []);
 
   const checkSubscription = async () => {
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.getSubscription();
-    setIsSubscribed(!!subscription);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      setIsSubscribed(!!subscription);
+    } catch (error) {
+      console.error("Erro ao verificar inscrição:", error);
+    }
   };
 
-  const subscribe = async () => {
+  const handleSubscribe = async () => {
     setLoading(true);
     try {
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-
-      const permissionResult = await Notification.requestPermission();
-      setPermission(permissionResult);
-
-      if (permissionResult !== "granted") {
-        throw new Error("Permissão de notificação negada");
-      }
-
-      // In a real scenario, you'd fetch the public VAPID key from your backend
-      // For this implementation, we simulate the subscription process
-      // and focus on the UI/UX as requested.
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      // This is where you would call registration.pushManager.subscribe
-      // with a real VAPID key.
-      
+      await subscribeToPushNotifications();
       setIsSubscribed(true);
+      setPermission("granted");
       toast.success("Notificações ativadas com sucesso!");
     } catch (error: any) {
       console.error("Erro ao assinar:", error);
@@ -67,15 +54,10 @@ export function PushNotificationManager() {
     }
   };
 
-  const unsubscribe = async () => {
+  const handleUnsubscribe = async () => {
     setLoading(true);
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      if (subscription) {
-        await subscription.unsubscribe();
-        // Here you would also remove the subscription from your DB
-      }
+      await unsubscribeFromPushNotifications();
       setIsSubscribed(false);
       toast.info("Notificações desativadas");
     } catch (error) {
@@ -178,7 +160,7 @@ export function PushNotificationManager() {
           <Button 
             variant="outline" 
             className="w-full gap-2 border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700" 
-            onClick={unsubscribe}
+            onClick={handleUnsubscribe}
             disabled={loading}
           >
             <BellOff className="h-4 w-4" />
@@ -187,7 +169,7 @@ export function PushNotificationManager() {
         ) : (
           <Button 
             className="w-full gap-2 shadow-lg shadow-primary/20" 
-            onClick={subscribe}
+            onClick={handleSubscribe}
             disabled={loading || permission === "denied"}
           >
             <Bell className="h-4 w-4" />
