@@ -35,6 +35,7 @@ function DashboardLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["Relatórios"]);
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -43,67 +44,118 @@ function DashboardLayout() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      
       if (!session) {
         navigate({ to: "/auth" });
-      } else {
-        setUser(session.user);
-        
-        // Listen for new sales to show "push" simulation
-        const channel = supabase
-          .channel('schema-db-changes')
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'sales',
-              filter: `user_id=eq.${session.user.id}`
-            },
-            (payload: any) => {
-              if (payload.new.status === 'approved') {
-                const amount = payload.new.amount;
-                // Browser Toast
-                toast.success(
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-black text-sm uppercase tracking-widest text-emerald-600">🔔 Nova Venda</span>
-                    <span className="text-lg font-black text-slate-900 leading-none">💰 Pingou🎉 {amount} MT</span>
-                  </div>,
-                  {
-                    icon: (
-                      <div className="bg-black p-2 rounded-xl border border-slate-800 shadow-2xl flex items-center justify-center animate-bounce">
-                        <span className="text-sm font-black text-white leading-none">P</span>
-                      </div>
-                    ),
-                    duration: 10000,
-                    className: "bg-white border-2 border-slate-100 shadow-[0_30px_60px_rgba(0,0,0,0.12)] rounded-2xl p-4",
-                  }
-                );
+        return;
+      }
 
-                // native Push Notification
-                if ("Notification" in window && Notification.permission === "granted") {
-                  new Notification("🔔 Nova Venda", {
-                    body: `💰 Pingou🎉 ${amount} MT`,
-                    icon: "/logo-p.svg",
-                    badge: "/logo-p.svg",
-                  });
+      // Fetch profile to check status and role
+      const { data: userProfile, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+
+      if (error || !userProfile) {
+        // If profile doesn't exist, try to create it (fallback)
+        const { data: newProfile } = await supabase
+          .from("profiles")
+          .upsert({ 
+            id: session.user.id,
+            full_name: session.user.user_metadata?.full_name || '',
+            status: session.user.email === 'chadlopesff@gmail.com' ? 'approved' : 'pending',
+            role: session.user.email === 'chadlopesff@gmail.com' ? 'admin' : 'user'
+          })
+          .select()
+          .single();
+        
+        if (newProfile) {
+          setProfile(newProfile);
+          checkStatus(newProfile);
+        }
+      } else {
+        setProfile(userProfile);
+        checkStatus(userProfile);
+      }
+      
+      setUser(session.user);
+      
+      // Update last login
+      await supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("id", session.user.id);
+
+      // Listen for new sales to show "push" simulation
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'sales',
+            filter: `user_id=eq.${session.user.id}`
+          },
+          (payload: any) => {
+            if (payload.new.status === 'approved') {
+              const amount = payload.new.amount;
+              // Browser Toast
+              toast.success(
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-black text-sm uppercase tracking-widest text-emerald-600">🔔 Nova Venda</span>
+                  <span className="text-lg font-black text-slate-900 leading-none">💰 Pingou🎉 {amount} MT</span>
+                </div>,
+                {
+                  icon: (
+                    <div className="bg-black p-2 rounded-xl border border-slate-800 shadow-2xl flex items-center justify-center animate-bounce">
+                      <span className="text-sm font-black text-white leading-none">P</span>
+                    </div>
+                  ),
+                  duration: 10000,
+                  className: "bg-white border-2 border-slate-100 shadow-[0_30px_60px_rgba(0,0,0,0.12)] rounded-2xl p-4",
                 }
+              );
+
+              // native Push Notification
+              if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("🔔 Nova Venda", {
+                  body: `💰 Pingou🎉 ${amount} MT`,
+                  icon: "/logo-p.svg",
+                  badge: "/logo-p.svg",
+                });
               }
             }
-          )
-          .subscribe();
+          }
+        )
+        .subscribe();
 
-        return () => {
-          supabase.removeChannel(channel);
-        };
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
+
+    const checkStatus = (p: any) => {
+      if (p.status === "banned") {
+        navigate({ to: "/blocked" });
+      } else if (p.status !== "approved") {
+        navigate({ to: "/waiting-approval" });
       }
     };
+
     checkAuth();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) navigate({ to: "/auth" });
-      else setUser(session.user);
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
+        navigate({ to: "/auth" });
+      } else {
+        setUser(session.user);
+        const { data: p } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+        if (p) {
+          setProfile(p);
+          checkStatus(p);
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -135,6 +187,7 @@ function DashboardLayout() {
     },
     { name: "Pixel Facebook", icon: Target, path: "/pixel" },
     { name: "Assistente IA", icon: Zap, path: "/dashboard", params: { tab: 'ai' } },
+    ...(profile?.role === 'admin' ? [{ name: "Admin Panel", icon: ShieldCheck, path: "/admin" }] : []),
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
 
