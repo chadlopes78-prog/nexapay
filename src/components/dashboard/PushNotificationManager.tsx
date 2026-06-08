@@ -156,24 +156,22 @@ export function PushNotificationManager() {
           </div>
         </div>
 
-        {isSubscribed ? (
+        {/* Manual subscription button removed as per requirements - now automatic */}
+        {!isSubscribed && permission !== "denied" && (
+          <div className="text-center p-2 bg-primary/5 rounded-lg border border-primary/10">
+            <p className="text-[10px] font-bold text-primary uppercase">Sincronizando Notificações...</p>
+          </div>
+        )}
+
+        {isSubscribed && (
           <Button 
-            variant="outline" 
-            className="w-full gap-2 border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700" 
+            variant="ghost" 
+            className="w-full gap-2 text-slate-400 hover:text-red-600 text-[10px]" 
             onClick={handleUnsubscribe}
             disabled={loading}
           >
-            <BellOff className="h-4 w-4" />
-            Desativar Notificações
-          </Button>
-        ) : (
-          <Button 
-            className="w-full gap-2 shadow-lg shadow-primary/20" 
-            onClick={handleSubscribe}
-            disabled={loading || permission === "denied"}
-          >
-            <Bell className="h-4 w-4" />
-            Ativar Notificações Inteligentes
+            <BellOff className="h-3 w-3" />
+            Pausar Alertas Temporariamente
           </Button>
         )}
 

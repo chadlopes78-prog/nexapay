@@ -13,7 +13,7 @@ export async function subscribeToPushNotifications(silent = false) {
     
     // Check permission first
     let permission = Notification.permission;
-    if (permission === "default" && !silent) {
+    if (permission === "default") {
       permission = await Notification.requestPermission();
     }
     
