@@ -187,7 +187,7 @@ export function PushNotificationManager() {
           </Button>
         )}
 
-        <div className="pt-2">
+        <div className="pt-2 space-y-2">
           <Button 
             variant="outline" 
             size="sm" 
@@ -196,6 +196,12 @@ export function PushNotificationManager() {
           >
             Testar Som de Venda 💰
           </Button>
+          
+          {!isSubscribed && (
+            <p className="text-[8px] text-center text-rose-500 font-bold uppercase px-4">
+              ⚠️ Se estiver no iPhone, use o Safari e adicione à Tela de Início antes de ativar.
+            </p>
+          )}
         </div>
 
         <p className="text-[9px] text-center text-slate-400 font-bold uppercase tracking-widest">
