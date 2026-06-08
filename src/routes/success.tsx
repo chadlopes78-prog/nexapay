@@ -13,7 +13,9 @@ import {
   CreditCard,
   Hash,
   ShieldCheck,
-  LayoutDashboard
+  LayoutDashboard,
+  MessageCircle,
+  AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -90,8 +92,9 @@ function SuccessPage() {
   }
 
   // Determine destination URL
-  const destinationUrl = product.delivery_link || "/dashboard";
-  const isExternal = !!product.delivery_link;
+  // We prioritize delivery_link (or access_link if we want to call it that)
+  const destinationUrl = product.delivery_link || product.access_link || null;
+  const isExternal = !!destinationUrl;
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] py-12 px-4 flex flex-col items-center">
@@ -148,22 +151,34 @@ function SuccessPage() {
             </div>
 
             {/* Main Action Button */}
-            <div className="pt-4">
-              <Button 
-                className="w-full h-16 rounded-2xl bg-black hover:bg-slate-900 text-lg font-black shadow-xl shadow-black/10 transition-all active:scale-[0.98]"
-                asChild={isExternal}
-                onClick={!isExternal ? () => navigate({ to: "/dashboard" }) : undefined}
-              >
-                {isExternal ? (
-                  <a href={destinationUrl} target="_blank" rel="noopener noreferrer">
-                    ACESSAR MEU PRODUTO <ArrowRight className="ml-2 h-6 w-6" />
+            <div className="pt-4 space-y-4">
+              {destinationUrl ? (
+                <Button 
+                  className="w-full h-16 rounded-2xl bg-black hover:bg-slate-900 text-lg font-black shadow-xl shadow-black/10 transition-all active:scale-[0.98]"
+                  asChild
+                >
+                  <a href={destinationUrl} target={destinationUrl.startsWith('http') ? "_blank" : "_self"} rel="noopener noreferrer">
+                    ACESSAR CONTEÚDO <ArrowRight className="ml-2 h-6 w-6" />
                   </a>
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    ACESSAR MEU PAINEL <LayoutDashboard className="ml-2 h-6 w-6" />
-                  </span>
-                )}
-              </Button>
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-700 font-medium">
+                      Seu acesso ainda está sendo configurado. Entre em contato pelo suporte.
+                    </p>
+                  </div>
+                  <Button 
+                    className="w-full h-16 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-lg font-black shadow-xl shadow-green-600/10 transition-all active:scale-[0.98]"
+                    asChild
+                  >
+                    <a href={`https://wa.me/258${product.support_phone?.replace(/\D/g, '') || ''}`} target="_blank" rel="noopener noreferrer">
+                      FALAR NO WHATSAPP <MessageCircle className="ml-2 h-6 w-6" />
+                    </a>
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Extra delivery options if they exist */}

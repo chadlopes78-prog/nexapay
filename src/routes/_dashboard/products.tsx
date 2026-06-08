@@ -65,6 +65,7 @@ function ProductsPage() {
   const [pixelId, setPixelId] = useState("");
   const [deliveryType, setDeliveryType] = useState("none");
   const [deliveryLink, setDeliveryLink] = useState("");
+  const [accessLink, setAccessLink] = useState("");
   const [deliveryFile, setDeliveryFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -173,6 +174,7 @@ function ProductsPage() {
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
           delivery_file_url: deliveryFileUrl,
+          access_link: accessLink || deliveryLink,
           image_url: uploadedImageUrl || null,
         })
         .select()
@@ -221,6 +223,7 @@ function ProductsPage() {
     setPixelId("");
     setDeliveryType("none");
     setDeliveryLink("");
+    setAccessLink("");
     setDeliveryFile(null);
     setImageFile(null);
     setImageUrl("");
@@ -236,6 +239,7 @@ function ProductsPage() {
     setPixelId(product.pixel_id || "");
     setDeliveryType(product.delivery_type || "none");
     setDeliveryLink(product.delivery_link || "");
+    setAccessLink(product.access_link || "");
     setImageUrl(product.image_url || "");
     setImageFile(null);
     setIsEditDialogOpen(true);
@@ -265,6 +269,7 @@ function ProductsPage() {
           pixel_id: pixelId,
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
+          access_link: accessLink || deliveryLink,
           image_url: finalImageUrl || null,
         })
         .eq("id", editingProduct.id);
@@ -382,10 +387,16 @@ function ProductsPage() {
                       </div>
                     )}
                     {(deliveryType === 'link' || deliveryType === 'both') && (
-                      <div className="grid gap-2">
-                          <Label htmlFor="delivery_link">Link de Acesso</Label>
-                          <Input id="delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
-                      </div>
+                      <>
+                        <div className="grid gap-2">
+                            <Label htmlFor="delivery_link">Link de Acesso</Label>
+                            <Input id="delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="access_link">Link de Acesso (WhatsApp, URL, etc)</Label>
+                            <Input id="access_link" value={accessLink} onChange={(e) => setAccessLink(e.target.value)} placeholder="https://wa.me/..." />
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -482,10 +493,16 @@ function ProductsPage() {
                         </select>
                     </div>
                     {(deliveryType === 'link' || deliveryType === 'both') && (
-                      <div className="grid gap-2">
-                          <Label htmlFor="edit-delivery_link">Link de Acesso</Label>
-                          <Input id="edit-delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
-                      </div>
+                      <>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-delivery_link">Link de Acesso</Label>
+                            <Input id="edit-delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-access_link">Link de Redirecionamento (WhatsApp, URL, etc)</Label>
+                            <Input id="edit-access_link" value={accessLink} onChange={(e) => setAccessLink(e.target.value)} placeholder="https://wa.me/..." />
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
