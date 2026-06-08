@@ -112,15 +112,68 @@ function DashboardPage() {
   const { data: dashboardData, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["dashboard-metrics", dateRange.from.toISOString(), dateRange.to.toISOString()],
     queryFn: async () => {
+      console.log("[Dashboard] Fetching metrics for range:", dateRange.from.toISOString(), "to", dateRange.to.toISOString());
+      
       const { data, error } = await supabase.rpc('get_dashboard_metrics', {
         p_start_date: dateRange.from.toISOString(),
         p_end_date: dateRange.to.toISOString()
       });
 
       if (error) {
-        console.error("Error fetching metrics from RPC:", error);
-        throw error;
+        console.error("[Dashboard] RPC Error details:", error);
+        
+        // Fallback for non-RPC data if it fails
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw error;
+
+        console.log("[Dashboard] Falling back to direct query due to RPC error");
+        const { data: sales, error: salesError } = await supabase
+          .from("sales")
+          .select("amount, status, created_at, products(name)")
+          .eq("user_id", user.id)
+          .gte("created_at", dateRange.from.toISOString())
+          .lte("created_at", dateRange.to.toISOString());
+
+        if (salesError) throw salesError;
+
+        const stats = {
+          total_transactions: sales.length,
+          success_count: sales.filter(s => s.status && ["approved", "paid", "success"].includes(s.status)).length,
+          failed_count: sales.filter(s => s.status && ["failed", "error", "cancelled", "canceled"].includes(s.status)).length,
+          total_value: sales.reduce((acc, s) => acc + Number(s.amount), 0),
+          received_value: sales.filter(s => s.status && ["approved", "paid", "success"].includes(s.status)).reduce((acc, s) => acc + Number(s.amount), 0),
+          lost_value: sales.filter(s => s.status && ["failed", "error", "cancelled", "canceled"].includes(s.status)).reduce((acc, s) => acc + Number(s.amount), 0),
+        };
+
+        const recentSales = sales.slice(0, 10).map(s => ({
+          ...s,
+          product_name: (s.products as any)?.name
+        }));
+
+        // Group by day for chart
+        const dailyMap = new Map();
+        sales.forEach(s => {
+          if (!s.created_at) return;
+          const day = startOfDay(parseISO(s.created_at)).toISOString();
+          const current = dailyMap.get(day) || { sucesso: 0, falha: 0 };
+          if (s.status && ["approved", "paid", "success"].includes(s.status)) current.sucesso++;
+          else if (s.status && ["failed", "error"].includes(s.status)) current.falha++;
+          dailyMap.set(day, current);
+        });
+
+        const chartData = Array.from(dailyMap.entries()).map(([day, val]) => ({
+          day,
+          ...val
+        }));
+
+        return {
+          stats,
+          chartData,
+          recentSales
+        };
       }
+
+      console.log("[Dashboard] RPC Data received:", data);
 
       const result = data as any;
       
