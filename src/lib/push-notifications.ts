@@ -25,8 +25,8 @@ export async function subscribeToPushNotifications() {
   if (!user) throw new Error("User not authenticated");
 
   // Save to database
-  const p256dh = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey("p256dh")!)));
-  const auth = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey("auth")!)));
+  const p256dh = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(subscription.getKey("p256dh")!))));
+  const auth = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(subscription.getKey("auth")!))));
 
   const { error } = await supabase.from("push_subscriptions").upsert({
     user_id: user.id,
