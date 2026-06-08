@@ -51,7 +51,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminControlCenter() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[] | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -59,6 +59,7 @@ function AdminControlCenter() {
     banned: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
