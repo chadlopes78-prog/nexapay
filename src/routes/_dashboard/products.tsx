@@ -268,6 +268,7 @@ function ProductsPage() {
           price: parseFloat(price),
           category,
           support_phone: validSupportPhone,
+          support_number: supportNumber || validSupportPhone,
           pixel_id: pixelId,
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
