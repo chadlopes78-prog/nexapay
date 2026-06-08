@@ -21,19 +21,50 @@ import mozFlag from "@/assets/moz-flag.png.asset.json";
 
 export const Route = createFileRoute("/p/$productId")({
   loader: async ({ params: { productId } }) => {
-    const [productRes, checkoutRes] = await Promise.all([
-      supabase.from("products").select("*").eq("id", productId).single(),
-      supabase.from("checkouts").select("*").eq("product_id", productId).maybeSingle(),
-    ]);
+    try {
+      // Intentar buscar por ID (UUID) primero
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId);
+      
+      let productQuery = supabase.from("products").select("*");
+      
+      if (isUuid) {
+        productQuery = productQuery.eq("id", productId);
+      } else {
+        productQuery = productQuery.eq("custom_url", productId);
+      }
 
-    if (productRes.error || !productRes.data) {
+      const [productRes, checkoutRes] = await Promise.all([
+        productQuery.single(),
+        supabase.from("checkouts").select("*").eq("product_id", isUuid ? productId : "").maybeSingle(),
+      ]);
+
+      if (productRes.error || !productRes.data) {
+        // Fallback: Si no se encontró por ID y no era un UUID, intentar buscar por custom_url
+        if (isUuid) {
+          const fallbackRes = await supabase.from("products").select("*").eq("custom_url", productId).maybeSingle();
+          if (fallbackRes.data) {
+            const checkoutFallback = await supabase.from("checkouts").select("*").eq("product_id", fallbackRes.data.id).maybeSingle();
+            return { product: fallbackRes.data, checkout: checkoutFallback.data ?? null };
+          }
+        }
+        return { product: null, checkout: null };
+      }
+
+      // Si se encontró por custom_url, necesitamos cargar el checkout real usando el ID del producto
+      let finalCheckout = checkoutRes?.data || null;
+      if (!isUuid && productRes.data && !finalCheckout) {
+        const actualCheckoutRes = await supabase.from("checkouts").select("*").eq("product_id", productRes.data.id).maybeSingle();
+        finalCheckout = actualCheckoutRes.data;
+      }
+
+      return {
+        product: productRes.data,
+        checkout: finalCheckout,
+      };
+    } catch (err) {
+      console.error("Loader error:", err);
       return { product: null, checkout: null };
     }
-
-    return {
-      product: productRes.data,
-      checkout: checkoutRes.data ?? null,
-    };
   },
   head: ({ loaderData }) => {
     const product = loaderData?.product;
@@ -61,6 +92,23 @@ function CheckoutPage() {
   const payFn = useServerFn(processPayment);
   const { productId } = useParams({ from: "/p/$productId" });
   const { product, checkout } = Route.useLoaderData();
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [isLoading, setIsLoading] = useState(!product);
+
+  useEffect(() => {
+    if (!product) {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+    setIsLoading(false);
+  }, [product]);
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    window.location.reload();
+  };
   
   const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -207,18 +255,53 @@ function CheckoutPage() {
 
 
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
+        <div className="w-full max-w-md space-y-8 text-center">
+          <div className="relative mx-auto h-24 w-24">
+            <div className="absolute inset-0 rounded-full border-4 border-slate-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-black border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Package className="h-8 w-8 text-slate-400" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-slate-900">A carregar o checkout...</h2>
+            <p className="text-slate-500">Estamos a preparar a sua experiência de compra segura.</p>
+          </div>
+          <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-black h-full w-1/2 animate-[loading_2s_ease-in-out_infinite]"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Card className="max-w-md w-full text-center p-8">
-          <ShieldAlert className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold">Produto não encontrado</h1>
-          <p className="text-muted-foreground mt-2">
-            Este link de checkout parece ser inválido ou expirou.
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <Card className="max-w-md w-full text-center p-10 shadow-2xl border-none rounded-3xl animate-in fade-in zoom-in duration-500">
+          <div className="h-20 w-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShieldAlert className="h-10 w-10 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Produto Indisponível</h1>
+          <p className="text-slate-500 mt-4 leading-relaxed">
+            O link pode ter expirado ou o produto foi removido. Por favor, contacte o vendedor se achar que isto é um erro.
           </p>
-          <Button className="mt-6" asChild>
-            <a href="/">Voltar ao início</a>
-          </Button>
+          <div className="flex flex-col gap-3 mt-8">
+            <Button 
+              variant="outline" 
+              className="h-12 rounded-xl font-bold"
+              onClick={handleRetry}
+              disabled={isRetrying}
+            >
+              {isRetrying ? "A tentar..." : "Tentar novamente"}
+            </Button>
+            <Button className="h-12 rounded-xl font-bold bg-black hover:bg-slate-900" asChild>
+              <a href="/">Voltar ao início</a>
+            </Button>
+          </div>
         </Card>
       </div>
     );
