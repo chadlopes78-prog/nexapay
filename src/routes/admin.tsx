@@ -109,19 +109,20 @@ function AdminControlCenter() {
     setError(null);
     
     try {
-      // Fetch stats with a single query (optimized)
-      const { data: statsData, error: statsError } = await supabase
-        .from("profiles")
-        .select("status", { count: 'exact' });
+      // Fetch stats using count for better performance and to avoid loading all data
+      const [totalCount, pendingCount, approvedCount, bannedCount] = await Promise.all([
+        supabase.from("profiles").select("*", { count: 'exact', head: true }),
+        supabase.from("profiles").select("*", { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from("profiles").select("*", { count: 'exact', head: true }).eq('status', 'approved'),
+        supabase.from("profiles").select("*", { count: 'exact', head: true }).eq('status', 'banned'),
+      ]);
       
-      if (!statsError && statsData) {
-        setStats({
-          total: statsData.length,
-          pending: statsData.filter(u => u.status === 'pending').length,
-          approved: statsData.filter(u => u.status === 'approved').length,
-          banned: statsData.filter(u => u.status === 'banned').length
-        });
-      }
+      setStats({
+        total: totalCount.count || 0,
+        pending: pendingCount.count || 0,
+        approved: approvedCount.count || 0,
+        banned: bannedCount.count || 0
+      });
 
       // Fetch paginated users
       let query = supabase
