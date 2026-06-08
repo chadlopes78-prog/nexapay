@@ -107,12 +107,8 @@ function AdminControlCenter() {
 
   const fetchUsers = async () => {
     setLoading(true);
+    setError(null);
     
-    // Security timeout
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 8000);
-
     try {
       // Fetch stats with a single query (optimized)
       const { data: statsData, error: statsError } = await supabase
@@ -139,15 +135,19 @@ function AdminControlCenter() {
         query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data, error: queryError } = await query;
       
-      clearTimeout(timeout);
+      if (queryError) {
+        if (queryError.message.includes("infinite recursion")) {
+          throw new Error("Erro de segurança no banco de dados. Contate o suporte.");
+        }
+        throw queryError;
+      }
+      
       setUsers(data || []);
-    } catch (error: any) {
-      clearTimeout(timeout);
-      toast.error("Erro ao carregar base: " + error.message);
-      // Ensure users is at least an empty array to avoid crashes
+    } catch (err: any) {
+      console.error("Fetch error:", err);
+      setError(err.message || "Erro desconhecido ao carregar usuários");
       setUsers([]);
     } finally {
       setLoading(false);
