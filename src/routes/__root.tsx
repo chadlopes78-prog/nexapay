@@ -148,7 +148,7 @@ function RootComponent() {
   useEffect(() => {
     // Register Service Worker for PWA
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
+      const registerSW = () => {
         navigator.serviceWorker
           .register("/sw.js")
           .then((registration) => {
@@ -162,7 +162,14 @@ function RootComponent() {
           .catch((err) => {
             console.error("[SW] Falha no registro:", err);
           });
-      });
+      };
+
+      if (document.readyState === "complete") {
+        registerSW();
+      } else {
+        window.addEventListener("load", registerSW);
+        return () => window.removeEventListener("load", registerSW);
+      }
     }
   }, []);
 
