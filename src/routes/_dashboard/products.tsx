@@ -181,11 +181,16 @@ function ProductsPage() {
       if (error) throw error;
 
       // Create default checkout record for the product
-      await supabase.from("checkouts").insert({
+      const { error: checkoutError } = await supabase.from("checkouts").insert({
         product_id: data.id,
         title: name,
-        subtitle: description.substring(0, 100),
+        subtitle: description ? description.substring(0, 100) : "",
       });
+
+      if (checkoutError) {
+        console.error("Erro ao criar configurações de checkout:", checkoutError);
+        // We don't throw here to avoid failing product creation if checkout fails
+      }
 
       const checkoutLink = `${window.location.origin}/p/${data.id}`;
       toast.success("Produto criado com sucesso!", {
