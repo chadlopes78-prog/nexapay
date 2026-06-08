@@ -86,7 +86,7 @@ function SuccessPage() {
         </div>
 
         <Card className="border-none shadow-lg overflow-hidden">
-          <CardHeader className="bg-primary text-white p-6">
+          <CardHeader className="bg-[#E30613] text-white p-6">
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5" /> {product.name}
             </CardTitle>
@@ -104,7 +104,7 @@ function SuccessPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-muted-foreground flex items-center gap-1"><CreditCard className="h-3 w-3" /> Valor Pago</p>
-                  <p className="font-bold text-lg text-primary">{sale.amount.toLocaleString("pt-MZ")} MT</p>
+                  <p className="font-bold text-lg text-[#E30613]">{sale.amount.toLocaleString("pt-MZ")} MT</p>
                 </div>
               </div>
 
@@ -119,7 +119,7 @@ function SuccessPage() {
                       <p className="text-xs text-muted-foreground">Clique para baixar agora</p>
                     </div>
                   </div>
-                  <Button asChild>
+                  <Button className="bg-[#E30613] hover:bg-[#C20511]" asChild>
                     <a href={product.delivery_file_url} download target="_blank" rel="noopener noreferrer">
                       Download <Download className="ml-2 h-4 w-4" />
                     </a>
