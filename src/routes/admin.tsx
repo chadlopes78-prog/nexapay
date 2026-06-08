@@ -78,17 +78,21 @@ function AdminControlCenter() {
         return;
       }
 
-      if (session.user.email !== ADMIN_EMAIL) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .maybeSingle();
+      // Bypass for primary admin
+      if (session.user.email === ADMIN_EMAIL) {
+        return;
+      }
 
-        if (profile?.role !== 'admin') {
-          navigate({ to: "/dashboard" });
-          toast.error("Acesso negado.");
-        }
+      // Fallback: check profile role
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (profile?.role !== 'admin') {
+        navigate({ to: "/dashboard" });
+        toast.error("Acesso negado.");
       }
     } catch (error) {
       console.error("Admin check error:", error);
