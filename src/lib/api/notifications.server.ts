@@ -20,6 +20,7 @@ export async function triggerSaleApprovedNotification(saleId: string) {
     const userId = products?.user_id;
     const productName = products?.name || "Produto";
     const amount = sale.amount || 0;
+    const paymentMethod = (sale.payment_method || "Checkout").toUpperCase();
 
     if (!userId) {
       console.error("[Notification] No user_id found for sale:", saleId);
@@ -36,7 +37,7 @@ export async function triggerSaleApprovedNotification(saleId: string) {
 
     // Use the specific message requested by the user
     const title = "💰 Venda aprovada!";
-    const body = `Recebeste pagamento de ${amount} MT no produto ${productName}`;
+    const body = `Recebeste pagamento de ${amount} MT via ${paymentMethod} no produto ${productName}`;
     
     console.log(`[Notification] Sending push to user ${userId}: ${body}`);
 

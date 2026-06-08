@@ -23,8 +23,9 @@ import {
   Bar,
   Legend,
 } from "recharts";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 import { DateRangePicker, DateRangePreset } from "@/components/dashboard/DateRangePicker";
 import { format, subDays, differenceInDays, startOfDay, endOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -61,6 +62,31 @@ function DashboardPage() {
   const [preset, setPreset] = useState<DateRangePreset>(() => {
     return (sessionStorage.getItem("dashboard-preset") as DateRangePreset) || "last7days";
   });
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // Listen for realtime sale updates to refresh dashboard immediately
+    const channel = supabase
+      .channel('dashboard-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'sales'
+        },
+        () => {
+          console.log("[Dashboard] Realtime sale change detected, refreshing...");
+          queryClient.invalidateQueries({ queryKey: ["dashboard-simple-metrics"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ["dashboard-simple-metrics", dateRange.from.toISOString(), dateRange.to.toISOString()],
