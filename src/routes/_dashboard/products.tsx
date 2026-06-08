@@ -62,6 +62,7 @@ function ProductsPage() {
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [supportPhone, setSupportPhone] = useState("");
+  const [supportNumber, setSupportNumber] = useState("");
   const [pixelId, setPixelId] = useState("");
   const [deliveryType, setDeliveryType] = useState("none");
   const [deliveryLink, setDeliveryLink] = useState("");
