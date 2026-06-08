@@ -409,6 +409,7 @@ export type Database = {
           created_at: string
           endpoint: string
           id: string
+          metadata: Json | null
           p256dh: string
           updated_at: string
           user_id: string
@@ -418,6 +419,7 @@ export type Database = {
           created_at?: string
           endpoint: string
           id?: string
+          metadata?: Json | null
           p256dh: string
           updated_at?: string
           user_id: string
@@ -427,6 +429,7 @@ export type Database = {
           created_at?: string
           endpoint?: string
           id?: string
+          metadata?: Json | null
           p256dh?: string
           updated_at?: string
           user_id?: string

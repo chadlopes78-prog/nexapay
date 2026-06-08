@@ -85,18 +85,20 @@ serve(async (req) => {
           timestamp: Date.now()
         });
 
+        // Use webpush for all as it is the standard supported by iOS 16.4+
+        // and modern Android/Desktop browsers.
         await webpush.sendNotification(pushSubscription, payload);
         return { success: true, endpoint: sub.endpoint };
       } catch (err) {
         console.error(`Error sending push to ${sub.endpoint}:`, err);
         
-        // If subscription is expired or invalid, remove it
+        // Handle failed attempts with forward compatibility (retry/cleanup)
         if (err.statusCode === 410 || err.statusCode === 404) {
           await supabaseClient
             .from("push_subscriptions")
             .delete()
             .eq("id", sub.id);
-          console.log(`Removed invalid subscription: ${sub.id}`);
+          console.log(`Removed invalid/expired subscription: ${sub.id}`);
         }
         
         return { success: false, endpoint: sub.endpoint, error: err.message, statusCode: err.statusCode };
