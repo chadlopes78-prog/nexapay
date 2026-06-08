@@ -256,12 +256,21 @@ export const processPayment = createServerFn({ method: "POST" })
         })
         .eq("id", sale.id);
 
-      if (finalStatus === "paid" && finalTrafficPageId) {
-        await supabaseAdmin.from("traffic_events").insert({
-          page_id: finalTrafficPageId,
-          event_type: "purchase",
-          metadata: { saleId: sale.id, productId: data.productId },
-        });
+      if (finalStatus === "paid") {
+        const { triggerSaleApprovedNotification } = await import("@/lib/api/notifications.server");
+        
+        // Trigger notification
+        triggerSaleApprovedNotification(sale.id).catch(err => 
+          console.error("Error triggering sale notification:", err)
+        );
+
+        if (finalTrafficPageId) {
+          await supabaseAdmin.from("traffic_events").insert({
+            page_id: finalTrafficPageId,
+            event_type: "purchase",
+            metadata: { saleId: sale.id, productId: data.productId },
+          });
+        }
       }
 
       return {
