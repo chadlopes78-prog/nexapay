@@ -38,28 +38,46 @@ export const Route = createFileRoute("/p/$productId")({
         supabase.from("checkouts").select("*").eq("product_id", isUuid ? productId : "").maybeSingle(),
       ]);
 
-      if (productRes.error || !productRes.data) {
+      let finalProduct = productRes.data;
+      let finalCheckout = checkoutRes?.data || null;
+
+      if (!finalProduct) {
         // Fallback: Si no se encontró por ID y no era un UUID, intentar buscar por custom_url
         if (isUuid) {
           const fallbackRes = await supabase.from("products").select("*").eq("custom_url", productId).maybeSingle();
           if (fallbackRes.data) {
+            finalProduct = fallbackRes.data;
             const checkoutFallback = await supabase.from("checkouts").select("*").eq("product_id", fallbackRes.data.id).maybeSingle();
-            return { product: fallbackRes.data, checkout: checkoutFallback.data ?? null };
+            finalCheckout = checkoutFallback.data ?? null;
           }
         }
-        return { product: null, checkout: null };
+      }
+
+      if (!finalProduct) {
+        return { product: null, checkout: null, defaultPixel: null };
+      }
+
+      // Load default pixel config if product doesn't have one
+      let defaultPixel = null;
+      if (!finalProduct.facebook_pixel_id) {
+        const { data: pixelConfig } = await supabase
+          .from("pixel_configs")
+          .select("fb_pixel_id, fb_access_token")
+          .eq("user_id", finalProduct.user_id)
+          .maybeSingle();
+        defaultPixel = pixelConfig;
       }
 
       // Si se encontró por custom_url, necesitamos cargar el checkout real usando el ID del producto
-      let finalCheckout = checkoutRes?.data || null;
-      if (!isUuid && productRes.data && !finalCheckout) {
-        const actualCheckoutRes = await supabase.from("checkouts").select("*").eq("product_id", productRes.data.id).maybeSingle();
+      if (!isUuid && finalProduct && !finalCheckout) {
+        const actualCheckoutRes = await supabase.from("checkouts").select("*").eq("product_id", finalProduct.id).maybeSingle();
         finalCheckout = actualCheckoutRes.data;
       }
 
       return {
-        product: productRes.data,
+        product: finalProduct,
         checkout: finalCheckout,
+        defaultPixel: defaultPixel,
       };
     } catch (err) {
       console.error("Loader error:", err);
