@@ -266,9 +266,22 @@ function DashboardPage() {
   }, [dashboardData]);
 
   if (isLoading) return (
+    <div className="flex flex-col items-center justify-center min-h-[600px] space-y-6">
+      <div className="relative h-20 w-20">
+        <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
+        <div className="absolute inset-0 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+      </div>
+      <p className="font-black text-slate-900 uppercase tracking-widest text-xs animate-pulse">Sincronizando Métricas...</p>
+    </div>
+  );
+
+  if (!dashboardData) return (
     <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-      <div className="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
-      <p className="font-bold text-slate-500 uppercase tracking-widest text-xs">Carregando métricas...</p>
+      <AlertTriangle className="h-12 w-12 text-rose-500" />
+      <p className="font-black text-slate-900 uppercase tracking-widest text-xs">Erro ao carregar dados. Tente atualizar a página.</p>
+      <Button onClick={() => refetch()} variant="outline" size="sm" className="rounded-xl font-black uppercase tracking-tighter">
+        <RefreshCcw className="mr-2 h-4 w-4" /> Tentar Novamente
+      </Button>
     </div>
   );
 
