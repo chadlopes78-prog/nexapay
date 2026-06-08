@@ -9,8 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WaitingApprovalRouteImport } from './routes/waiting-approval'
 import { Route as SuccessRouteImport } from './routes/success'
+import { Route as BlockedRouteImport } from './routes/blocked'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PProductIdRouteImport } from './routes/p.$productId'
@@ -25,14 +28,29 @@ import { Route as DashboardCustomersRouteImport } from './routes/_dashboard/cust
 import { Route as ApiPublicE2paymentWebhookRouteImport } from './routes/api/public/e2payment-webhook'
 import { Route as DashboardReportsTrafficRouteImport } from './routes/_dashboard.reports.traffic'
 
+const WaitingApprovalRoute = WaitingApprovalRouteImport.update({
+  id: '/waiting-approval',
+  path: '/waiting-approval',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SuccessRoute = SuccessRouteImport.update({
   id: '/success',
   path: '/success',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlockedRoute = BlockedRouteImport.update({
+  id: '/blocked',
+  path: '/blocked',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -103,8 +121,11 @@ const DashboardReportsTrafficRoute = DashboardReportsTrafficRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/blocked': typeof BlockedRoute
   '/success': typeof SuccessRoute
+  '/waiting-approval': typeof WaitingApprovalRoute
   '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
   '/files': typeof DashboardFilesRoute
@@ -119,8 +140,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/blocked': typeof BlockedRoute
   '/success': typeof SuccessRoute
+  '/waiting-approval': typeof WaitingApprovalRoute
   '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
   '/files': typeof DashboardFilesRoute
@@ -137,8 +161,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_dashboard': typeof DashboardRouteWithChildren
+  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/blocked': typeof BlockedRoute
   '/success': typeof SuccessRoute
+  '/waiting-approval': typeof WaitingApprovalRoute
   '/_dashboard/customers': typeof DashboardCustomersRoute
   '/_dashboard/dashboard': typeof DashboardDashboardRoute
   '/_dashboard/files': typeof DashboardFilesRoute
@@ -155,8 +182,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/auth'
+    | '/blocked'
     | '/success'
+    | '/waiting-approval'
     | '/customers'
     | '/dashboard'
     | '/files'
@@ -171,8 +201,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/auth'
+    | '/blocked'
     | '/success'
+    | '/waiting-approval'
     | '/customers'
     | '/dashboard'
     | '/files'
@@ -188,8 +221,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_dashboard'
+    | '/admin'
     | '/auth'
+    | '/blocked'
     | '/success'
+    | '/waiting-approval'
     | '/_dashboard/customers'
     | '/_dashboard/dashboard'
     | '/_dashboard/files'
@@ -206,14 +242,24 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
+  AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  BlockedRoute: typeof BlockedRoute
   SuccessRoute: typeof SuccessRoute
+  WaitingApprovalRoute: typeof WaitingApprovalRoute
   PProductIdRoute: typeof PProductIdRoute
   ApiPublicE2paymentWebhookRoute: typeof ApiPublicE2paymentWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/waiting-approval': {
+      id: '/waiting-approval'
+      path: '/waiting-approval'
+      fullPath: '/waiting-approval'
+      preLoaderRoute: typeof WaitingApprovalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/success': {
       id: '/success'
       path: '/success'
@@ -221,11 +267,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blocked': {
+      id: '/blocked'
+      path: '/blocked'
+      fullPath: '/blocked'
+      preLoaderRoute: typeof BlockedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_dashboard': {
@@ -353,8 +413,11 @@ const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
+  AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  BlockedRoute: BlockedRoute,
   SuccessRoute: SuccessRoute,
+  WaitingApprovalRoute: WaitingApprovalRoute,
   PProductIdRoute: PProductIdRoute,
   ApiPublicE2paymentWebhookRoute: ApiPublicE2paymentWebhookRoute,
 }
