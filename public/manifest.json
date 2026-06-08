@@ -4,8 +4,8 @@
   "description": "Plataforma de pagamentos e checkout inteligente",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#E30613",
+  "theme_color": "#E30613",
   "icons": [
     {
       "src": "/logo-192.png",
