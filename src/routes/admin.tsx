@@ -109,19 +109,20 @@ function AdminControlCenter() {
     setError(null);
     
     try {
-      // Fetch stats with a single query (optimized)
-      const { data: statsData, error: statsError } = await supabase
-        .from("profiles")
-        .select("status");
+      // Fetch stats using count for better performance and to avoid loading all data
+      const [totalCount, pendingCount, approvedCount, bannedCount] = await Promise.all([
+        supabase.from("profiles").select("*", { count: 'exact', head: true }),
+        supabase.from("profiles").select("*", { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from("profiles").select("*", { count: 'exact', head: true }).eq('status', 'approved'),
+        supabase.from("profiles").select("*", { count: 'exact', head: true }).eq('status', 'banned'),
+      ]);
       
-      if (!statsError && statsData) {
-        setStats({
-          total: statsData.length,
-          pending: statsData.filter(u => u.status === 'pending').length,
-          approved: statsData.filter(u => u.status === 'approved').length,
-          banned: statsData.filter(u => u.status === 'banned').length
-        });
-      }
+      setStats({
+        total: totalCount.count || 0,
+        pending: pendingCount.count || 0,
+        approved: approvedCount.count || 0,
+        banned: bannedCount.count || 0
+      });
 
       // Fetch paginated users
       let query = supabase
@@ -131,7 +132,8 @@ function AdminControlCenter() {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (search) {
-        query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+        // Since we don't have email in the profiles table, we only search by full_name
+        query = query.ilike('full_name', `%${search}%`);
       }
 
       const { data, error: queryError } = await query;
@@ -341,7 +343,7 @@ function AdminControlCenter() {
                             <span className="font-bold text-slate-900 truncate">{user.full_name || "Sem nome cadastrado"}</span>
                             <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
                               <Mail className="h-3 w-3" />
-                              {user.email || "Sem email"}
+                              {user.full_name || "Sem identificação"}
                             </span>
                           </div>
                         </div>
