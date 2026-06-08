@@ -235,7 +235,6 @@ function DashboardLayout() {
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { name: "Intelligence Center", icon: BarChart3, path: "/dashboard", params: { tab: 'intelligence' } },
     { name: "Produtos", icon: Package, path: "/products" },
     { name: "Vendas", icon: CreditCard, path: "/sales" },
     { name: "Clientes", icon: Users, path: "/customers" },
