@@ -117,7 +117,7 @@ export const processPayment = createServerFn({ method: "POST" })
 
     const { data: product, error: productError } = await supabaseAdmin
       .from("products")
-      .select("id, price, status")
+      .select("id, price, status, user_id")
       .eq("id", data.productId)
       .single();
 
@@ -151,6 +151,7 @@ export const processPayment = createServerFn({ method: "POST" })
       .from("sales")
       .insert({
         product_id: data.productId,
+        user_id: product.user_id,
         customer_name: customerName.slice(0, 100),
         customer_phone: msisdn,
         amount,

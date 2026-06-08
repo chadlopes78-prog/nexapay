@@ -7,7 +7,7 @@ export async function triggerSaleApprovedNotification(saleId: string) {
     // Fetch complete sale data including product details
     const { data: sale, error: fetchError } = await supabaseAdmin
       .from("sales")
-      .select("*, products(user_id, name)")
+      .select("*, products(name)")
       .eq("id", saleId)
       .maybeSingle();
 
@@ -17,7 +17,7 @@ export async function triggerSaleApprovedNotification(saleId: string) {
     }
 
     const products = sale.products as any;
-    const userId = products?.user_id;
+    const userId = sale.user_id;
     const productName = products?.name || "Produto";
     const amount = sale.amount || 0;
     const paymentMethod = (sale.payment_method || "Checkout").toUpperCase();
