@@ -396,7 +396,13 @@ function DashboardLayout() {
         isSidebarOpen ? "lg:ml-64" : "lg:ml-20"
       )}>
         <div className="p-4 md:p-8">
-          <Outlet />
+          <Suspense fallback={
+            <div className="flex h-[400px] w-full items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </div>
       </main>
     </div>
