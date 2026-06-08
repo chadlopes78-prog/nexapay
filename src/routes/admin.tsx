@@ -17,7 +17,9 @@ import {
   LayoutDashboard,
   Clock,
   Mail,
-  Filter
+  Filter,
+  AlertTriangle,
+  RefreshCcw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +50,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminControlCenter() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[] | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -55,6 +58,7 @@ function AdminControlCenter() {
     banned: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -78,17 +82,21 @@ function AdminControlCenter() {
         return;
       }
 
-      if (session.user.email !== ADMIN_EMAIL) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", session.user.id)
-          .maybeSingle();
+      // Bypass for primary admin
+      if (session.user.email === ADMIN_EMAIL) {
+        return;
+      }
 
-        if (profile?.role !== 'admin') {
-          navigate({ to: "/dashboard" });
-          toast.error("Acesso negado.");
-        }
+      // Fallback: check profile role
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
+
+      if (profile?.role !== 'admin') {
+        navigate({ to: "/dashboard" });
+        toast.error("Acesso negado.");
       }
     } catch (error) {
       console.error("Admin check error:", error);
@@ -98,12 +106,8 @@ function AdminControlCenter() {
 
   const fetchUsers = async () => {
     setLoading(true);
+    setError(null);
     
-    // Security timeout
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 8000);
-
     try {
       // Fetch stats with a single query (optimized)
       const { data: statsData, error: statsError } = await supabase
@@ -130,15 +134,19 @@ function AdminControlCenter() {
         query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data, error: queryError } = await query;
       
-      clearTimeout(timeout);
+      if (queryError) {
+        if (queryError.message.includes("infinite recursion")) {
+          throw new Error("Erro de segurança no banco de dados. Contate o suporte.");
+        }
+        throw queryError;
+      }
+      
       setUsers(data || []);
-    } catch (error: any) {
-      clearTimeout(timeout);
-      toast.error("Erro ao carregar base: " + error.message);
-      // Ensure users is at least an empty array to avoid crashes
+    } catch (err: any) {
+      console.error("Fetch error:", err);
+      setError(err.message || "Erro desconhecido ao carregar usuários");
       setUsers([]);
     } finally {
       setLoading(false);
@@ -160,7 +168,9 @@ function AdminControlCenter() {
       toast.success(`Usuário ${status} com sucesso.`);
       
       // Update local state for immediate feedback
-      setUsers(users.map(u => u.id === userId ? { ...u, status } : u));
+      if (users) {
+        setUsers(users.map(u => u.id === userId ? { ...u, status } : u));
+      }
       
       // Recalculate stats locally to avoid extra query
       fetchUsers(); 
@@ -168,6 +178,44 @@ function AdminControlCenter() {
       toast.error("Erro na operação: " + error.message);
     }
   };
+
+  const LoadingSkeleton = () => (
+    <div className="space-y-4 p-6">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center space-x-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full max-w-[250px]" />
+            <Skeleton className="h-4 w-full max-w-[200px]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const ErrorState = ({ message }: { message: string }) => (
+    <div className="p-10 text-center space-y-4">
+      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-600 mb-2">
+        <AlertTriangle className="h-8 w-8" />
+      </div>
+      <h3 className="text-xl font-bold text-slate-900">Falha ao carregar dados</h3>
+      <p className="text-slate-500 max-w-md mx-auto">{message}</p>
+      <Button onClick={fetchUsers} variant="outline" className="mt-4">
+        <RefreshCcw className="mr-2 h-4 w-4" />
+        Tentar Novamente
+      </Button>
+    </div>
+  );
+
+  const EmptyState = () => (
+    <div className="p-20 text-center">
+      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-400 mb-4">
+        <Search className="h-8 w-8" />
+      </div>
+      <h3 className="text-lg font-bold text-slate-900">Nenhum utilizador encontrado</h3>
+      <p className="text-slate-500">Ajuste seus filtros ou tente uma busca diferente.</p>
+    </div>
+  );
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -264,15 +312,21 @@ function AdminControlCenter() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i} className="animate-pulse h-20">
-                      <TableCell colSpan={5} className="bg-slate-50/20"></TableCell>
-                    </TableRow>
-                  ))
-                ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-40 text-center text-slate-400 font-medium">
-                      Nenhum resultado para os critérios de busca.
+                    <TableCell colSpan={5} className="p-0">
+                      <LoadingSkeleton />
+                    </TableCell>
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="p-0">
+                      <ErrorState message={error} />
+                    </TableCell>
+                  </TableRow>
+                ) : users === null || users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="p-0">
+                      <EmptyState />
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -294,7 +348,7 @@ function AdminControlCenter() {
                       </TableCell>
                       <TableCell>{getStatusBadge(user.status)}</TableCell>
                       <TableCell className="text-sm text-slate-600 font-medium">
-                        {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                        {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : "-"}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600 font-medium">
                         {user.last_login ? new Date(user.last_login).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : "Nunca acessou"}
@@ -346,7 +400,7 @@ function AdminControlCenter() {
           
           <div className="p-6 border-t border-slate-100 flex items-center justify-between bg-white">
             <p className="text-sm font-bold text-slate-400">
-              {stats.total > 0 ? `Exibindo ${users.length} de ${stats.total} registros` : "Nenhum registro encontrado"}
+              {stats.total > 0 ? `Exibindo ${users?.length || 0} de ${stats.total} registros` : "Nenhum registro encontrado"}
             </p>
             <div className="flex items-center gap-1.5">
               <Button 
@@ -365,7 +419,7 @@ function AdminControlCenter() {
                 variant="outline" 
                 size="icon" 
                 className="h-9 w-9 rounded-lg border-slate-200"
-                disabled={users.length < PAGE_SIZE}
+                disabled={!users || users.length < PAGE_SIZE}
                 onClick={() => setPage(p => p + 1)}
               >
                 <ChevronRight className="h-4 w-4" />
