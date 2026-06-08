@@ -171,6 +171,9 @@ function DashboardPage() {
       if (!user) throw new Error("Não autenticado");
 
       // We use the same logic as in settings but centralized here if needed
+      // Reset all user data safely
+      await supabase.from("sales").delete().eq("user_id", user.id);
+      
       const { data: userProducts } = await supabase
         .from("products")
         .select("id")
@@ -179,8 +182,6 @@ function DashboardPage() {
       const productIds = userProducts?.map(p => p.id) || [];
 
       if (productIds.length > 0) {
-        await supabase.from("sales").delete().in("product_id", productIds);
-        
         const { data: userPages } = await supabase
           .from("traffic_pages")
           .select("id")
