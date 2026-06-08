@@ -308,12 +308,11 @@ export type Database = {
           delivery_link: string | null
           delivery_type: string | null
           description: string | null
+          facebook_access_token: string | null
+          facebook_pixel_id: string | null
           id: string
           image_url: string | null
           name: string
-          pixel_id: string | null
-          pixel_name: string | null
-          pixel_token: string | null
           price: number
           status: string | null
           support_number: string | null
@@ -331,12 +330,11 @@ export type Database = {
           delivery_link?: string | null
           delivery_type?: string | null
           description?: string | null
+          facebook_access_token?: string | null
+          facebook_pixel_id?: string | null
           id?: string
           image_url?: string | null
           name: string
-          pixel_id?: string | null
-          pixel_name?: string | null
-          pixel_token?: string | null
           price: number
           status?: string | null
           support_number?: string | null
@@ -354,12 +352,11 @@ export type Database = {
           delivery_link?: string | null
           delivery_type?: string | null
           description?: string | null
+          facebook_access_token?: string | null
+          facebook_pixel_id?: string | null
           id?: string
           image_url?: string | null
           name?: string
-          pixel_id?: string | null
-          pixel_name?: string | null
-          pixel_token?: string | null
           price?: number
           status?: string | null
           support_number?: string | null
