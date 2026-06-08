@@ -311,13 +311,16 @@ function CheckoutPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-4 md:py-12 px-4 transition-all duration-300">
       {/* Top Banner - Urgency with real logic or faster appearance */}
       <div className="w-full mb-4 -mx-4 md:-mx-0 md:-mt-12 md:mb-6 animate-in slide-in-from-top duration-500">
-        <div className="bg-black text-white text-sm md:text-xl py-4 px-6 md:py-5 md:px-8 flex items-center justify-center gap-2 md:gap-3 font-bold shadow-2xl rounded-none sticky top-0 z-50">
+        <div className="bg-[#E30613] text-white text-sm md:text-xl py-4 px-6 md:py-5 md:px-8 flex items-center justify-center gap-2 md:gap-3 font-bold shadow-2xl rounded-none sticky top-0 z-50 uppercase tracking-tighter">
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
             </span>
-            <span>Oferta por tempo limitado — expira em 10:00</span>
+            <span className="flex items-center gap-2">
+              <span className="animate-pulse">⚡</span>
+              Finalize sua compra agora — Oferta por tempo limitado!
+            </span>
           </div>
         </div>
       </div>
@@ -349,7 +352,7 @@ function CheckoutPage() {
                 {product.price.toLocaleString("pt-MZ")}MT
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                <CheckCircle2 className="h-3.5 w-3.5 text-black" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#E30613]" />
                 <span>Compra 100% segura</span>
               </div>
             </div>
@@ -416,13 +419,13 @@ function CheckoutPage() {
                   className={cn(
                     "flex flex-col items-center justify-center gap-3 p-5 rounded-2xl border-2 transition-all font-bold group relative overflow-hidden",
                     paymentMethod === "mpesa"
-                      ? "border-black bg-slate-50 text-black ring-4 ring-black/5"
+                      ? "border-[#E30613] bg-red-50 text-[#E30613] ring-4 ring-red-500/10"
                       : "border-slate-100 hover:border-slate-200 text-slate-500 bg-white",
                   )}
                 >
                   {paymentMethod === "mpesa" && (
                     <div className="absolute top-2 right-2">
-                      <CheckCircle2 className="h-4 w-4 text-black" />
+                      <CheckCircle2 className="h-4 w-4 text-[#E30613]" />
                     </div>
                   )}
                   <div className="h-14 w-14 rounded-xl overflow-hidden border border-slate-100 shadow-md group-hover:scale-110 transition-transform">
@@ -472,7 +475,7 @@ function CheckoutPage() {
                   onChange={(e) => setPhone(e.target.value)}
                   className={cn(
                     "h-12 pl-24 border-slate-200 rounded-xl",
-                    paymentMethod === "mpesa" ? "focus:ring-black" : "focus:ring-orange-500",
+                    paymentMethod === "mpesa" ? "focus:ring-[#E30613]" : "focus:ring-orange-500",
                   )}
                 />
               </div>
@@ -499,14 +502,14 @@ function CheckoutPage() {
               <Button
                 type="submit"
                 disabled={processingPayment}
-                className="w-full h-16 text-xl font-black bg-black hover:bg-slate-900 text-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-3 border-b-4 border-slate-800"
+                className="w-full h-16 text-xl font-black bg-[#E30613] hover:bg-[#C20511] text-white rounded-2xl shadow-[0_20px_50px_rgba(227,6,19,0.3)] hover:shadow-[0_20px_50px_rgba(227,6,19,0.4)] disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-3 border-b-4 border-[#9E040D]"
               >
                 {processingPayment ? (
                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Lock className="h-5 w-5" />
                 )}
-                {processingPayment ? "Aguarde..." : `Finalizar compra (${product.price.toLocaleString("pt-MZ")} MT)`}
+                {processingPayment ? "Processando pagamento..." : `PAGAR AGORA (${product.price.toLocaleString("pt-MZ")} MT)`}
               </Button>
 
             </div>
