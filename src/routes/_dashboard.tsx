@@ -50,25 +50,31 @@ function DashboardLayout() {
         return;
       }
 
+      // ADMIN BYPASS TOTAL
+      if (session.user.email === 'chadlopesff@gmail.com') {
+        navigate({ to: "/admin" });
+        return;
+      }
+
       // Fetch profile to check status and role
       const { data: userProfile, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", session.user.id)
-        .single();
+        .maybeSingle();
 
       if (error || !userProfile) {
-        // If profile doesn't exist, try to create it (fallback)
+        // Se perfil não existe, tenta criar
         const { data: newProfile } = await supabase
           .from("profiles")
           .upsert({ 
             id: session.user.id,
             full_name: session.user.user_metadata?.full_name || '',
-            status: session.user.email === 'chadlopesff@gmail.com' ? 'approved' : 'pending',
-            role: session.user.email === 'chadlopesff@gmail.com' ? 'admin' : 'user'
+            status: 'pending',
+            role: 'user'
           })
           .select()
-          .single();
+          .maybeSingle();
         
         if (newProfile) {
           setProfile(newProfile);

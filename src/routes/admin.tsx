@@ -74,11 +74,11 @@ function AdminDashboard() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, email:id") // email from auth.users isn't directly in profiles but we know the admin email
+      .select("role")
       .eq("id", session.user.id)
-      .single();
+      .maybeSingle();
 
-    if (profile?.role !== 'admin' && session.user.email !== 'chadlopesff@gmail.com') {
+    if (session.user.email !== 'chadlopesff@gmail.com' && profile?.role !== 'admin') {
       navigate({ to: "/dashboard" });
       toast.error("Acesso negado.");
     }
