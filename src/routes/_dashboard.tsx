@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { subscribeToPushNotifications } from "@/lib/push-notifications";
 
 export const Route = createFileRoute("/_dashboard")({
   component: DashboardLayoutWrapper,
@@ -145,6 +146,16 @@ function DashboardLayout() {
         
         // Update last login
         await supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("id", session.user.id);
+
+        // Auto-subscribe to push notifications if permission is already granted
+        if ("Notification" in window && Notification.permission === "granted") {
+          try {
+            await subscribeToPushNotifications();
+            console.log("Push notification token updated automatically");
+          } catch (err) {
+            console.error("Error updating push token automatically:", err);
+          }
+        }
 
         /* 
         // Realtime sales notification removed in favor of native push notifications
