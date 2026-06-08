@@ -155,33 +155,33 @@ function DashboardLayout() {
           );
         }
 
-        /* 
-        // Realtime sales notification removed in favor of native push notifications
+        // Realtime sales notification for in-app toasts
         const channel = supabase
-          .channel('schema-db-changes')
+          .channel(`user-sales-${session.user.id}`)
           .on(
             'postgres_changes',
             {
-              event: 'INSERT',
+              event: 'UPDATE',
               schema: 'public',
               table: 'sales',
               filter: `user_id=eq.${session.user.id}`
             },
             (payload: any) => {
-              if (payload.new.status === 'approved') {
+              // Only notify if status changed to paid
+              if (payload.new.status === 'paid' && payload.old.status !== 'paid') {
                 const amount = payload.new.amount;
                 toast.success(
                   <div className="flex flex-col gap-0.5">
                     <span className="font-black text-sm uppercase tracking-widest text-emerald-600">🔔 Nova Venda</span>
-                    <span className="text-lg font-black text-slate-900 leading-none">💰 Pingou🎉 {amount} MT</span>
+                    <span className="text-lg font-black text-slate-900 leading-none tracking-tighter">💰 Pingou🎉 {amount} MT</span>
                   </div>,
                   {
                     icon: (
                       <div className="bg-black p-2 rounded-xl border border-slate-800 shadow-2xl flex items-center justify-center animate-bounce">
-                        <span className="text-sm font-black text-white leading-none">P</span>
+                        <CreditCard className="h-4 w-4 text-white" />
                       </div>
                     ),
-                    duration: 10000,
+                    duration: 8000,
                   }
                 );
               }
@@ -192,7 +192,6 @@ function DashboardLayout() {
         return () => {
           supabase.removeChannel(channel);
         };
-        */
         return () => {};
       } catch (err) {
         console.error("Auth check error:", err);
