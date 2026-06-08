@@ -62,6 +62,7 @@ function ProductsPage() {
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [supportPhone, setSupportPhone] = useState("");
+  const [supportNumber, setSupportNumber] = useState("");
   const [pixelId, setPixelId] = useState("");
   const [deliveryType, setDeliveryType] = useState("none");
   const [deliveryLink, setDeliveryLink] = useState("");
@@ -168,6 +169,7 @@ function ProductsPage() {
           price: parseFloat(price),
           category,
           support_phone: validSupportPhone,
+          support_number: supportNumber || validSupportPhone,
           user_id: user.id,
           status: "active",
           pixel_id: pixelId,
@@ -236,6 +238,7 @@ function ProductsPage() {
     setPrice(product.price.toString());
     setCategory(product.category || "");
     setSupportPhone(product.support_phone || "");
+    setSupportNumber(product.support_number || product.support_phone || "");
     setPixelId(product.pixel_id || "");
     setDeliveryType(product.delivery_type || "none");
     setDeliveryLink(product.delivery_link || "");
@@ -266,6 +269,7 @@ function ProductsPage() {
           price: parseFloat(price),
           category,
           support_phone: validSupportPhone,
+          support_number: supportNumber || validSupportPhone,
           pixel_id: pixelId,
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
@@ -354,49 +358,55 @@ function ProductsPage() {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="support_phone">Número de Suporte</Label>
+                  <Label htmlFor="support_number">Número de Suporte (WhatsApp)</Label>
                   <Input
-                    id="support_phone"
+                    id="support_number"
                     inputMode="tel"
-                    value={supportPhone}
-                    onChange={(e) => setSupportPhone(e.target.value)}
-                    placeholder="Ex: 84xxxxxxx ou +258 84xxxxxxx"
+                    value={supportNumber}
+                    onChange={(e) => setSupportNumber(e.target.value)}
+                    placeholder="Ex: 25884xxxxxxx"
                     required
                   />
                 </div>
                 <div className="border-t pt-4">
-                  <Label className="font-semibold mb-2 block">Entrega do Produto</Label>
+                  <Label className="font-semibold mb-2 block text-[#E30613]">Configurações de Acesso (Obrigatório)</Label>
                   <div className="grid gap-4">
                     <div className="grid gap-2">
-                        <Label>Tipo de Entrega</Label>
+                        <Label htmlFor="access_link">Link de Acesso Principal</Label>
+                        <Input 
+                          id="access_link" 
+                          value={accessLink} 
+                          onChange={(e) => setAccessLink(e.target.value)} 
+                          placeholder="Link do produto, grupo, ou arquivo" 
+                          required 
+                        />
+                        <p className="text-[10px] text-muted-foreground italic">Este link será usado no botão "Acessar Produto" após o pagamento.</p>
+                    </div>
+                    
+                    <div className="grid gap-2 pt-2 border-t border-dashed">
+                        <Label className="text-xs">Entrega Automática (Opcional)</Label>
                         <select 
                           value={deliveryType}
                           onChange={(e) => setDeliveryType(e.target.value)}
                           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                         >
-                            <option value="none">Nenhum</option>
+                            <option value="none">Nenhum adicional</option>
                             <option value="file">Upload de Arquivo</option>
-                            <option value="link">Link de Acesso</option>
+                            <option value="link">Link Secundário</option>
                             <option value="both">Ambos</option>
                         </select>
                     </div>
                     {(deliveryType === 'file' || deliveryType === 'both') && (
                       <div className="grid gap-2">
-                          <Label htmlFor="delivery_file">Arquivo (PDF, ZIP, etc)</Label>
+                          <Label htmlFor="delivery_file">Arquivo Adicional</Label>
                           <Input id="delivery_file" type="file" onChange={(e) => setDeliveryFile(e.target.files?.[0] || null)} />
                       </div>
                     )}
                     {(deliveryType === 'link' || deliveryType === 'both') && (
-                      <>
-                        <div className="grid gap-2">
-                            <Label htmlFor="delivery_link">Link de Acesso</Label>
-                            <Input id="delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="access_link">Link de Acesso (WhatsApp, URL, etc)</Label>
-                            <Input id="access_link" value={accessLink} onChange={(e) => setAccessLink(e.target.value)} placeholder="https://wa.me/..." />
-                        </div>
-                      </>
+                      <div className="grid gap-2">
+                          <Label htmlFor="delivery_link">Link Adicional</Label>
+                          <Input id="delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -466,43 +476,48 @@ function ProductsPage() {
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-support_phone">Número de Suporte</Label>
+                  <Label htmlFor="edit-support_number">Número de Suporte (WhatsApp)</Label>
                   <Input
-                    id="edit-support_phone"
+                    id="edit-support_number"
                     inputMode="tel"
-                    value={supportPhone}
-                    onChange={(e) => setSupportPhone(e.target.value)}
-                    placeholder="Ex: 84xxxxxxx ou +258 84xxxxxxx"
+                    value={supportNumber}
+                    onChange={(e) => setSupportNumber(e.target.value)}
+                    placeholder="Ex: 25884xxxxxxx"
                     required
                   />
                 </div>
                 <div className="border-t pt-4">
-                  <Label className="font-semibold mb-2 block">Entrega do Produto</Label>
+                  <Label className="font-semibold mb-2 block text-[#E30613]">Configurações de Acesso (Obrigatório)</Label>
                   <div className="grid gap-4">
                     <div className="grid gap-2">
-                        <Label>Tipo de Entrega</Label>
+                        <Label htmlFor="edit-access_link">Link de Acesso Principal</Label>
+                        <Input 
+                          id="edit-access_link" 
+                          value={accessLink} 
+                          onChange={(e) => setAccessLink(e.target.value)} 
+                          placeholder="Link do produto, grupo, ou arquivo" 
+                          required 
+                        />
+                    </div>
+                    
+                    <div className="grid gap-2 pt-2 border-t border-dashed">
+                        <Label className="text-xs">Entrega Automática (Opcional)</Label>
                         <select 
                           value={deliveryType}
                           onChange={(e) => setDeliveryType(e.target.value)}
                           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
                         >
-                            <option value="none">Nenhum</option>
+                            <option value="none">Nenhum adicional</option>
                             <option value="file">Upload de Arquivo</option>
-                            <option value="link">Link de Acesso</option>
+                            <option value="link">Link Secundário</option>
                             <option value="both">Ambos</option>
                         </select>
                     </div>
                     {(deliveryType === 'link' || deliveryType === 'both') && (
-                      <>
-                        <div className="grid gap-2">
-                            <Label htmlFor="edit-delivery_link">Link de Acesso</Label>
-                            <Input id="edit-delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="edit-access_link">Link de Redirecionamento (WhatsApp, URL, etc)</Label>
-                            <Input id="edit-access_link" value={accessLink} onChange={(e) => setAccessLink(e.target.value)} placeholder="https://wa.me/..." />
-                        </div>
-                      </>
+                      <div className="grid gap-2">
+                          <Label htmlFor="edit-delivery_link">Link Adicional</Label>
+                          <Input id="edit-delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
+                      </div>
                     )}
                   </div>
                 </div>

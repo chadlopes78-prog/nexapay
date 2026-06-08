@@ -292,6 +292,7 @@ export type Database = {
           pixel_token: string | null
           price: number
           status: string | null
+          support_number: string | null
           support_phone: string | null
           updated_at: string
           user_id: string
@@ -314,6 +315,7 @@ export type Database = {
           pixel_token?: string | null
           price: number
           status?: string | null
+          support_number?: string | null
           support_phone?: string | null
           updated_at?: string
           user_id: string
@@ -336,6 +338,7 @@ export type Database = {
           pixel_token?: string | null
           price?: number
           status?: string | null
+          support_number?: string | null
           support_phone?: string | null
           updated_at?: string
           user_id?: string
