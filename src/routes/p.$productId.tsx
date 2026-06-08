@@ -333,7 +333,7 @@ function CheckoutPage() {
             </span>
             <span className="flex items-center gap-2">
               <span className="animate-pulse">⚡</span>
-              Finalize sua compra agora — Oferta por tempo limitado!
+              Finalize sua compra agora — Oferta expira em {formatTime(timeLeft)}
             </span>
           </div>
         </div>
