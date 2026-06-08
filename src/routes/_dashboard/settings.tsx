@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Settings, Shield, Globe, Bell, User, History, MessageSquare, PieChart, Smartphone, Lock } from "lucide-react";
+import { Settings, Shield, Globe, Bell, User, History, MessageSquare, PieChart, Smartphone, Lock, Trash2, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { PushNotificationManager } from "@/components/dashboard/PushNotificationManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,6 +10,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_dashboard/settings")({
   component: SettingsPage,
@@ -18,6 +29,8 @@ export const Route = createFileRoute("/_dashboard/settings")({
 function SettingsPage() {
   const queryClient = useQueryClient();
   const [fullName, setFullName] = useState("");
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile"],
@@ -63,6 +76,78 @@ function SettingsPage() {
     },
     onError: (error: any) => {
       toast.error("Erro ao atualizar perfil: " + error.message);
+    }
+  });
+  
+  const resetData = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      // We need to delete data associated with the user
+      // Note: This assumes tables have RLS allowing deletion or user_id columns
+      
+      // 1. Delete sales (assuming RLS allows or we use product relationship)
+      // Since we don't have a direct user_id on sales (it's via products), 
+      // we first find the product IDs owned by the user.
+      const { data: userProducts } = await supabase
+        .from("products")
+        .select("id")
+        .eq("user_id", user.id);
+      
+      const productIds = userProducts?.map(p => p.id) || [];
+
+      if (productIds.length > 0) {
+        // Delete sales for these products
+        const { error: salesError } = await supabase
+          .from("sales")
+          .delete()
+          .in("product_id", productIds);
+        
+        if (salesError) throw salesError;
+        
+        // Delete traffic events for these products/pages
+        const { data: userPages } = await supabase
+          .from("traffic_pages")
+          .select("id")
+          .in("product_id", productIds);
+        
+        const pageIds = userPages?.map(p => p.id) || [];
+        
+        if (pageIds.length > 0) {
+          const { error: eventsError } = await supabase
+            .from("traffic_events")
+            .delete()
+            .in("page_id", pageIds);
+          
+          if (eventsError) throw eventsError;
+        }
+      }
+
+      // 2. Delete notification logs
+      const { error: notifyError } = await supabase
+        .from("notifications_log")
+        .delete()
+        .eq("user_id", user.id);
+      
+      if (notifyError) throw notifyError;
+
+      // 3. Delete marketing alerts
+      const { error: alertsError } = await supabase
+        .from("marketing_alerts")
+        .delete()
+        .eq("user_id", user.id);
+      
+      if (alertsError) throw alertsError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      toast.success("Todos os dados foram resetados com sucesso!");
+      setIsResetDialogOpen(false);
+      setResetConfirmText("");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao resetar dados: " + error.message);
     }
   });
 
@@ -215,6 +300,80 @@ function SettingsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground italic">Em breve novas integrações disponíveis.</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              <CardTitle className="text-red-600">Zona de Perigo</CardTitle>
+            </div>
+            <CardDescription>Ações irreversíveis para sua conta e dados.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl border border-red-100 dark:border-red-900/20 bg-white dark:bg-slate-900">
+              <div className="space-y-1">
+                <p className="font-bold text-slate-900">Limpar Dados / Reiniciar Sistema</p>
+                <p className="text-sm text-slate-500">
+                  Apaga todas as transações, vendas, valores e gráficos. Sua conta e produtos permanecem.
+                </p>
+              </div>
+              
+              <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="font-bold uppercase tracking-wider text-xs px-6">
+                    Reset Total
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-md rounded-2xl border-none shadow-2xl">
+                  <AlertDialogHeader>
+                    <div className="flex items-center gap-3 text-red-600 mb-2">
+                      <div className="p-2 bg-red-100 rounded-xl">
+                        <AlertTriangle className="h-6 w-6" />
+                      </div>
+                      <AlertDialogTitle className="text-2xl font-black uppercase tracking-tight">Atenção Crítica!</AlertDialogTitle>
+                    </div>
+                    <AlertDialogDescription className="text-slate-600 font-bold text-lg leading-snug">
+                      Esta ação irá apagar permanentemente todas as suas vendas e métricas. <span className="text-red-600 underline">Não há como desfazer.</span>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  
+                  <div className="py-6 space-y-4">
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <p className="text-xs font-black uppercase text-slate-400 mb-2 tracking-widest">Para confirmar, digite abaixo:</p>
+                      <p className="text-sm font-black text-slate-900 mb-4 tracking-tighter uppercase select-none">CONFIRMAR RESET</p>
+                      <Input 
+                        value={resetConfirmText}
+                        onChange={(e) => setResetConfirmText(e.target.value)}
+                        placeholder="Digite aqui..."
+                        className="h-12 border-2 focus-visible:ring-red-500 rounded-xl font-bold uppercase tracking-widest text-center"
+                      />
+                    </div>
+                  </div>
+
+                  <AlertDialogFooter className="gap-2 sm:gap-0">
+                    <AlertDialogCancel 
+                      onClick={() => {
+                        setResetConfirmText("");
+                        setIsResetDialogOpen(false);
+                      }}
+                      className="h-12 rounded-xl font-bold border-2"
+                    >
+                      CANCELAR
+                    </AlertDialogCancel>
+                    <Button
+                      variant="destructive"
+                      disabled={resetConfirmText !== "CONFIRMAR RESET" || resetData.isPending}
+                      onClick={() => resetData.mutate()}
+                      className="h-12 rounded-xl font-bold uppercase tracking-widest"
+                    >
+                      {resetData.isPending ? "PROCESSANDO..." : "EXECUTAR RESET TOTAL"}
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </CardContent>
         </Card>
       </div>
