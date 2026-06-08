@@ -31,26 +31,21 @@ export function PushNotificationManager() {
 
   const checkSubscription = async () => {
     try {
+      if (!("serviceWorker" in navigator)) return;
+      
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       setIsSubscribed(!!subscription);
       
-      // If permission is already granted but not subscribed, try to auto-subscribe
+      // If permission is already granted but not subscribed, try to auto-subscribe silently
       if (Notification.permission === "granted" && !subscription) {
-        console.log("[Push] Permission granted but not subscribed, auto-subscribing...");
-        handleAutoSubscribe();
+        console.log("[Push] Permissão já concedida, tentando inscrição automática...");
+        await subscribeToPushNotifications(true);
+        const newSubscription = await registration.pushManager.getSubscription();
+        setIsSubscribed(!!newSubscription);
       }
     } catch (error) {
-      console.error("Erro ao verificar inscrição:", error);
-    }
-  };
-
-  const handleAutoSubscribe = async () => {
-    try {
-      await subscribeToPushNotifications(true);
-      setIsSubscribed(true);
-    } catch (err) {
-      console.error("Auto-subscribe failed:", err);
+      console.error("[Push] Erro ao verificar inscrição:", error);
     }
   };
 
