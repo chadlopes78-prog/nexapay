@@ -112,6 +112,8 @@ function DashboardPage() {
   const { data: dashboardData, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["dashboard-metrics", dateRange.from.toISOString(), dateRange.to.toISOString()],
     queryFn: async () => {
+      console.log("[Dashboard] Fetching metrics for range:", dateRange.from.toISOString(), "to", dateRange.to.toISOString());
+      
       const { data, error } = await supabase.rpc('get_dashboard_metrics', {
         p_start_date: dateRange.from.toISOString(),
         p_end_date: dateRange.to.toISOString()
