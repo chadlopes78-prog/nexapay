@@ -43,9 +43,10 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
             : "pending";
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { triggerSaleApprovedNotification } = await import("@/lib/api/notifications.server");
 
-        // Fetch the sale first to get product_id and check current status
-        let saleQuery = supabaseAdmin.from("sales").select("*, products(user_id)");
+        // Fetch the sale first to get current status
+        let saleQuery = supabaseAdmin.from("sales").select("id, status");
         if (transactionId) {
           saleQuery = saleQuery.eq("transaction_id", String(transactionId));
         } else {
@@ -77,47 +78,10 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
 
         // Trigger push notification if paid
         if (isBecomingPaid) {
-          let userId = null;
-          if (Array.isArray(saleData.products)) {
-            userId = saleData.products[0]?.user_id;
-          } else {
-            userId = (saleData.products as any)?.user_id;
-          }
-
-          if (userId) {
-            console.log("Triggering push notification for user:", userId);
-            
-            // Call the send-push edge function
-            // We use the internal URL if possible, or the public one
-            const supabaseUrl = process.env.SUPABASE_URL;
-            const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-            if (supabaseUrl && supabaseServiceKey) {
-              try {
-                const amount = saleData.amount || 0;
-                const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${supabaseServiceKey}`
-                  },
-                  body: JSON.stringify({
-                    user_id: userId,
-                    title: "Nova venda 🎉",
-                    body: `Recebeste um pagamento de ${amount} MT`,
-                    url: "/dashboard/sales"
-                  })
-                });
-                
-                if (!response.ok) {
-                  const errorText = await response.text();
-                  console.error("Failed to send push notification:", errorText);
-                }
-              } catch (err) {
-                console.error("Error calling send-push function:", err);
-              }
-            }
-          }
+          // Fire and forget notification trigger
+          triggerSaleApprovedNotification(saleData.id).catch(err => 
+            console.error("Error triggering sale notification:", err)
+          );
         }
 
         return Response.json({ ok: true });
