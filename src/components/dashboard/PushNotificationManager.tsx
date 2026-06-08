@@ -134,7 +134,7 @@ export function PushNotificationManager() {
           </div>
           <div className={cn(
             "h-12 w-12 rounded-2xl flex items-center justify-center transition-all shadow-lg",
-            isSubscribed ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-slate-100 text-slate-400 shadow-slate-100"
+            isSubscribed ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-black text-white shadow-slate-100"
           )}>
             {isSubscribed ? <Bell className="h-6 w-6" /> : <BellOff className="h-6 w-6" />}
           </div>

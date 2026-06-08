@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { subscribeToPushNotifications } from "../lib/push-notifications";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -143,6 +144,27 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    // Register Service Worker for PWA
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((registration) => {
+            console.log("[SW] Registrado com sucesso:", registration.scope);
+            
+            // Try to auto-subscribe if permission is already granted
+            if (Notification.permission === "granted") {
+              subscribeToPushNotifications(true);
+            }
+          })
+          .catch((err) => {
+            console.error("[SW] Falha no registro:", err);
+          });
+      });
+    }
+  }, []);
 
   return (
     <ErrorBoundary>
