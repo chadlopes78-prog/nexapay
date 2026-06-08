@@ -138,11 +138,11 @@ function DashboardPage() {
 
         const stats = {
           total_transactions: sales.length,
-          success_count: sales.filter(s => ["approved", "paid", "success"].includes(s.status)).length,
-          failed_count: sales.filter(s => ["failed", "error", "cancelled", "canceled"].includes(s.status)).length,
+          success_count: sales.filter(s => s.status && ["approved", "paid", "success"].includes(s.status)).length,
+          failed_count: sales.filter(s => s.status && ["failed", "error", "cancelled", "canceled"].includes(s.status)).length,
           total_value: sales.reduce((acc, s) => acc + Number(s.amount), 0),
-          received_value: sales.filter(s => ["approved", "paid", "success"].includes(s.status)).reduce((acc, s) => acc + Number(s.amount), 0),
-          lost_value: sales.filter(s => ["failed", "error", "cancelled", "canceled"].includes(s.status)).reduce((acc, s) => acc + Number(s.amount), 0),
+          received_value: sales.filter(s => s.status && ["approved", "paid", "success"].includes(s.status)).reduce((acc, s) => acc + Number(s.amount), 0),
+          lost_value: sales.filter(s => s.status && ["failed", "error", "cancelled", "canceled"].includes(s.status)).reduce((acc, s) => acc + Number(s.amount), 0),
         };
 
         const recentSales = sales.slice(0, 10).map(s => ({
@@ -153,10 +153,11 @@ function DashboardPage() {
         // Group by day for chart
         const dailyMap = new Map();
         sales.forEach(s => {
+          if (!s.created_at) return;
           const day = startOfDay(parseISO(s.created_at)).toISOString();
           const current = dailyMap.get(day) || { sucesso: 0, falha: 0 };
-          if (["approved", "paid", "success"].includes(s.status)) current.sucesso++;
-          else if (["failed", "error"].includes(s.status)) current.falha++;
+          if (s.status && ["approved", "paid", "success"].includes(s.status)) current.sucesso++;
+          else if (s.status && ["failed", "error"].includes(s.status)) current.falha++;
           dailyMap.set(day, current);
         });
 
