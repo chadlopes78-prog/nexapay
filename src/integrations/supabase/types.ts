@@ -276,6 +276,7 @@ export type Database = {
       }
       products: {
         Row: {
+          access_link: string | null
           category: string | null
           created_at: string
           custom_url: string | null
@@ -297,6 +298,7 @@ export type Database = {
           warranty_days: number | null
         }
         Insert: {
+          access_link?: string | null
           category?: string | null
           created_at?: string
           custom_url?: string | null
@@ -318,6 +320,7 @@ export type Database = {
           warranty_days?: number | null
         }
         Update: {
+          access_link?: string | null
           category?: string | null
           created_at?: string
           custom_url?: string | null
