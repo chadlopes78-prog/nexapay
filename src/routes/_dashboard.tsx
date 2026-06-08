@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useNavigate, useLocation } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
@@ -11,24 +11,63 @@ import {
   ChevronRight,
   ShieldCheck,
   CreditCard,
-  MessageSquare,
   BarChart3,
   ChevronDown,
   Globe,
-  Bell,
   Menu,
   X,
   Target,
   Zap,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const Route = createFileRoute("/_dashboard")({
-  component: DashboardLayout,
+  component: DashboardLayoutWrapper,
+  errorComponent: ({ error, reset }) => <ErrorFallback error={error} reset={reset} />,
 });
+
+function ErrorFallback({ error, reset }: { error: any; reset: () => void }) {
+  return (
+    <div className="flex h-[400px] w-full flex-col items-center justify-center p-6 text-center">
+      <Alert variant="destructive" className="max-w-md bg-white border-red-100 shadow-xl rounded-2xl p-6">
+        <AlertCircle className="h-6 w-6 mb-4 mx-auto text-red-500" />
+        <AlertTitle className="text-xl font-black text-slate-900 mb-2">Erro ao carregar painel</AlertTitle>
+        <AlertDescription className="text-slate-500 font-medium mb-6">
+          {error?.message || "Houve um problema técnico ao renderizar esta seção."}
+        </AlertDescription>
+        <Button 
+          onClick={() => reset()} 
+          className="w-full bg-black hover:bg-slate-900 text-white font-bold rounded-xl h-12"
+        >
+          Tentar novamente
+        </Button>
+      </Alert>
+    </div>
+  );
+}
+
+function DashboardLayoutWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm font-black text-slate-400 uppercase tracking-widest animate-pulse">
+            Carregando PaymentBlack...
+          </p>
+        </div>
+      </div>
+    }>
+      <DashboardLayout />
+    </Suspense>
+  );
+}
 
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -40,105 +79,6 @@ function DashboardLayout() {
   const location = useLocation();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate({ to: "/auth" });
-        return;
-      }
-
-      // ADMIN BYPASS TOTAL
-      if (session.user.email === 'chadlopesff@gmail.com') {
-        navigate({ to: "/admin" });
-        return;
-      }
-
-      // Fetch profile to check status and role
-      const { data: userProfile, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      if (error || !userProfile) {
-        // Se perfil não existe, tenta criar
-        const { data: newProfile } = await supabase
-          .from("profiles")
-          .upsert({ 
-            id: session.user.id,
-            full_name: session.user.user_metadata?.full_name || '',
-            status: 'pending',
-            role: 'user'
-          })
-          .select()
-          .maybeSingle();
-        
-        if (newProfile) {
-          setProfile(newProfile);
-          checkStatus(newProfile);
-        }
-      } else {
-        setProfile(userProfile);
-        checkStatus(userProfile);
-      }
-      
-      setUser(session.user);
-      
-      // Update last login
-      await supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("id", session.user.id);
-
-      // Listen for new sales to show "push" simulation
-      const channel = supabase
-        .channel('schema-db-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'sales',
-            filter: `user_id=eq.${session.user.id}`
-          },
-          (payload: any) => {
-            if (payload.new.status === 'approved') {
-              const amount = payload.new.amount;
-              // Browser Toast
-              toast.success(
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-black text-sm uppercase tracking-widest text-emerald-600">🔔 Nova Venda</span>
-                  <span className="text-lg font-black text-slate-900 leading-none">💰 Pingou🎉 {amount} MT</span>
-                </div>,
-                {
-                  icon: (
-                    <div className="bg-black p-2 rounded-xl border border-slate-800 shadow-2xl flex items-center justify-center animate-bounce">
-                      <span className="text-sm font-black text-white leading-none">P</span>
-                    </div>
-                  ),
-                  duration: 10000,
-                  className: "bg-white border-2 border-slate-100 shadow-[0_30px_60px_rgba(0,0,0,0.12)] rounded-2xl p-4",
-                }
-              );
-
-              // native Push Notification
-              if ("Notification" in window && Notification.permission === "granted") {
-                new Notification("🔔 Nova Venda", {
-                  body: `💰 Pingou🎉 ${amount} MT`,
-                  icon: "/logo-p.svg",
-                  badge: "/logo-p.svg",
-                });
-              }
-            }
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    };
-
     const checkStatus = (p: any) => {
       // Se for o admin mestre, ignora status
       if (user?.email === 'chadlopesff@gmail.com') return;
@@ -147,6 +87,104 @@ function DashboardLayout() {
         navigate({ to: "/blocked" });
       } else if (p.status !== "approved") {
         navigate({ to: "/waiting-approval" });
+      }
+    };
+
+    const checkAuth = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
+        if (!session) {
+          navigate({ to: "/auth" });
+          return;
+        }
+
+        // ADMIN BYPASS TOTAL
+        if (session.user.email === 'chadlopesff@gmail.com') {
+          setUser(session.user);
+          setProfile({ role: 'admin' });
+          return;
+        }
+
+        // Fetch profile to check status and role
+        const { data: userProfile, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!userProfile) {
+          // If profile doesn't exist, create it
+          const { data: newProfile, error: upsertError } = await supabase
+            .from("profiles")
+            .upsert({ 
+              id: session.user.id,
+              full_name: session.user.user_metadata?.full_name || '',
+              status: 'pending',
+              role: 'user'
+            })
+            .select()
+            .maybeSingle();
+          
+          if (upsertError) throw upsertError;
+
+          if (newProfile) {
+            setProfile(newProfile);
+            checkStatus(newProfile);
+          }
+        } else {
+          setProfile(userProfile);
+          checkStatus(userProfile);
+        }
+        
+        setUser(session.user);
+        
+        // Update last login
+        await supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("id", session.user.id);
+
+        // Listen for new sales
+        const channel = supabase
+          .channel('schema-db-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'sales',
+              filter: `user_id=eq.${session.user.id}`
+            },
+            (payload: any) => {
+              if (payload.new.status === 'approved') {
+                const amount = payload.new.amount;
+                toast.success(
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-black text-sm uppercase tracking-widest text-emerald-600">🔔 Nova Venda</span>
+                    <span className="text-lg font-black text-slate-900 leading-none">💰 Pingou🎉 {amount} MT</span>
+                  </div>,
+                  {
+                    icon: (
+                      <div className="bg-black p-2 rounded-xl border border-slate-800 shadow-2xl flex items-center justify-center animate-bounce">
+                        <span className="text-sm font-black text-white leading-none">P</span>
+                      </div>
+                    ),
+                    duration: 10000,
+                  }
+                );
+              }
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      } catch (err) {
+        console.error("Auth check error:", err);
+        navigate({ to: "/auth" });
       }
     };
 
@@ -159,10 +197,14 @@ function DashboardLayout() {
         navigate({ to: "/auth" });
       } else {
         setUser(session.user);
-        const { data: p } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
-        if (p) {
-          setProfile(p);
-          checkStatus(p);
+        if (session.user.email === 'chadlopesff@gmail.com') {
+          setProfile({ role: 'admin' });
+        } else {
+          const { data: p } = await supabase.from("profiles").select("*").eq("id", session.user.id).single();
+          if (p) {
+            setProfile(p);
+            checkStatus(p);
+          }
         }
       }
     });
@@ -170,7 +212,6 @@ function DashboardLayout() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
@@ -196,7 +237,7 @@ function DashboardLayout() {
     },
     { name: "Pixel Facebook", icon: Target, path: "/pixel" },
     { name: "Assistente IA", icon: Zap, path: "/dashboard", params: { tab: 'ai' } },
-    ...(profile?.role === 'admin' || user?.email === 'chadlopesff@gmail.com' ? [{ name: "Control Center", icon: ShieldCheck, path: "/admin" }] : []),
+    ...(profile?.role === 'admin' || user?.email === 'chadlopesff@gmail.com' ? [{ name: "Painel Operacional", icon: ShieldCheck, path: "/admin" }] : []),
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
 
@@ -253,10 +294,10 @@ function DashboardLayout() {
                   search={item.params}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100 active:scale-95",
-                    location.pathname === item.path && (!item.params || Object.keys(item.params).every(k => (new URLSearchParams(location.search)).get(k) === (item.params as any)[k])) ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-600",
+                    isActive ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-600",
                   )}
                 >
-                  <item.icon className={cn("h-5 w-5 shrink-0", location.pathname === item.path && (!item.params || Object.keys(item.params).every(k => (new URLSearchParams(location.search)).get(k) === (item.params as any)[k])) ? "text-white" : "text-slate-500")} />
+                  <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-slate-500")} />
                   {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
                 </Link>
               )}
@@ -308,7 +349,6 @@ function DashboardLayout() {
 
   return (
     <div className="flex min-h-screen bg-slate-50/50">
-      {/* Mobile Header */}
       <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
         <Link to="/dashboard" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-black border border-slate-800 shadow-sm">
@@ -326,7 +366,6 @@ function DashboardLayout() {
         </Button>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -334,7 +373,6 @@ function DashboardLayout() {
         />
       )}
 
-      {/* Mobile Sidebar */}
       <aside
         className={cn(
           "fixed left-0 top-0 z-50 h-screen w-64 border-r bg-white transition-transform duration-300 lg:hidden",
@@ -344,7 +382,6 @@ function DashboardLayout() {
         <SidebarContent />
       </aside>
 
-      {/* Desktop Sidebar */}
       <aside
         className={cn(
           "fixed left-0 top-0 z-40 hidden h-screen border-r bg-white transition-all duration-300 lg:block",
@@ -359,7 +396,13 @@ function DashboardLayout() {
         isSidebarOpen ? "lg:ml-64" : "lg:ml-20"
       )}>
         <div className="p-4 md:p-8">
-          <Outlet />
+          <Suspense fallback={
+            <div className="flex h-[400px] w-full items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </div>
       </main>
     </div>
