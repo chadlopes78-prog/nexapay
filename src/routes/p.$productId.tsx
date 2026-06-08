@@ -256,7 +256,7 @@ function CheckoutPage() {
       toast.success("Pagamento confirmado!");
 
       setTimeout(() => {
-        window.location.href = `/success?productId=${productId}&saleId=${result.saleId}`;
+        window.location.href = `/payment-success?productId=${productId}&saleId=${result.saleId}`;
       }, 800);
     } catch (error: any) {
       setPaymentErrorMessage(error?.message || "Erro inesperado ao processar pagamento.");
