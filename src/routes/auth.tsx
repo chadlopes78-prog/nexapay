@@ -41,11 +41,22 @@ function AuthPage() {
             .eq("id", session.user.id)
             .maybeSingle();
 
-          if (profile?.status === "banned") {
+          if (!profile) {
+            // New user or profile not created yet, might need to wait for trigger
+            // or redirect to onboarding if applicable. 
+            // For now, if no profile, assume pending
+            navigate({ to: "/waiting-approval" });
+            return;
+          }
+
+          if (profile.status === "banned") {
             await supabase.auth.signOut();
             navigate({ to: "/blocked" });
-          } else if (profile?.status === "approved") {
+          } else if (profile.status === "approved") {
             navigate({ to: "/dashboard" });
+          } else if (profile.status === "rejected") {
+            await supabase.auth.signOut();
+            navigate({ to: "/blocked" }); // Or a rejected page
           } else {
             navigate({ to: "/waiting-approval" });
           }
@@ -115,13 +126,18 @@ function AuthPage() {
 
       setLoading(false);
 
-      if (profile?.status === "banned") {
+      if (!profile) {
+        navigate({ to: "/waiting-approval" });
+        return;
+      }
+
+      if (profile.status === "banned" || profile.status === "rejected") {
         await supabase.auth.signOut();
         navigate({ to: "/blocked" });
         return;
       }
 
-      if (profile?.status === "approved") {
+      if (profile.status === "approved") {
         navigate({ to: "/dashboard" });
       } else {
         navigate({ to: "/waiting-approval" });
