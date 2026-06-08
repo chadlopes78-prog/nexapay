@@ -91,7 +91,10 @@ declare global {
 function CheckoutPage() {
   const payFn = useServerFn(processPayment);
   const { productId } = useParams({ from: "/p/$productId" });
-  const { product, checkout } = Route.useLoaderData();
+  const { product, checkout, defaultPixel } = Route.useLoaderData();
+  
+  const pixelId = product?.facebook_pixel_id || defaultPixel?.fb_pixel_id;
+  const pixelToken = product?.facebook_access_token || defaultPixel?.fb_access_token;
   const [isRetrying, setIsRetrying] = useState(false);
   const [isLoading, setIsLoading] = useState(!product);
 
@@ -164,7 +167,7 @@ function CheckoutPage() {
 
   // Facebook Pixel: init + ViewContent in one effect (no race, no crash)
   useEffect(() => {
-    if (!product?.facebook_pixel_id) return;
+    if (!pixelId) return;
     try {
       // @ts-ignore
       if (!window.fbq) {
@@ -181,7 +184,7 @@ function CheckoutPage() {
         };
         initFB(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
       }
-      window.fbq('init', product.facebook_pixel_id);
+      window.fbq('init', pixelId);
       window.fbq('track', 'PageView');
       window.fbq('track', 'ViewContent', {
         content_name: product.name,
@@ -194,11 +197,11 @@ function CheckoutPage() {
     } catch (e) {
       console.error('FB Pixel error:', e);
     }
-  }, [product?.facebook_pixel_id, product?.id]);
+  }, [pixelId, product?.id]);
 
   const trackCheckout = () => {
     try {
-      if (product?.facebook_pixel_id && window.fbq) {
+      if (pixelId && window.fbq) {
         window.fbq('track', 'InitiateCheckout', {
           content_name: product.name, value: product.price, currency: 'MZN',
         });
@@ -208,7 +211,7 @@ function CheckoutPage() {
 
   const trackPurchase = () => {
     try {
-      if (product?.facebook_pixel_id && window.fbq) {
+      if (pixelId && window.fbq) {
         window.fbq('track', 'Purchase', {
           content_name: product.name, value: product.price, currency: 'MZN',
         });
