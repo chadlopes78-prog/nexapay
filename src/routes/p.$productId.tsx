@@ -38,28 +38,46 @@ export const Route = createFileRoute("/p/$productId")({
         supabase.from("checkouts").select("*").eq("product_id", isUuid ? productId : "").maybeSingle(),
       ]);
 
-      if (productRes.error || !productRes.data) {
+      let finalProduct = productRes.data;
+      let finalCheckout = checkoutRes?.data || null;
+
+      if (!finalProduct) {
         // Fallback: Si no se encontró por ID y no era un UUID, intentar buscar por custom_url
         if (isUuid) {
           const fallbackRes = await supabase.from("products").select("*").eq("custom_url", productId).maybeSingle();
           if (fallbackRes.data) {
+            finalProduct = fallbackRes.data;
             const checkoutFallback = await supabase.from("checkouts").select("*").eq("product_id", fallbackRes.data.id).maybeSingle();
-            return { product: fallbackRes.data, checkout: checkoutFallback.data ?? null };
+            finalCheckout = checkoutFallback.data ?? null;
           }
         }
-        return { product: null, checkout: null };
+      }
+
+      if (!finalProduct) {
+        return { product: null, checkout: null, defaultPixel: null };
+      }
+
+      // Load default pixel config if product doesn't have one
+      let defaultPixel = null;
+      if (!finalProduct.facebook_pixel_id) {
+        const { data: pixelConfig } = await supabase
+          .from("pixel_configs")
+          .select("fb_pixel_id, fb_access_token")
+          .eq("user_id", finalProduct.user_id)
+          .maybeSingle();
+        defaultPixel = pixelConfig;
       }
 
       // Si se encontró por custom_url, necesitamos cargar el checkout real usando el ID del producto
-      let finalCheckout = checkoutRes?.data || null;
-      if (!isUuid && productRes.data && !finalCheckout) {
-        const actualCheckoutRes = await supabase.from("checkouts").select("*").eq("product_id", productRes.data.id).maybeSingle();
+      if (!isUuid && finalProduct && !finalCheckout) {
+        const actualCheckoutRes = await supabase.from("checkouts").select("*").eq("product_id", finalProduct.id).maybeSingle();
         finalCheckout = actualCheckoutRes.data;
       }
 
       return {
-        product: productRes.data,
+        product: finalProduct,
         checkout: finalCheckout,
+        defaultPixel: defaultPixel,
       };
     } catch (err) {
       console.error("Loader error:", err);
@@ -91,7 +109,10 @@ declare global {
 function CheckoutPage() {
   const payFn = useServerFn(processPayment);
   const { productId } = useParams({ from: "/p/$productId" });
-  const { product, checkout } = Route.useLoaderData();
+  const { product, checkout, defaultPixel } = Route.useLoaderData();
+  
+  const pixelId = product?.facebook_pixel_id || defaultPixel?.fb_pixel_id;
+  const pixelToken = product?.facebook_access_token || defaultPixel?.fb_access_token;
   const [isRetrying, setIsRetrying] = useState(false);
   const [isLoading, setIsLoading] = useState(!product);
 
@@ -164,7 +185,7 @@ function CheckoutPage() {
 
   // Facebook Pixel: init + ViewContent in one effect (no race, no crash)
   useEffect(() => {
-    if (!product?.pixel_id) return;
+    if (!pixelId) return;
     try {
       // @ts-ignore
       if (!window.fbq) {
@@ -181,7 +202,7 @@ function CheckoutPage() {
         };
         initFB(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
       }
-      window.fbq('init', product.pixel_id);
+      window.fbq('init', pixelId);
       window.fbq('track', 'PageView');
       window.fbq('track', 'ViewContent', {
         content_name: product.name,
@@ -194,11 +215,11 @@ function CheckoutPage() {
     } catch (e) {
       console.error('FB Pixel error:', e);
     }
-  }, [product?.pixel_id, product?.id]);
+  }, [pixelId, product?.id]);
 
   const trackCheckout = () => {
     try {
-      if (product?.pixel_id && window.fbq) {
+      if (pixelId && window.fbq) {
         window.fbq('track', 'InitiateCheckout', {
           content_name: product.name, value: product.price, currency: 'MZN',
         });
@@ -208,7 +229,7 @@ function CheckoutPage() {
 
   const trackPurchase = () => {
     try {
-      if (product?.pixel_id && window.fbq) {
+      if (pixelId && window.fbq) {
         window.fbq('track', 'Purchase', {
           content_name: product.name, value: product.price, currency: 'MZN',
         });
