@@ -112,7 +112,7 @@ function AdminControlCenter() {
       // Fetch stats with a single query (optimized)
       const { data: statsData, error: statsError } = await supabase
         .from("profiles")
-        .select("status");
+        .select("status", { count: 'exact' });
       
       if (!statsError && statsData) {
         setStats({
