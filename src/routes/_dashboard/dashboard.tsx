@@ -120,13 +120,56 @@ function DashboardPage() {
       });
 
       if (error) {
-        console.error("[Dashboard] RPC Error details:", {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
+        console.error("[Dashboard] RPC Error details:", error);
+        
+        // Fallback for non-RPC data if it fails
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw error;
+
+        console.log("[Dashboard] Falling back to direct query due to RPC error");
+        const { data: sales, error: salesError } = await supabase
+          .from("sales")
+          .select("amount, status, created_at, products(name)")
+          .eq("user_id", user.id)
+          .gte("created_at", dateRange.from.toISOString())
+          .lte("created_at", dateRange.to.toISOString());
+
+        if (salesError) throw salesError;
+
+        const stats = {
+          total_transactions: sales.length,
+          success_count: sales.filter(s => ["approved", "paid", "success"].includes(s.status)).length,
+          failed_count: sales.filter(s => ["failed", "error", "cancelled", "canceled"].includes(s.status)).length,
+          total_value: sales.reduce((acc, s) => acc + Number(s.amount), 0),
+          received_value: sales.filter(s => ["approved", "paid", "success"].includes(s.status)).reduce((acc, s) => acc + Number(s.amount), 0),
+          lost_value: sales.filter(s => ["failed", "error", "cancelled", "canceled"].includes(s.status)).reduce((acc, s) => acc + Number(s.amount), 0),
+        };
+
+        const recentSales = sales.slice(0, 10).map(s => ({
+          ...s,
+          product_name: (s.products as any)?.name
+        }));
+
+        // Group by day for chart
+        const dailyMap = new Map();
+        sales.forEach(s => {
+          const day = startOfDay(parseISO(s.created_at)).toISOString();
+          const current = dailyMap.get(day) || { sucesso: 0, falha: 0 };
+          if (["approved", "paid", "success"].includes(s.status)) current.sucesso++;
+          else if (["failed", "error"].includes(s.status)) current.falha++;
+          dailyMap.set(day, current);
         });
-        throw error;
+
+        const chartData = Array.from(dailyMap.entries()).map(([day, val]) => ({
+          day,
+          ...val
+        }));
+
+        return {
+          stats,
+          chartData,
+          recentSales
+        };
       }
 
       console.log("[Dashboard] RPC Data received:", data);
