@@ -71,28 +71,39 @@ function AdminControlCenter() {
   }, [page, search]);
 
   const checkAdmin = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate({ to: "/auth" });
-      return;
-    }
-
-    if (session.user.email !== ADMIN_EMAIL) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      if (profile?.role !== 'admin') {
-        navigate({ to: "/dashboard" });
-        toast.error("Acesso negado.");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate({ to: "/auth" });
+        return;
       }
+
+      if (session.user.email !== ADMIN_EMAIL) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (profile?.role !== 'admin') {
+          navigate({ to: "/dashboard" });
+          toast.error("Acesso negado.");
+        }
+      }
+    } catch (error) {
+      console.error("Admin check error:", error);
+      navigate({ to: "/auth" });
     }
   };
 
   const fetchUsers = async () => {
     setLoading(true);
+    
+    // Security timeout
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+
     try {
       // Fetch stats with a single query (optimized)
       const { data: statsData, error: statsError } = await supabase
@@ -121,9 +132,14 @@ function AdminControlCenter() {
 
       const { data, error } = await query;
       if (error) throw error;
+      
+      clearTimeout(timeout);
       setUsers(data || []);
     } catch (error: any) {
+      clearTimeout(timeout);
       toast.error("Erro ao carregar base: " + error.message);
+      // Ensure users is at least an empty array to avoid crashes
+      setUsers([]);
     } finally {
       setLoading(false);
     }

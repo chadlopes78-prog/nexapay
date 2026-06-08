@@ -32,10 +32,23 @@ function AuthPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         if (session.user.email === "chadlopesff@gmail.com") {
-          // Bypass total para o admin mestre
           navigate({ to: "/admin" });
         } else {
-          navigate({ to: "/dashboard" });
+          // Check profile status
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("status")
+            .eq("id", session.user.id)
+            .maybeSingle();
+
+          if (profile?.status === "banned") {
+            await supabase.auth.signOut();
+            navigate({ to: "/blocked" });
+          } else if (profile?.status === "approved") {
+            navigate({ to: "/dashboard" });
+          } else {
+            navigate({ to: "/waiting-approval" });
+          }
         }
       }
     });
@@ -71,12 +84,10 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
 
-    // Timeout de segurança para evitar loading infinito
+    // Security timeout to prevent infinite loading
     const timeout = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-        toast.error("O login demorou muito. Tente novamente.");
-      }
+      setLoading(false);
+      toast.error("O login demorou muito. Tente novamente.");
     }, 8000);
 
     try {
@@ -90,15 +101,35 @@ function AuthPage() {
       clearTimeout(timeout);
       
       if (data.user?.email === "chadlopesff@gmail.com") {
+        setLoading(false);
         navigate({ to: "/admin" });
-      } else {
+        return;
+      }
+
+      // Fetch profile status
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("status")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      setLoading(false);
+
+      if (profile?.status === "banned") {
+        await supabase.auth.signOut();
+        navigate({ to: "/blocked" });
+        return;
+      }
+
+      if (profile?.status === "approved") {
         navigate({ to: "/dashboard" });
+      } else {
+        navigate({ to: "/waiting-approval" });
       }
     } catch (error: any) {
       clearTimeout(timeout);
-      toast.error(error.message);
-    } finally {
       setLoading(false);
+      toast.error(error.message);
     }
   };
 

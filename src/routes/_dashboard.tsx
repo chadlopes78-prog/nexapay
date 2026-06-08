@@ -41,51 +41,62 @@ function DashboardLayout() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate({ to: "/auth" });
-        return;
-      }
-
-      // ADMIN BYPASS TOTAL
-      if (session.user.email === 'chadlopesff@gmail.com') {
-        navigate({ to: "/admin" });
-        return;
-      }
-
-      // Fetch profile to check status and role
-      const { data: userProfile, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      if (error || !userProfile) {
-        // Se perfil não existe, tenta criar
-        const { data: newProfile } = await supabase
-          .from("profiles")
-          .upsert({ 
-            id: session.user.id,
-            full_name: session.user.user_metadata?.full_name || '',
-            status: 'pending',
-            role: 'user'
-          })
-          .select()
-          .maybeSingle();
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         
-        if (newProfile) {
-          setProfile(newProfile);
-          checkStatus(newProfile);
+        if (!session) {
+          navigate({ to: "/auth" });
+          return;
         }
-      } else {
-        setProfile(userProfile);
-        checkStatus(userProfile);
+
+        // ADMIN BYPASS TOTAL
+        if (session.user.email === 'chadlopesff@gmail.com') {
+          navigate({ to: "/admin" });
+          return;
+        }
+
+        // Fetch profile to check status and role
+        const { data: userProfile, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!userProfile) {
+          // If profile doesn't exist, create it
+          const { data: newProfile, error: upsertError } = await supabase
+            .from("profiles")
+            .upsert({ 
+              id: session.user.id,
+              full_name: session.user.user_metadata?.full_name || '',
+              status: 'pending',
+              role: 'user',
+              email: session.user.email
+            })
+            .select()
+            .maybeSingle();
+          
+          if (upsertError) throw upsertError;
+
+          if (newProfile) {
+            setProfile(newProfile);
+            checkStatus(newProfile);
+          }
+        } else {
+          setProfile(userProfile);
+          checkStatus(userProfile);
+        }
+        
+        setUser(session.user);
+      } catch (err) {
+        console.error("Auth check error:", err);
+        navigate({ to: "/auth" });
       }
-      
-      setUser(session.user);
+    };
       
       // Update last login
       await supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("id", session.user.id);
@@ -196,7 +207,7 @@ function DashboardLayout() {
     },
     { name: "Pixel Facebook", icon: Target, path: "/pixel" },
     { name: "Assistente IA", icon: Zap, path: "/dashboard", params: { tab: 'ai' } },
-    ...(profile?.role === 'admin' || user?.email === 'chadlopesff@gmail.com' ? [{ name: "Control Center", icon: ShieldCheck, path: "/admin" }] : []),
+    ...(profile?.role === 'admin' || user?.email === 'chadlopesff@gmail.com' ? [{ name: "Painel Operacional", icon: ShieldCheck, path: "/admin" }] : []),
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
 
