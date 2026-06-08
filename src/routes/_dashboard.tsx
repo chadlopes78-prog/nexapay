@@ -83,8 +83,8 @@ function DashboardLayout() {
                 if ("Notification" in window && Notification.permission === "granted") {
                   new Notification("🔔 Nova Venda", {
                     body: `💰 Pingou🎉 ${amount} MT`,
-                    icon: "/notification-icon.png",
-                    badge: "/notification-icon.png",
+                    icon: "/logo-p.svg",
+                    badge: "/logo-p.svg",
                   });
                 }
               }
