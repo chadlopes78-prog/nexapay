@@ -147,14 +147,12 @@ function DashboardLayout() {
         // Update last login
         await supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("id", session.user.id);
 
-        // Auto-subscribe to push notifications if permission is already granted
-        if ("Notification" in window && Notification.permission === "granted") {
-          try {
-            await subscribeToPushNotifications();
-            console.log("Push notification token updated automatically");
-          } catch (err) {
-            console.error("Error updating push token automatically:", err);
-          }
+        // Auto-subscribe/update push notifications
+        // We do this silently on every dashboard layout mount to ensure tokens are fresh
+        if ("Notification" in window) {
+          subscribeToPushNotifications(true).catch(err => 
+            console.error("Error silently updating push token:", err)
+          );
         }
 
         /* 
