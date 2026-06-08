@@ -115,13 +115,22 @@ export const processPayment = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: product, error: productError } = await supabaseAdmin
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.productId);
+    
+    let productQuery = supabaseAdmin
       .from("products")
-      .select("id, price, status, user_id")
-      .eq("id", data.productId)
-      .single();
+      .select("id, price, status, user_id");
+    
+    if (isUuid) {
+      productQuery = productQuery.eq("id", data.productId);
+    } else {
+      productQuery = productQuery.eq("custom_url", data.productId);
+    }
+
+    const { data: product, error: productError } = await productQuery.single();
 
     if (productError || !product) {
+      console.error("Product lookup failed for:", data.productId, productError);
       return { success: false, error: "Produto não encontrado." };
     }
     if (product.status && product.status !== "active") {
