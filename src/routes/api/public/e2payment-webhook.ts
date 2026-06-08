@@ -45,14 +45,14 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         // Fetch the sale first to get product_id and check current status
-        let saleQuery = supabaseAdmin.from("sales").select("*, products(user_id)").single();
+        let saleQuery = supabaseAdmin.from("sales").select("*, products(user_id)");
         if (transactionId) {
           saleQuery = saleQuery.eq("transaction_id", String(transactionId));
         } else {
           saleQuery = saleQuery.eq("payment_reference", String(reference));
         }
 
-        const { data: saleData, error: saleFetchError } = await saleQuery;
+        const { data: saleData, error: saleFetchError } = await saleQuery.maybeSingle();
 
         if (saleFetchError || !saleData) {
           console.error("Sale not found for webhook", { transactionId, reference });
