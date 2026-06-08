@@ -29,11 +29,17 @@ function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        navigate({ to: "/dashboard" });
+        if (session.user.email === "chadlopesff@gmail.com") {
+          navigate({ to: "/admin" });
+        } else {
+          navigate({ to: "/dashboard" });
+        }
       }
     });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -63,15 +69,32 @@ function AuthPage() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Timeout de segurança para evitar loading infinito
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+        toast.error("O login demorou muito. Tente novamente.");
+      }
+    }, 8000);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
-      navigate({ to: "/dashboard" });
+      
+      clearTimeout(timeout);
+      
+      if (data.user?.email === "chadlopesff@gmail.com") {
+        navigate({ to: "/admin" });
+      } else {
+        navigate({ to: "/dashboard" });
+      }
     } catch (error: any) {
+      clearTimeout(timeout);
       toast.error(error.message);
     } finally {
       setLoading(false);
