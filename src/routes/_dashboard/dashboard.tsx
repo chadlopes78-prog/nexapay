@@ -372,7 +372,7 @@ function DashboardPage() {
           <CardContent className="px-0 pb-0 pt-8">
             <div className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboardData?.chartData}>
+                <BarChart data={dashboardData.chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis 
                     dataKey="name" 
