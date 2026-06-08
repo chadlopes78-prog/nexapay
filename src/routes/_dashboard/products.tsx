@@ -387,14 +387,16 @@ function ProductsPage() {
                       </div>
                     )}
                     {(deliveryType === 'link' || deliveryType === 'both') && (
-                      <div className="grid gap-2">
-                          <Label htmlFor="delivery_link">Link de Acesso</Label>
-                          <Input id="delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
-                      </div>
-                      <div className="grid gap-2">
-                          <Label htmlFor="access_link">Link de Acesso (WhatsApp, URL, etc)</Label>
-                          <Input id="access_link" value={accessLink} onChange={(e) => setAccessLink(e.target.value)} placeholder="https://wa.me/..." />
-                      </div>
+                      <>
+                        <div className="grid gap-2">
+                            <Label htmlFor="delivery_link">Link de Acesso</Label>
+                            <Input id="delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="access_link">Link de Acesso (WhatsApp, URL, etc)</Label>
+                            <Input id="access_link" value={accessLink} onChange={(e) => setAccessLink(e.target.value)} placeholder="https://wa.me/..." />
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -491,10 +493,16 @@ function ProductsPage() {
                         </select>
                     </div>
                     {(deliveryType === 'link' || deliveryType === 'both') && (
-                      <div className="grid gap-2">
-                          <Label htmlFor="edit-delivery_link">Link de Acesso</Label>
-                          <Input id="edit-delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
-                      </div>
+                      <>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-delivery_link">Link de Acesso</Label>
+                            <Input id="edit-delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit-access_link">Link de Redirecionamento (WhatsApp, URL, etc)</Label>
+                            <Input id="edit-access_link" value={accessLink} onChange={(e) => setAccessLink(e.target.value)} placeholder="https://wa.me/..." />
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
