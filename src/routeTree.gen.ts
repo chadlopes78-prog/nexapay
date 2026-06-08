@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WaitingApprovalRouteImport } from './routes/waiting-approval'
 import { Route as SuccessRouteImport } from './routes/success'
+import { Route as PaymentSuccessRouteImport } from './routes/payment-success'
 import { Route as BlockedRouteImport } from './routes/blocked'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -36,6 +37,11 @@ const WaitingApprovalRoute = WaitingApprovalRouteImport.update({
 const SuccessRoute = SuccessRouteImport.update({
   id: '/success',
   path: '/success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentSuccessRoute = PaymentSuccessRouteImport.update({
+  id: '/payment-success',
+  path: '/payment-success',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlockedRoute = BlockedRouteImport.update({
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/blocked': typeof BlockedRoute
+  '/payment-success': typeof PaymentSuccessRoute
   '/success': typeof SuccessRoute
   '/waiting-approval': typeof WaitingApprovalRoute
   '/customers': typeof DashboardCustomersRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/blocked': typeof BlockedRoute
+  '/payment-success': typeof PaymentSuccessRoute
   '/success': typeof SuccessRoute
   '/waiting-approval': typeof WaitingApprovalRoute
   '/customers': typeof DashboardCustomersRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/blocked': typeof BlockedRoute
+  '/payment-success': typeof PaymentSuccessRoute
   '/success': typeof SuccessRoute
   '/waiting-approval': typeof WaitingApprovalRoute
   '/_dashboard/customers': typeof DashboardCustomersRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/blocked'
+    | '/payment-success'
     | '/success'
     | '/waiting-approval'
     | '/customers'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/blocked'
+    | '/payment-success'
     | '/success'
     | '/waiting-approval'
     | '/customers'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/blocked'
+    | '/payment-success'
     | '/success'
     | '/waiting-approval'
     | '/_dashboard/customers'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   BlockedRoute: typeof BlockedRoute
+  PaymentSuccessRoute: typeof PaymentSuccessRoute
   SuccessRoute: typeof SuccessRoute
   WaitingApprovalRoute: typeof WaitingApprovalRoute
   PProductIdRoute: typeof PProductIdRoute
@@ -265,6 +278,13 @@ declare module '@tanstack/react-router' {
       path: '/success'
       fullPath: '/success'
       preLoaderRoute: typeof SuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment-success': {
+      id: '/payment-success'
+      path: '/payment-success'
+      fullPath: '/payment-success'
+      preLoaderRoute: typeof PaymentSuccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blocked': {
@@ -416,6 +436,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   BlockedRoute: BlockedRoute,
+  PaymentSuccessRoute: PaymentSuccessRoute,
   SuccessRoute: SuccessRoute,
   WaitingApprovalRoute: WaitingApprovalRoute,
   PProductIdRoute: PProductIdRoute,
@@ -424,3 +445,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
