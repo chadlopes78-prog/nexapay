@@ -120,9 +120,16 @@ function DashboardPage() {
       });
 
       if (error) {
-        console.error("Error fetching metrics from RPC:", error);
+        console.error("[Dashboard] RPC Error details:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
         throw error;
       }
+
+      console.log("[Dashboard] RPC Data received:", data);
 
       const result = data as any;
       
