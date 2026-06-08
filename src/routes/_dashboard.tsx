@@ -140,6 +140,9 @@ function DashboardLayout() {
     };
 
     const checkStatus = (p: any) => {
+      // Se for o admin mestre, ignora status
+      if (user?.email === 'chadlopesff@gmail.com') return;
+      
       if (p.status === "banned") {
         navigate({ to: "/blocked" });
       } else if (p.status !== "approved") {
@@ -193,7 +196,7 @@ function DashboardLayout() {
     },
     { name: "Pixel Facebook", icon: Target, path: "/pixel" },
     { name: "Assistente IA", icon: Zap, path: "/dashboard", params: { tab: 'ai' } },
-    ...(profile?.role === 'admin' ? [{ name: "Admin Panel", icon: ShieldCheck, path: "/admin" }] : []),
+    ...(profile?.role === 'admin' || user?.email === 'chadlopesff@gmail.com' ? [{ name: "Control Center", icon: ShieldCheck, path: "/admin" }] : []),
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
 

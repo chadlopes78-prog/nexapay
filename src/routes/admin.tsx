@@ -14,7 +14,10 @@ import {
   XCircle,
   Ban,
   Shield,
-  LayoutDashboard
+  LayoutDashboard,
+  Clock,
+  Mail,
+  Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,12 +40,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin")({
-  component: AdminDashboard,
+  component: AdminControlCenter,
 });
 
-function AdminDashboard() {
+function AdminControlCenter() {
   const [users, setUsers] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -56,6 +60,7 @@ function AdminDashboard() {
   const navigate = useNavigate();
 
   const PAGE_SIZE = 20;
+  const ADMIN_EMAIL = "chadlopesff@gmail.com";
 
   useEffect(() => {
     checkAdmin();
@@ -72,32 +77,34 @@ function AdminDashboard() {
       return;
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", session.user.id)
-      .maybeSingle();
+    if (session.user.email !== ADMIN_EMAIL) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
 
-    if (session.user.email !== 'chadlopesff@gmail.com' && profile?.role !== 'admin') {
-      navigate({ to: "/dashboard" });
-      toast.error("Acesso negado.");
+      if (profile?.role !== 'admin') {
+        navigate({ to: "/dashboard" });
+        toast.error("Acesso negado.");
+      }
     }
   };
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch stats (simplified aggregation)
-      const { data: allProfiles } = await supabase
+      // Fetch stats with a single query (optimized)
+      const { data: statsData, error: statsError } = await supabase
         .from("profiles")
         .select("status");
       
-      if (allProfiles) {
+      if (!statsError && statsData) {
         setStats({
-          total: allProfiles.length,
-          pending: allProfiles.filter(u => u.status === 'pending').length,
-          approved: allProfiles.filter(u => u.status === 'approved').length,
-          banned: allProfiles.filter(u => u.status === 'banned').length
+          total: statsData.length,
+          pending: statsData.filter(u => u.status === 'pending').length,
+          approved: statsData.filter(u => u.status === 'approved').length,
+          banned: statsData.filter(u => u.status === 'banned').length
         });
       }
 
@@ -109,14 +116,14 @@ function AdminDashboard() {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (search) {
-        query = query.ilike("full_name", `%${search}%`);
+        query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
       }
 
       const { data, error } = await query;
       if (error) throw error;
       setUsers(data || []);
     } catch (error: any) {
-      toast.error("Erro ao carregar usuários: " + error.message);
+      toast.error("Erro ao carregar base: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -126,157 +133,190 @@ function AdminDashboard() {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ status })
+        .update({ 
+          status,
+          updated_at: new Date().toISOString()
+        })
         .eq("id", userId);
       
       if (error) throw error;
       
       toast.success(`Usuário ${status} com sucesso.`);
-      fetchUsers();
+      
+      // Update local state for immediate feedback
+      setUsers(users.map(u => u.id === userId ? { ...u, status } : u));
+      
+      // Recalculate stats locally to avoid extra query
+      fetchUsers(); 
     } catch (error: any) {
-      toast.error("Erro ao atualizar status: " + error.message);
+      toast.error("Erro na operação: " + error.message);
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'approved': return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">Aprovado</Badge>;
-      case 'pending': return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200">Pendente</Badge>;
-      case 'banned': return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200">Banido</Badge>;
-      case 'rejected': return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200">Rejeitado</Badge>;
+      case 'approved': return <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-emerald-200 font-medium">Aprovado</Badge>;
+      case 'pending': return <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border-amber-200 font-medium">Pendente</Badge>;
+      case 'banned': return <Badge className="bg-red-50 text-red-700 hover:bg-red-50 border-red-200 font-medium">Banido</Badge>;
+      case 'rejected': return <Badge className="bg-slate-50 text-slate-700 hover:bg-slate-50 border-slate-200 font-medium">Rejeitado</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-8 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            Admin Panel
-          </h1>
-          <p className="text-sm text-slate-500">Gerenciamento de usuários e aprovações.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/dashboard">
-            <Button variant="outline" size="sm" className="bg-white">
-              <LayoutDashboard className="mr-2 h-4 w-4" />
-              Voltar ao Dashboard
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Total Usuários", value: stats.total, icon: Users, color: "text-blue-600" },
-          { label: "Pendentes", value: stats.pending, icon: UserPlus, color: "text-amber-600" },
-          { label: "Aprovados", value: stats.approved, icon: UserCheck, color: "text-emerald-600" },
-          { label: "Banidos", value: stats.banned, icon: UserX, color: "text-red-600" },
-        ].map((stat, i) => (
-          <Card key={i} className="border-none shadow-sm overflow-hidden bg-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{stat.label}</p>
-                  <p className="text-2xl font-black text-slate-900">{stat.value}</p>
-                </div>
-                <div className={`${stat.color} bg-slate-50 p-3 rounded-2xl`}>
-                  <stat.icon className="h-6 w-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="border-none shadow-sm bg-white overflow-hidden">
-        <CardHeader className="p-6 pb-0 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg font-bold">Usuários Recentes</CardTitle>
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input 
-              placeholder="Buscar por nome..." 
-              className="pl-9 h-9 border-slate-200 focus-visible:ring-primary/20"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+    <div className="min-h-screen bg-[#F9FAFB] p-4 md:p-10">
+      <div className="max-w-7xl mx-auto space-y-10">
+        
+        {/* Header - Clean Stripe Style */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-primary font-bold text-sm tracking-tight uppercase">
+              <Shield className="h-4 w-4" />
+              Control Center
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">
+              Gestão de Acessos
+            </h1>
+            <p className="text-slate-500 font-medium">Controle total sobre a base de usuários da PaymentBlack.</p>
           </div>
-        </CardHeader>
-        <CardContent className="p-0 mt-4">
+          
+          <div className="flex items-center gap-3">
+            <Link to="/dashboard">
+              <Button variant="outline" className="bg-white border-slate-200 text-slate-600 font-bold hover:bg-slate-50 shadow-sm h-11 px-6 rounded-xl transition-all active:scale-95">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Painel Operacional
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Metric Cards - Premium Style */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: "Total de Usuários", value: stats.total, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+            { label: "Aguardando Aprovação", value: stats.pending, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+            { label: "Contas Ativas", value: stats.approved, icon: UserCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
+            { label: "Contas Banidas", value: stats.banned, icon: Ban, color: "text-red-600", bg: "bg-red-50" },
+          ].map((stat, i) => (
+            <Card key={i} className="border border-slate-100 shadow-sm bg-white rounded-2xl overflow-hidden transition-all hover:shadow-md">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={cn("p-2.5 rounded-xl", stat.bg)}>
+                    <stat.icon className={cn("h-5 w-5", stat.color)} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-1">{stat.label}</p>
+                  <p className="text-3xl font-black text-slate-900 tabular-nums leading-none">{stat.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Main Table Area */}
+        <Card className="border border-slate-100 shadow-sm bg-white rounded-2xl overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input 
+                placeholder="Pesquisar por nome ou email..." 
+                className="pl-10 h-11 bg-slate-50 border-transparent focus:bg-white focus:ring-primary/20 rounded-xl font-medium transition-all"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="text-slate-500 font-bold hover:bg-slate-50 rounded-lg">
+                <Filter className="mr-2 h-4 w-4" />
+                Filtros
+              </Button>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-slate-50/50">
-                <TableRow className="hover:bg-transparent border-slate-100">
-                  <TableHead className="font-bold text-slate-700">Usuário</TableHead>
-                  <TableHead className="font-bold text-slate-700">Cargo</TableHead>
-                  <TableHead className="font-bold text-slate-700">Status</TableHead>
-                  <TableHead className="font-bold text-slate-700">Criado em</TableHead>
-                  <TableHead className="text-right font-bold text-slate-700">Ações</TableHead>
+                <TableRow className="hover:bg-transparent border-slate-100 h-12">
+                  <TableHead className="font-bold text-slate-500 text-[12px] uppercase tracking-wider pl-6">Utilizador</TableHead>
+                  <TableHead className="font-bold text-slate-500 text-[12px] uppercase tracking-wider">Status</TableHead>
+                  <TableHead className="font-bold text-slate-500 text-[12px] uppercase tracking-wider">Adesão</TableHead>
+                  <TableHead className="font-bold text-slate-500 text-[12px] uppercase tracking-wider">Último Login</TableHead>
+                  <TableHead className="text-right font-bold text-slate-500 text-[12px] uppercase tracking-wider pr-6">Gerir</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i} className="animate-pulse">
-                      <TableCell colSpan={5} className="h-16 bg-slate-50/20"></TableCell>
+                    <TableRow key={i} className="animate-pulse h-20">
+                      <TableCell colSpan={5} className="bg-slate-50/20"></TableCell>
                     </TableRow>
                   ))
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-slate-500">
-                      Nenhum usuário encontrado.
+                    <TableCell colSpan={5} className="h-40 text-center text-slate-400 font-medium">
+                      Nenhum resultado para os critérios de busca.
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-slate-50/50 border-slate-100">
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">{user.full_name || "Sem nome"}</span>
-                          <span className="text-xs text-slate-500 font-mono truncate max-w-[150px]">{user.id}</span>
+                    <TableRow key={user.id} className="hover:bg-slate-50/50 border-slate-100 transition-colors h-20">
+                      <TableCell className="pl-6">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-black shrink-0 border border-slate-200">
+                            {user.full_name?.charAt(0) || "U"}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-bold text-slate-900 truncate">{user.full_name || "Sem nome cadastrado"}</span>
+                            <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {user.email || "Sem email"}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize font-medium border-slate-200">
-                          {user.role || "user"}
-                        </Badge>
-                      </TableCell>
                       <TableCell>{getStatusBadge(user.status)}</TableCell>
-                      <TableCell className="text-sm text-slate-600">
-                        {new Date(user.created_at).toLocaleDateString()}
+                      <TableCell className="text-sm text-slate-600 font-medium">
+                        {new Date(user.created_at).toLocaleDateString('pt-BR')}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-sm text-slate-600 font-medium">
+                        {user.last_login ? new Date(user.last_login).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : "Nunca acessou"}
+                      </TableCell>
+                      <TableCell className="text-right pr-6">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                              <MoreVertical className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100">
+                              <MoreVertical className="h-4 w-4 text-slate-400" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48 p-2">
-                            <DropdownMenuLabel>Ações de Acesso</DropdownMenuLabel>
+                          <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl shadow-xl border-slate-100">
+                            <DropdownMenuLabel className="text-[11px] uppercase tracking-widest text-slate-400 font-black px-2 pb-2">Controle de Acesso</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              className="flex items-center gap-2 text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer"
+                              disabled={user.status === 'approved'}
+                              className="flex items-center gap-2 py-2.5 rounded-lg text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer font-bold"
                               onClick={() => handleUpdateStatus(user.id, 'approved')}
                             >
                               <CheckCircle2 className="h-4 w-4" />
                               Aprovar Acesso
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              className="flex items-center gap-2 text-amber-600 focus:text-amber-700 focus:bg-amber-50 cursor-pointer"
+                              disabled={user.status === 'rejected'}
+                              className="flex items-center gap-2 py-2.5 rounded-lg text-amber-600 focus:text-amber-700 focus:bg-amber-50 cursor-pointer font-bold"
                               onClick={() => handleUpdateStatus(user.id, 'rejected')}
                             >
                               <XCircle className="h-4 w-4" />
-                              Rejeitar
+                              Recusar Adesão
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem 
-                              className="flex items-center gap-2 text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
+                              disabled={user.status === 'banned'}
+                              className="flex items-center gap-2 py-2.5 rounded-lg text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer font-bold"
                               onClick={() => handleUpdateStatus(user.id, 'banned')}
                             >
                               <Ban className="h-4 w-4" />
-                              Banir Usuário
+                              Banir Permanentemente
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -288,25 +328,27 @@ function AdminDashboard() {
             </Table>
           </div>
           
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-sm text-slate-500">
-              Mostrando {users.length} de {stats.total} usuários
+          <div className="p-6 border-t border-slate-100 flex items-center justify-between bg-white">
+            <p className="text-sm font-bold text-slate-400">
+              {stats.total > 0 ? `Exibindo ${users.length} de ${stats.total} registros` : "Nenhum registro encontrado"}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Button 
                 variant="outline" 
                 size="icon" 
-                className="h-8 w-8"
+                className="h-9 w-9 rounded-lg border-slate-200"
                 disabled={page === 0}
                 onClick={() => setPage(p => p - 1)}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-bold">Página {page + 1}</span>
+              <div className="px-3 h-9 flex items-center justify-center bg-slate-50 rounded-lg text-xs font-black text-slate-600">
+                PÁGINA {page + 1}
+              </div>
               <Button 
                 variant="outline" 
                 size="icon" 
-                className="h-8 w-8"
+                className="h-9 w-9 rounded-lg border-slate-200"
                 disabled={users.length < PAGE_SIZE}
                 onClick={() => setPage(p => p + 1)}
               >
@@ -314,8 +356,8 @@ function AdminDashboard() {
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
