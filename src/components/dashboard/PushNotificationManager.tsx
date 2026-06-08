@@ -31,26 +31,21 @@ export function PushNotificationManager() {
 
   const checkSubscription = async () => {
     try {
+      if (!("serviceWorker" in navigator)) return;
+      
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       setIsSubscribed(!!subscription);
       
-      // If permission is already granted but not subscribed, try to auto-subscribe
+      // If permission is already granted but not subscribed, try to auto-subscribe silently
       if (Notification.permission === "granted" && !subscription) {
-        console.log("[Push] Permission granted but not subscribed, auto-subscribing...");
-        handleAutoSubscribe();
+        console.log("[Push] Permissão já concedida, tentando inscrição automática...");
+        await subscribeToPushNotifications(true);
+        const newSubscription = await registration.pushManager.getSubscription();
+        setIsSubscribed(!!newSubscription);
       }
     } catch (error) {
-      console.error("Erro ao verificar inscrição:", error);
-    }
-  };
-
-  const handleAutoSubscribe = async () => {
-    try {
-      await subscribeToPushNotifications(true);
-      setIsSubscribed(true);
-    } catch (err) {
-      console.error("Auto-subscribe failed:", err);
+      console.error("[Push] Erro ao verificar inscrição:", error);
     }
   };
 
@@ -134,7 +129,7 @@ export function PushNotificationManager() {
           </div>
           <div className={cn(
             "h-12 w-12 rounded-2xl flex items-center justify-center transition-all shadow-lg",
-            isSubscribed ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-slate-100 text-slate-400 shadow-slate-100"
+            isSubscribed ? "bg-emerald-500 text-white shadow-emerald-200" : "bg-black text-white shadow-slate-100"
           )}>
             {isSubscribed ? <Bell className="h-6 w-6" /> : <BellOff className="h-6 w-6" />}
           </div>
@@ -192,7 +187,7 @@ export function PushNotificationManager() {
           </Button>
         )}
 
-        <div className="pt-2">
+        <div className="pt-2 space-y-2">
           <Button 
             variant="outline" 
             size="sm" 
@@ -201,6 +196,12 @@ export function PushNotificationManager() {
           >
             Testar Som de Venda 💰
           </Button>
+          
+          {!isSubscribed && (
+            <p className="text-[8px] text-center text-rose-500 font-bold uppercase px-4">
+              ⚠️ Se estiver no iPhone, use o Safari e adicione à Tela de Início antes de ativar.
+            </p>
+          )}
         </div>
 
         <p className="text-[9px] text-center text-slate-400 font-bold uppercase tracking-widest">
