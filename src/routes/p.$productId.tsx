@@ -261,7 +261,7 @@ function CheckoutPage() {
         <div className="w-full max-w-md space-y-8 text-center">
           <div className="relative mx-auto h-24 w-24">
             <div className="absolute inset-0 rounded-full border-4 border-slate-200"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-black border-t-transparent animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-[#E30613] border-t-transparent animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
               <Package className="h-8 w-8 text-slate-400" />
             </div>
@@ -271,7 +271,7 @@ function CheckoutPage() {
             <p className="text-slate-500">Estamos a preparar a sua experiência de compra segura.</p>
           </div>
           <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-black h-full w-1/2 animate-[loading_2s_ease-in-out_infinite]"></div>
+            <div className="bg-[#E30613] h-full w-1/2 animate-[loading_2s_ease-in-out_infinite]"></div>
           </div>
         </div>
       </div>
