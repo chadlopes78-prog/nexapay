@@ -595,7 +595,7 @@ export type Database = {
     }
     Functions: {
       get_dashboard_metrics: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string }
+        Args: { p_end_date: string; p_start_date: string }
         Returns: Json
       }
       is_product_publicly_visible: {
