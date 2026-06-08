@@ -133,6 +133,7 @@ function DashboardPage() {
         received_value: 0,
         lost_value: 0
       };
+      const recentSales = result.recentSales || [];
 
       const days = differenceInDays(dateRange.to, dateRange.from) + 1;
       const formattedChartData = [];
@@ -143,22 +144,24 @@ function DashboardPage() {
         const dayLabel = format(dayDate, "dd/MM", { locale: ptBR });
         
         const existingDay = rawChartData.find((d: any) => 
-          format(parseISO(d.day), "yyyy-MM-dd") === dayStr
+          d.day && format(parseISO(d.day), "yyyy-MM-dd") === dayStr
         );
 
         formattedChartData.push({
           name: dayLabel,
-          sucesso: existingDay ? existingDay.sucesso : 0,
-          falha: existingDay ? existingDay.falha : 0,
+          sucesso: existingDay ? Number(existingDay.sucesso || 0) : 0,
+          falha: existingDay ? Number(existingDay.falha || 0) : 0,
         });
       }
 
       return {
         stats,
-        chartData: formattedChartData
+        chartData: formattedChartData,
+        recentSales
       };
     },
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: 1000 * 10, // 10 seconds for more "realtime" feel
+    retry: 1,
   });
 
   const resetData = useMutation({
