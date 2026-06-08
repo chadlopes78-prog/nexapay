@@ -44,21 +44,74 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        let query = supabaseAdmin.from("sales").update({
-          status,
-          transaction_id: transactionId ? String(transactionId).slice(0, 200) : undefined,
-        });
-
+        // Fetch the sale first to get product_id and check current status
+        let saleQuery = supabaseAdmin.from("sales").select("*, products(user_id)").single();
         if (transactionId) {
-          query = query.eq("transaction_id", String(transactionId));
-        } else if (reference) {
-          query = query.eq("payment_reference", String(reference));
+          saleQuery = saleQuery.eq("transaction_id", String(transactionId));
+        } else {
+          saleQuery = saleQuery.eq("payment_reference", String(reference));
         }
 
-        const { error } = await query;
-        if (error) {
-          console.error("webhook update error", error);
+        const { data: saleData, error: saleFetchError } = await saleQuery;
+
+        if (saleFetchError || !saleData) {
+          console.error("Sale not found for webhook", { transactionId, reference });
+          return new Response("Sale not found", { status: 404 });
+        }
+
+        // Only trigger push if status is changing to paid
+        const isBecomingPaid = status === "paid" && saleData.status !== "paid";
+
+        const { error: updateError } = await supabaseAdmin
+          .from("sales")
+          .update({
+            status,
+            transaction_id: transactionId ? String(transactionId).slice(0, 200) : undefined,
+          })
+          .eq("id", saleData.id);
+
+        if (updateError) {
+          console.error("webhook update error", updateError);
           return new Response("DB error", { status: 500 });
+        }
+
+        // Trigger push notification if paid
+        if (isBecomingPaid) {
+          const userId = (saleData.products as any)?.user_id;
+          if (userId) {
+            console.log("Triggering push notification for user:", userId);
+            
+            // Call the send-push edge function
+            // We use the internal URL if possible, or the public one
+            const supabaseUrl = process.env.SUPABASE_URL;
+            const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+            if (supabaseUrl && supabaseServiceKey) {
+              try {
+                const amount = saleData.amount || 0;
+                const response = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${supabaseServiceKey}`
+                  },
+                  body: JSON.stringify({
+                    user_id: userId,
+                    title: "Nova venda 🎉",
+                    body: `Recebeste um pagamento de ${amount} MT`,
+                    url: "/dashboard/sales"
+                  })
+                });
+                
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.error("Failed to send push notification:", errorText);
+                }
+              } catch (err) {
+                console.error("Error calling send-push function:", err);
+              }
+            }
+          }
         }
 
         return Response.json({ ok: true });
