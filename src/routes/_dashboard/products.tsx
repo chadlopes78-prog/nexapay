@@ -63,7 +63,8 @@ function ProductsPage() {
   const [category, setCategory] = useState("");
   const [supportPhone, setSupportPhone] = useState("");
   const [supportNumber, setSupportNumber] = useState("");
-  const [pixelId, setPixelId] = useState("");
+  const [facebookPixelId, setFacebookPixelId] = useState("");
+  const [facebookAccessToken, setFacebookAccessToken] = useState("");
   const [deliveryType, setDeliveryType] = useState("none");
   const [deliveryLink, setDeliveryLink] = useState("");
   const [accessLink, setAccessLink] = useState("");
@@ -172,7 +173,8 @@ function ProductsPage() {
           support_number: supportNumber || validSupportPhone,
           user_id: user.id,
           status: "active",
-          pixel_id: pixelId,
+          facebook_pixel_id: facebookPixelId,
+          facebook_access_token: facebookAccessToken,
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
           delivery_file_url: deliveryFileUrl,
@@ -222,7 +224,8 @@ function ProductsPage() {
     setPrice("");
     setCategory("");
     setSupportPhone("");
-    setPixelId("");
+    setFacebookPixelId("");
+    setFacebookAccessToken("");
     setDeliveryType("none");
     setDeliveryLink("");
     setAccessLink("");
@@ -239,7 +242,8 @@ function ProductsPage() {
     setCategory(product.category || "");
     setSupportPhone(product.support_phone || "");
     setSupportNumber(product.support_number || product.support_phone || "");
-    setPixelId(product.pixel_id || "");
+    setFacebookPixelId(product.facebook_pixel_id || "");
+    setFacebookAccessToken(product.facebook_access_token || "");
     setDeliveryType(product.delivery_type || "none");
     setDeliveryLink(product.delivery_link || "");
     setAccessLink(product.access_link || "");
@@ -270,7 +274,8 @@ function ProductsPage() {
           category,
           support_phone: validSupportPhone,
           support_number: supportNumber || validSupportPhone,
-          pixel_id: pixelId,
+          facebook_pixel_id: facebookPixelId,
+          facebook_access_token: facebookAccessToken,
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
           access_link: accessLink || deliveryLink,
@@ -344,8 +349,12 @@ function ProductsPage() {
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="pixel_id">ID do Pixel (Facebook)</Label>
-                  <Input id="pixel_id" value={pixelId} onChange={(e) => setPixelId(e.target.value)} placeholder="Ex: 123456789" />
+                  <Label htmlFor="facebook_pixel_id">Facebook Pixel ID</Label>
+                  <Input id="facebook_pixel_id" value={facebookPixelId} onChange={(e) => setFacebookPixelId(e.target.value)} placeholder="Ex: 123456789" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="facebook_access_token">Facebook Access Token</Label>
+                  <Input id="facebook_access_token" value={facebookAccessToken} onChange={(e) => setFacebookAccessToken(e.target.value)} placeholder="EAAB..." />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
@@ -450,8 +459,12 @@ function ProductsPage() {
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-pixel_id">ID do Pixel (Facebook)</Label>
-                  <Input id="edit-pixel_id" value={pixelId} onChange={(e) => setPixelId(e.target.value)} placeholder="Ex: 123456789" />
+                  <Label htmlFor="edit-facebook_pixel_id">Facebook Pixel ID</Label>
+                  <Input id="edit-facebook_pixel_id" value={facebookPixelId} onChange={(e) => setFacebookPixelId(e.target.value)} placeholder="Ex: 123456789" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-facebook_access_token">Facebook Access Token</Label>
+                  <Input id="edit-facebook_access_token" value={facebookAccessToken} onChange={(e) => setFacebookAccessToken(e.target.value)} placeholder="EAAB..." />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">

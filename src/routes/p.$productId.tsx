@@ -164,7 +164,7 @@ function CheckoutPage() {
 
   // Facebook Pixel: init + ViewContent in one effect (no race, no crash)
   useEffect(() => {
-    if (!product?.pixel_id) return;
+    if (!product?.facebook_pixel_id) return;
     try {
       // @ts-ignore
       if (!window.fbq) {
@@ -181,7 +181,7 @@ function CheckoutPage() {
         };
         initFB(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
       }
-      window.fbq('init', product.pixel_id);
+      window.fbq('init', product.facebook_pixel_id);
       window.fbq('track', 'PageView');
       window.fbq('track', 'ViewContent', {
         content_name: product.name,
@@ -194,11 +194,11 @@ function CheckoutPage() {
     } catch (e) {
       console.error('FB Pixel error:', e);
     }
-  }, [product?.pixel_id, product?.id]);
+  }, [product?.facebook_pixel_id, product?.id]);
 
   const trackCheckout = () => {
     try {
-      if (product?.pixel_id && window.fbq) {
+      if (product?.facebook_pixel_id && window.fbq) {
         window.fbq('track', 'InitiateCheckout', {
           content_name: product.name, value: product.price, currency: 'MZN',
         });
@@ -208,7 +208,7 @@ function CheckoutPage() {
 
   const trackPurchase = () => {
     try {
-      if (product?.pixel_id && window.fbq) {
+      if (product?.facebook_pixel_id && window.fbq) {
         window.fbq('track', 'Purchase', {
           content_name: product.name, value: product.price, currency: 'MZN',
         });
