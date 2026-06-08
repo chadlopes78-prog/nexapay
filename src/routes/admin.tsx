@@ -132,8 +132,7 @@ function AdminControlCenter() {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (search) {
-        // Since we don't have email in the profiles table, we only search by full_name
-        query = query.ilike('full_name', `%${search}%`);
+        query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
       }
 
       const { data, error: queryError } = await query;
@@ -343,7 +342,7 @@ function AdminControlCenter() {
                             <span className="font-bold text-slate-900 truncate">{user.full_name || "Sem nome cadastrado"}</span>
                             <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
                               <Mail className="h-3 w-3" />
-                              {user.full_name || "Sem identificação"}
+                              {user.email || "Sem email cadastrado"}
                             </span>
                           </div>
                         </div>

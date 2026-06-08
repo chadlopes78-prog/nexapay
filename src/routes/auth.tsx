@@ -85,7 +85,12 @@ function AuthPage() {
       if (error) throw error;
       toast.success("Conta criada! Verifique seu email para confirmar.");
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Signup error:", error);
+      if (error.message.includes("Database error") || error.message.includes("profiles")) {
+        toast.error("Erro interno ao salvar dados. Por favor, tente novamente ou contate o suporte.");
+      } else {
+        toast.error(error.message);
+      }
     } finally {
       setLoading(false);
     }
