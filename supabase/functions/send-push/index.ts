@@ -27,7 +27,7 @@ serve(async (req) => {
     // Get VAPID keys from environment variables
     const publicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-    const subject = Deno.env.get("VAPID_SUBJECT") || "mailto:admin@paymentblack.com";
+    const subject = Deno.env.get("VAPID_SUBJECT") || "https://paymentblack.com";
 
     if (!publicKey || !privateKey) {
       throw new Error("VAPID keys not configured");
@@ -77,9 +77,12 @@ serve(async (req) => {
         };
 
         const payload = JSON.stringify({
-          title,
-          body,
-          url,
+          title: title || "💰 Pagamento Recebido!",
+          body: body || "Uma nova venda foi confirmada no seu checkout.",
+          url: url || "/dashboard",
+          badge: "/logo-192.png",
+          icon: "/logo-192.png",
+          timestamp: Date.now()
         });
 
         await webpush.sendNotification(pushSubscription, payload);
