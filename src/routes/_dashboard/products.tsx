@@ -238,6 +238,7 @@ function ProductsPage() {
     setPrice(product.price.toString());
     setCategory(product.category || "");
     setSupportPhone(product.support_phone || "");
+    setSupportNumber(product.support_number || product.support_phone || "");
     setPixelId(product.pixel_id || "");
     setDeliveryType(product.delivery_type || "none");
     setDeliveryLink(product.delivery_link || "");
