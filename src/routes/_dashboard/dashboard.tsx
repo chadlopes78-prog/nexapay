@@ -391,26 +391,69 @@ function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-none shadow-xl bg-white rounded-3xl overflow-hidden ring-1 ring-slate-100 flex flex-col">
+          <CardHeader className="bg-slate-50/50 border-b pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-primary" /> Atividade Recente
+                </CardTitle>
+                <CardDescription className="text-[10px] font-bold uppercase text-slate-400">
+                  Alertas em tempo real do seu checkout.
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 font-black text-[10px] uppercase">Live</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 overflow-auto max-h-[400px]">
+            {dashboardData?.recentSales && dashboardData.recentSales.length > 0 ? (
+              <div className="divide-y divide-slate-50">
+                {dashboardData.recentSales.map((sale: any) => (
+                  <div key={sale.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-10 w-10 rounded-xl flex items-center justify-center shadow-sm",
+                        ["paid", "approved", "success"].includes(sale.status) ? "bg-emerald-100 text-emerald-600" : 
+                        ["failed", "error"].includes(sale.status) ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
+                      )}>
+                        {["paid", "approved", "success"].includes(sale.status) ? <TrendingUp className="h-5 w-5" /> : 
+                         ["failed", "error"].includes(sale.status) ? <TrendingDown className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-slate-900 uppercase tracking-tighter">
+                          {["paid", "approved", "success"].includes(sale.status) ? "Venda Aprovada" : 
+                           ["failed", "error"].includes(sale.status) ? "Pagamento Falhou" : "Novo Pedido"}
+                        </p>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase truncate max-w-[150px]">
+                          {sale.product_name || "Produto"} • {sale.customer_name || "Cliente"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-black text-slate-900">
+                        {Number(sale.amount).toLocaleString("pt-MZ")} MT
+                      </p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase">
+                        {format(parseISO(sale.created_at), "HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+                <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-3">
+                  <ShoppingCart className="h-6 w-6 text-slate-300" />
+                </div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma atividade recente</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Suspense fallback={<div className="h-64 bg-white rounded-3xl animate-pulse shadow-sm" />}>
           <PushNotificationManager />
         </Suspense>
-        
-        <Card className="border-none shadow-xl bg-black text-white p-8 rounded-3xl flex flex-col justify-center relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
-            <TrendingUp className="h-32 w-32" />
-          </div>
-          <h3 className="text-xl font-black uppercase tracking-tighter mb-4 flex items-center gap-2">
-            Dica de Ouro ⚡
-          </h3>
-          <p className="text-base text-slate-400 font-medium leading-relaxed max-w-md">
-            Sua taxa de conversão atual pode melhorar. Reduza o abandono de checkout oferecendo suporte rápido via WhatsApp.
-          </p>
-          <div className="mt-6 flex gap-3">
-             <div className="h-1.5 w-12 rounded-full bg-emerald-500" />
-             <div className="h-1.5 w-6 rounded-full bg-slate-800" />
-             <div className="h-1.5 w-6 rounded-full bg-slate-800" />
-          </div>
-        </Card>
       </div>
     </div>
   );
