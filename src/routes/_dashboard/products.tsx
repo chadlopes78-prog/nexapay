@@ -180,6 +180,7 @@ function ProductsPage() {
           delivery_link: deliveryLink,
           delivery_file_url: deliveryFileUrl,
           access_link: accessLink || deliveryLink,
+          thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: uploadedImageUrl || null,
         })
         .select()
