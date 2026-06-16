@@ -22,79 +22,74 @@ import mozFlag from "@/assets/moz-flag.png.asset.json";
 export const Route = createFileRoute("/p/$productId")({
   loader: async ({ params: { productId } }) => {
     try {
-      // Intentar buscar por ID (UUID) primero
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId);
-      
       const PUBLIC_PRODUCT_COLUMNS = "id, user_id, name, description, price, image_url, category, status, custom_url, warranty_days, delivery_type, facebook_pixel_id, support_number";
-      let productQuery = supabase.from("products").select(PUBLIC_PRODUCT_COLUMNS);
-      
-      if (isUuid) {
-        productQuery = productQuery.eq("id", productId);
-      } else {
-        productQuery = productQuery.eq("custom_url", productId);
-      }
 
-      const [productRes, checkoutRes] = await Promise.all([
-        productQuery.single(),
-        supabase.from("checkouts").select("*").eq("product_id", isUuid ? productId : "").maybeSingle(),
-      ]);
+      // Single product fetch (by UUID or slug) — no wasted parallel query
+      const productRes = await supabase
+        .from("products")
+        .select(PUBLIC_PRODUCT_COLUMNS)
+        .eq(isUuid ? "id" : "custom_url", productId)
+        .maybeSingle();
 
       let finalProduct = productRes.data as any;
-      let finalCheckout = checkoutRes?.data || null;
 
-      if (!finalProduct) {
-        // Fallback: Si no se encontró por ID y no era un UUID, intentar buscar por custom_url
-        if (isUuid) {
-          const fallbackRes = await supabase.from("products").select(PUBLIC_PRODUCT_COLUMNS).eq("custom_url", productId).maybeSingle();
-          if (fallbackRes.data) {
-            finalProduct = fallbackRes.data;
-            const checkoutFallback = await supabase.from("checkouts").select("*").eq("product_id", fallbackRes.data.id).maybeSingle();
-            finalCheckout = checkoutFallback.data ?? null;
-          }
-        }
+      // Fallback: UUID-looking slug that's actually a custom_url
+      if (!finalProduct && isUuid) {
+        const fallbackRes = await supabase
+          .from("products")
+          .select(PUBLIC_PRODUCT_COLUMNS)
+          .eq("custom_url", productId)
+          .maybeSingle();
+        finalProduct = fallbackRes.data;
       }
 
       if (!finalProduct) {
         return { product: null, checkout: null, defaultPixel: null };
       }
 
-      // Load default pixel config if product doesn't have one
-      let defaultPixel = null;
-      if (!finalProduct.facebook_pixel_id) {
-        const { data: pixelConfig } = await supabase
-          .from("pixel_configs")
-          .select("fb_pixel_id, fb_access_token")
-          .eq("user_id", finalProduct.user_id)
-          .maybeSingle();
-        defaultPixel = pixelConfig;
-      }
+      // Parallel fetch of checkout + default pixel (only after we know the real product.id/user_id)
+      const checkoutPromise = supabase
+        .from("checkouts")
+        .select("*")
+        .eq("product_id", finalProduct.id)
+        .maybeSingle();
 
-      // Si se encontró por custom_url, necesitamos cargar el checkout real usando el ID del producto
-      if (!isUuid && finalProduct && !finalCheckout) {
-        const actualCheckoutRes = await supabase.from("checkouts").select("*").eq("product_id", finalProduct.id).maybeSingle();
-        finalCheckout = actualCheckoutRes.data;
-      }
+      const pixelPromise = finalProduct.facebook_pixel_id
+        ? Promise.resolve({ data: null })
+        : supabase
+            .from("pixel_configs")
+            .select("fb_pixel_id, fb_access_token")
+            .eq("user_id", finalProduct.user_id)
+            .maybeSingle();
+
+      const [checkoutRes, pixelRes] = await Promise.all([checkoutPromise, pixelPromise]);
 
       return {
         product: finalProduct,
-        checkout: finalCheckout,
-        defaultPixel: defaultPixel,
+        checkout: checkoutRes.data ?? null,
+        defaultPixel: pixelRes.data ?? null,
       };
     } catch (err) {
       console.error("Loader error:", err);
-      return { product: null, checkout: null };
+      return { product: null, checkout: null, defaultPixel: null };
     }
   },
   head: ({ loaderData }) => {
     const product = loaderData?.product;
     if (!product) return {};
+    const image = product.image_url || "";
     return {
       meta: [
         { title: `${product.name} | Paymentblack Mozambique` },
         { name: "description", content: product.description || "Checkout seguro via M-Pesa e e-Mola" },
         { property: "og:title", content: product.name },
-        { property: "og:image", content: product.image_url || "" },
+        { property: "og:image", content: image },
       ],
+      // Preload product image to improve LCP on the checkout page
+      links: image
+        ? [{ rel: "preload", as: "image", href: image, fetchpriority: "high" }]
+        : [],
     };
   },
   component: CheckoutPage,
