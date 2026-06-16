@@ -231,6 +231,24 @@ function DashboardPage() {
     sessionStorage.setItem("dashboard-preset", newPreset);
   };
 
+  // Realtime: refresh dashboard the moment a sale is inserted/updated (e.g. status -> paid)
+  useEffect(() => {
+    const channel = supabase
+      .channel("dashboard-sales")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sales" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+
   const { heroKpis, metricCards } = useMemo(() => {
     if (!dashboardData) return { heroKpis: [], metricCards: [] };
 
