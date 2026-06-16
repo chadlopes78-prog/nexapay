@@ -72,30 +72,7 @@ function DashboardPage() {
 
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    // Listen for realtime sale updates to refresh dashboard immediately
-    // Using user-specific channel would be better, but sales don't have RLS per user ID easily filterable here
-    // unless we use the new user_id column
-    const channel = supabase
-      .channel('dashboard-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sales'
-        },
-        () => {
-          console.log("[Dashboard] Realtime sale change detected, refreshing...");
-          queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  const queryClient = useQueryClient();
 
   const { data: dashboardData, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["dashboard-metrics", dateRange.from.toISOString(), dateRange.to.toISOString()],
