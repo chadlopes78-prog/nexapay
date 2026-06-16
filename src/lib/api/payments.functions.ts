@@ -196,16 +196,18 @@ export const processPayment = createServerFn({ method: "POST" })
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json; charset=utf-8",
           Accept: "application/json",
           Authorization: `Bearer ${token}`,
-          "User-Agent": "Mozilla/5.0 (compatible; PaymentBlackmz/1.0)",
+          "User-Agent": "PagamentosMZ/1.0",
         },
         body: JSON.stringify({
           client_id: clientId,
           amount: String(amount),
           phone: localPhone,
           reference,
+          merchant_name: MERCHANT_NAME,
+          description: PAYMENT_DESCRIPTION,
         }),
         signal: controller.signal,
       }).finally(() => clearTimeout(timeoutId));
