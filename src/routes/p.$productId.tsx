@@ -25,7 +25,8 @@ export const Route = createFileRoute("/p/$productId")({
       // Intentar buscar por ID (UUID) primero
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId);
       
-      let productQuery = supabase.from("products").select("*");
+      const PUBLIC_PRODUCT_COLUMNS = "id, user_id, name, description, price, image_url, category, status, custom_url, warranty_days, delivery_type, facebook_pixel_id, support_number";
+      let productQuery = supabase.from("products").select(PUBLIC_PRODUCT_COLUMNS);
       
       if (isUuid) {
         productQuery = productQuery.eq("id", productId);
@@ -38,13 +39,13 @@ export const Route = createFileRoute("/p/$productId")({
         supabase.from("checkouts").select("*").eq("product_id", isUuid ? productId : "").maybeSingle(),
       ]);
 
-      let finalProduct = productRes.data;
+      let finalProduct = productRes.data as any;
       let finalCheckout = checkoutRes?.data || null;
 
       if (!finalProduct) {
         // Fallback: Si no se encontró por ID y no era un UUID, intentar buscar por custom_url
         if (isUuid) {
-          const fallbackRes = await supabase.from("products").select("*").eq("custom_url", productId).maybeSingle();
+          const fallbackRes = await supabase.from("products").select(PUBLIC_PRODUCT_COLUMNS).eq("custom_url", productId).maybeSingle();
           if (fallbackRes.data) {
             finalProduct = fallbackRes.data;
             const checkoutFallback = await supabase.from("checkouts").select("*").eq("product_id", fallbackRes.data.id).maybeSingle();

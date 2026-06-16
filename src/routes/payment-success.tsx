@@ -43,7 +43,7 @@ function PaymentSuccessPage() {
       try {
         const { data: saleData, error: saleError } = await supabase
           .from("sales")
-          .select("*, products(*)")
+          .select("*, products(id, name, image_url, price, access_link, delivery_link, support_phone, support_number, warranty_days, delivery_type)")
           .eq("id", saleId)
           .single();
 
