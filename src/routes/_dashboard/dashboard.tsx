@@ -358,7 +358,7 @@ function DashboardPage() {
             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Dashboard</h1>
             {isFetching && <RefreshCcw className="h-4 w-4 animate-spin text-slate-400" />}
           </div>
-          <p className="text-sm text-muted-foreground font-medium uppercase tracking-tighter">Relatórios em tempo real sincronizados com Checkout.</p>
+          <p className="text-sm text-muted-foreground font-medium uppercase tracking-tighter">Visão geral sincronizada com seu Checkout.</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
