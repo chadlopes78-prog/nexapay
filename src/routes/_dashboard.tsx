@@ -304,10 +304,10 @@ function DashboardLayout() {
                   search={item.params}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100 active:scale-95",
-                    isActive ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-slate-600",
+                    isActive ? "bg-slate-100 text-slate-900" : "text-slate-600",
                   )}
                 >
-                  <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-slate-500")} />
+                  <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-slate-900" : "text-slate-500")} />
                   {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
                 </Link>
               )}
