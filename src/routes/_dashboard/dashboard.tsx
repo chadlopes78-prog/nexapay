@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense, useEffect } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   TrendingUp,
@@ -8,13 +8,11 @@ import {
   ShoppingCart,
   AlertCircle,
   BarChart3,
-  Calendar as CalendarIcon,
   Trash2,
   AlertTriangle,
   RefreshCcw
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,7 +25,6 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -37,8 +34,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// Lazy load complex components (Recharts ~220KB is loaded only when chart renders)
-const PushNotificationManager = lazy(() => import("@/components/dashboard/PushNotificationManager").then(m => ({ default: m.PushNotificationManager })));
+// Lazy load chart (Recharts ~220KB)
 const PerformanceChart = lazy(() => import("@/components/dashboard/PerformanceChart"));
 
 export const Route = createFileRoute("/_dashboard/dashboard")({
@@ -75,31 +71,6 @@ function DashboardPage() {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    // Listen for realtime sale updates to refresh dashboard immediately
-    // Using user-specific channel would be better, but sales don't have RLS per user ID easily filterable here
-    // unless we use the new user_id column
-    const channel = supabase
-      .channel('dashboard-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'sales'
-        },
-        () => {
-          console.log("[Dashboard] Realtime sale change detected, refreshing...");
-          queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
 
   const { data: dashboardData, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["dashboard-metrics", dateRange.from.toISOString(), dateRange.to.toISOString()],
@@ -387,7 +358,7 @@ function DashboardPage() {
             <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Dashboard</h1>
             {isFetching && <RefreshCcw className="h-4 w-4 animate-spin text-slate-400" />}
           </div>
-          <p className="text-sm text-muted-foreground font-medium uppercase tracking-tighter">Relatórios em tempo real sincronizados com Checkout.</p>
+          <p className="text-sm text-muted-foreground font-medium uppercase tracking-tighter">Visão geral sincronizada com seu Checkout.</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
@@ -395,7 +366,7 @@ function DashboardPage() {
           
           <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10 rounded-xl border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 gap-2 font-black uppercase tracking-tighter text-[10px]">
+              <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 gap-2 font-black uppercase tracking-tighter text-[10px]">
                 <Trash2 className="h-3.5 w-3.5" />
                 Resetar Dados
               </Button>
@@ -499,19 +470,16 @@ function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card className="border-none shadow-xl bg-white rounded-3xl overflow-hidden ring-1 ring-slate-100 flex flex-col">
           <CardHeader className="bg-slate-50/50 border-b pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-primary" /> Atividade Recente
-                </CardTitle>
-                <CardDescription className="text-[10px] font-bold uppercase text-slate-400">
-                  Alertas em tempo real do seu checkout.
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 font-black text-[10px] uppercase">Live</Badge>
+            <div>
+              <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-primary" /> Atividade Recente
+              </CardTitle>
+              <CardDescription className="text-[10px] font-bold uppercase text-slate-400">
+                Últimas transações do seu checkout.
+              </CardDescription>
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-auto max-h-[400px]">
@@ -522,18 +490,18 @@ function DashboardPage() {
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "h-10 w-10 rounded-xl flex items-center justify-center shadow-sm",
-                        ["paid", "approved", "success"].includes(sale.status) ? "bg-emerald-100 text-emerald-600" : 
-                        ["failed", "error"].includes(sale.status) ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
+                        ["paid", "approved", "success"].includes(sale.status) ? "bg-emerald-100 text-emerald-600" :
+                        ["failed", "error"].includes(sale.status) ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-600"
                       )}>
-                        {["paid", "approved", "success"].includes(sale.status) ? <TrendingUp className="h-5 w-5" /> : 
+                        {["paid", "approved", "success"].includes(sale.status) ? <TrendingUp className="h-5 w-5" /> :
                          ["failed", "error"].includes(sale.status) ? <TrendingDown className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
                       </div>
                       <div>
                         <p className="text-xs font-black text-slate-900 uppercase tracking-tighter">
-                          {["paid", "approved", "success"].includes(sale.status) ? "Venda Aprovada" : 
+                          {["paid", "approved", "success"].includes(sale.status) ? "Venda Aprovada" :
                            ["failed", "error"].includes(sale.status) ? "Pagamento Falhou" : "Novo Pedido"}
                         </p>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase truncate max-w-[150px]">
+                        <p className="text-[10px] text-slate-500 font-bold uppercase truncate max-w-[200px]">
                           {sale.product_name || "Produto"} • {sale.customer_name || "Cliente"}
                         </p>
                       </div>
@@ -559,10 +527,6 @@ function DashboardPage() {
             )}
           </CardContent>
         </Card>
-
-        <Suspense fallback={<div className="h-64 bg-white rounded-3xl animate-pulse shadow-sm" />}>
-          <PushNotificationManager />
-        </Suspense>
       </div>
     </div>
   );
