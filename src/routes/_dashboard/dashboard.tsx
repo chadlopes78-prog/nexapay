@@ -72,8 +72,6 @@ function DashboardPage() {
 
   const queryClient = useQueryClient();
 
-  const queryClient = useQueryClient();
-
   const { data: dashboardData, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["dashboard-metrics", dateRange.from.toISOString(), dateRange.to.toISOString()],
     queryFn: async () => {
