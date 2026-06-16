@@ -317,6 +317,7 @@ export type Database = {
           status: string | null
           support_number: string | null
           support_phone: string | null
+          thank_you_button_text: string | null
           updated_at: string
           user_id: string
           warranty_days: number | null
@@ -339,6 +340,7 @@ export type Database = {
           status?: string | null
           support_number?: string | null
           support_phone?: string | null
+          thank_you_button_text?: string | null
           updated_at?: string
           user_id: string
           warranty_days?: number | null
@@ -361,6 +363,7 @@ export type Database = {
           status?: string | null
           support_number?: string | null
           support_phone?: string | null
+          thank_you_button_text?: string | null
           updated_at?: string
           user_id?: string
           warranty_days?: number | null
