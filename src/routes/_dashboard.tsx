@@ -338,7 +338,7 @@ function DashboardLayout() {
         <Separator className="mb-3" />
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-red-600"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
         >
           <LogOut className="h-5 w-5 shrink-0" />
           {(isSidebarOpen || isMobileMenuOpen) && <span>Sair</span>}
