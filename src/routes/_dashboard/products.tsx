@@ -250,6 +250,7 @@ function ProductsPage() {
     setDeliveryType(product.delivery_type || "none");
     setDeliveryLink(product.delivery_link || "");
     setAccessLink(product.access_link || "");
+    setThankYouButtonText(product.thank_you_button_text || "Liberar acesso");
     setImageUrl(product.image_url || "");
     setImageFile(null);
     setIsEditDialogOpen(true);
