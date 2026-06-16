@@ -139,6 +139,13 @@
 @layer base {
   * {
     border-color: var(--color-border);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
@@ -146,3 +153,4 @@
     color: var(--color-foreground);
   }
 }
+
