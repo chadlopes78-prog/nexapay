@@ -1,18 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { 
-  CheckCircle2, 
-  ArrowRight,
-  MessageCircle,
-  AlertCircle,
-  Package,
-  ShieldCheck,
-  XCircle,
-  Loader2
-} from "lucide-react";
+import { CheckCircle2, ArrowRight, MessageCircle, AlertCircle, Loader2 } from "lucide-react";
 import { z } from "zod";
 
 const successSearchSchema = z.object({
@@ -26,57 +16,47 @@ export const Route = createFileRoute("/payment-success")({
 });
 
 function PaymentSuccessPage() {
-  const { saleId, productId } = Route.useSearch();
-  const navigate = useNavigate();
+  const { saleId } = Route.useSearch();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{ sale: any; product: any } | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!saleId) {
       setLoading(false);
-      setError("Pagamento não identificado.");
       return;
     }
 
     let cancelled = false;
     let attempts = 0;
-    const MAX_ATTEMPTS = 40; // ~2 min @ 3s
+    const MAX_ATTEMPTS = 40;
 
     const fetchSale = async () => {
-      const { data: saleData, error: saleError } = await supabase
+      const { data: saleData } = await supabase
         .from("sales")
-        .select("*, products(id, name, image_url, price, access_link, delivery_link, support_phone, support_number, warranty_days, delivery_type)")
+        .select("*, products(id, name, access_link, delivery_link, support_phone, support_number, thank_you_button_text)")
         .eq("id", saleId)
         .maybeSingle();
-
-      if (saleError || !saleData) return null;
-      return { sale: saleData, product: saleData.products };
+      if (!saleData) return null;
+      return { sale: saleData, product: (saleData as any).products };
     };
 
     const poll = async () => {
       while (!cancelled && attempts < MAX_ATTEMPTS) {
         attempts++;
-        try {
-          const result = await fetchSale();
-          if (cancelled) return;
-          if (result) {
-            setData(result);
-            const status = result.sale?.status;
-            if (status === "paid" || status === "failed") {
-              setLoading(false);
-              return;
-            }
+        const result = await fetchSale();
+        if (cancelled) return;
+        if (result) {
+          setData(result);
+          if (result.sale?.status === "paid" || result.sale?.status === "failed") {
+            setLoading(false);
+            return;
           }
-        } catch (err) {
-          console.error("Error polling sale:", err);
         }
         await new Promise((r) => setTimeout(r, 3000));
       }
       if (!cancelled) setLoading(false);
     };
 
-    // Realtime: react instantly when webhook updates the sale
     const channel = supabase
       .channel(`sale-${saleId}`)
       .on(
@@ -101,123 +81,90 @@ function PaymentSuccessPage() {
     };
   }, [saleId]);
 
-
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB]">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-[#E30613] mx-auto" />
-          <p className="text-slate-500 font-bold">Validando seu acesso...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-slate-400 mx-auto" />
+          <p className="text-slate-500 text-sm font-medium">A confirmar o seu pagamento...</p>
         </div>
       </div>
     );
   }
 
-  // Security check: Only paid sales allow access
   const isPaid = data?.sale?.status === "paid";
   const product = data?.product;
   const accessLink = product?.access_link || product?.delivery_link;
-  const supportNumber = product?.support_number || product?.support_phone || "258840000000"; // Fallback number if none exists
+  const supportNumber = product?.support_number || product?.support_phone || "258840000000";
+  const buttonText = (product?.thank_you_button_text || "Liberar acesso").trim();
 
-  // Fallback UI if product is missing or payment not confirmed
-  if (!data?.sale || !isPaid) {
+  if (!isPaid) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB] p-4">
-        <Card className="max-w-md w-full border-none shadow-2xl rounded-3xl overflow-hidden animate-in fade-in zoom-in duration-500">
-          <CardHeader className="bg-amber-500 text-white p-8 text-center">
-             <div className="flex justify-center mb-4">
-                <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-                  <AlertCircle className="h-10 w-10" />
-                </div>
-             </div>
-             <CardTitle className="text-2xl font-black">Acesso em Processamento</CardTitle>
-          </CardHeader>
-          <CardContent className="p-8 text-center space-y-6">
-            <p className="text-slate-600 font-bold text-lg">
-              Seu acesso está sendo preparado. Caso o pagamento já tenha sido feito, entre em contacto com o suporte.
+      <div className="flex min-h-screen items-center justify-center bg-white p-6">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="h-16 w-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
+            <AlertCircle className="h-8 w-8 text-amber-500" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold text-slate-900">Acesso em processamento</h1>
+            <p className="text-slate-500">
+              Se já concluiu o pagamento, fale com o suporte para liberar o seu acesso.
             </p>
-            
-            <Button 
-              className="w-full h-16 rounded-2xl bg-[#25D366] hover:bg-[#20ba5a] text-lg font-black shadow-xl shadow-green-600/10 transition-all active:scale-[0.98]"
-              asChild
-            >
-              <a href={`https://wa.me/${supportNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                FALAR COM SUPORTE <MessageCircle className="ml-2 h-6 w-6" />
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+          <a
+            href={`https://wa.me/${supportNumber.replace(/\D/g, "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full bg-[#25D366] hover:bg-[#1fb959] text-white font-semibold text-base shadow-lg shadow-emerald-200 transition-all active:scale-[0.98]"
+          >
+            Falar com suporte <MessageCircle className="h-5 w-5" />
+          </a>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] py-12 px-4 flex flex-col items-center">
-      <div className="max-w-xl w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="text-center space-y-4">
-          <div className="h-24 w-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto shadow-sm border border-emerald-100">
-            <CheckCircle2 className="h-12 w-12 text-emerald-500" />
+    <div className="min-h-screen bg-white flex items-center justify-center px-6 py-12">
+      <div className="w-full max-w-md text-center space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-6">
+          <div className="h-20 w-20 rounded-full bg-emerald-50 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="h-10 w-10 text-emerald-500" strokeWidth={2.2} />
           </div>
-          <div className="space-y-2">
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900">
-              Obrigado pela sua compra 🙏
+          <div className="space-y-3">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
+              Obrigado por confiar na gente
             </h1>
-            <p className="text-slate-500 font-bold text-lg">
-              Pagamento confirmado com sucesso.
+            <p className="text-slate-500 text-base md:text-lg">
+              Para liberar o seu acesso, clique no botão abaixo
             </p>
           </div>
         </div>
 
-        <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="bg-black text-white p-8 text-center">
-            <div className="flex justify-center mb-4">
-               <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md">
-                 <Package className="h-8 w-8" />
-               </div>
-            </div>
-            <CardTitle className="text-2xl font-black tracking-tight">
-              {product?.name || "Produto Adquirido"}
-            </CardTitle>
-            <p className="text-white/60 font-bold mt-1 uppercase tracking-widest text-[10px]">Acesso Liberado</p>
-          </CardHeader>
-          
-          <CardContent className="p-8 space-y-6">
-            {/* Action Buttons */}
-            <div className="space-y-4">
-              {accessLink && (
-                <Button 
-                  className="w-full h-16 rounded-2xl bg-[#E30613] hover:bg-[#c40510] text-lg font-black shadow-xl shadow-red-600/10 transition-all active:scale-[0.98]"
-                  asChild
-                >
-                  <a href={accessLink} target="_blank" rel="noopener noreferrer">
-                    ACESSAR PRODUTO <ArrowRight className="ml-2 h-6 w-6" />
-                  </a>
-                </Button>
-              )}
+        {accessLink ? (
+          <a
+            href={accessLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex w-full items-center justify-center gap-2 h-16 px-8 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-lg font-semibold shadow-xl shadow-emerald-200/70 transition-all duration-200 active:scale-[0.98] animate-[pulse_2.4s_ease-in-out_infinite]"
+          >
+            {buttonText}
+            <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+          </a>
+        ) : (
+          <p className="text-slate-500 text-sm">
+            O seu acesso será enviado em breve. Em caso de dúvida, contacte o suporte.
+          </p>
+        )}
 
-              <Button 
-                variant="outline"
-                className="w-full h-16 rounded-2xl border-2 border-slate-100 hover:bg-slate-50 text-slate-600 text-lg font-black transition-all active:scale-[0.98]"
-                asChild
-              >
-                <a href={`https://wa.me/${supportNumber.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                  FALAR COM SUPORTE <MessageCircle className="ml-2 h-6 w-6 text-[#25D366]" />
-                </a>
-              </Button>
-            </div>
-          </CardContent>
-          
-          <CardFooter className="bg-slate-50/50 p-6 flex items-center justify-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-500" />
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              Compra 100% Segura e Verificada
-            </span>
-          </CardFooter>
-        </Card>
-
-        <p className="text-center text-slate-400 text-xs font-bold uppercase tracking-widest">
-          PaymentBlack • Todos os direitos reservados
-        </p>
+        <a
+          href={`https://wa.me/${supportNumber.replace(/\D/g, "")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+        >
+          <MessageCircle className="h-4 w-4" /> Precisa de ajuda? Falar com suporte
+        </a>
       </div>
     </div>
   );

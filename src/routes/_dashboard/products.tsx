@@ -68,6 +68,7 @@ function ProductsPage() {
   const [deliveryType, setDeliveryType] = useState("none");
   const [deliveryLink, setDeliveryLink] = useState("");
   const [accessLink, setAccessLink] = useState("");
+  const [thankYouButtonText, setThankYouButtonText] = useState("Liberar acesso");
   const [deliveryFile, setDeliveryFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -179,6 +180,7 @@ function ProductsPage() {
           delivery_link: deliveryLink,
           delivery_file_url: deliveryFileUrl,
           access_link: accessLink || deliveryLink,
+          thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: uploadedImageUrl || null,
         })
         .select()
@@ -229,6 +231,7 @@ function ProductsPage() {
     setDeliveryType("none");
     setDeliveryLink("");
     setAccessLink("");
+    setThankYouButtonText("Liberar acesso");
     setDeliveryFile(null);
     setImageFile(null);
     setImageUrl("");
@@ -247,6 +250,7 @@ function ProductsPage() {
     setDeliveryType(product.delivery_type || "none");
     setDeliveryLink(product.delivery_link || "");
     setAccessLink(product.access_link || "");
+    setThankYouButtonText(product.thank_you_button_text || "Liberar acesso");
     setImageUrl(product.image_url || "");
     setImageFile(null);
     setIsEditDialogOpen(true);
@@ -279,6 +283,7 @@ function ProductsPage() {
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
           access_link: accessLink || deliveryLink,
+          thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: finalImageUrl || null,
         })
         .eq("id", editingProduct.id);
@@ -389,7 +394,18 @@ function ProductsPage() {
                           placeholder="Link do produto, grupo, ou arquivo" 
                           required 
                         />
-                        <p className="text-[10px] text-muted-foreground italic">Este link será usado no botão "Acessar Produto" após o pagamento.</p>
+                        <p className="text-[10px] text-muted-foreground italic">Este link será usado no botão da página de obrigado após o pagamento.</p>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="thank_you_button_text">Texto do Botão (Página de Obrigado)</Label>
+                        <Input
+                          id="thank_you_button_text"
+                          value={thankYouButtonText}
+                          onChange={(e) => setThankYouButtonText(e.target.value)}
+                          placeholder="Ex: Liberar acesso, Levantar valor, Aceder conteúdo"
+                          maxLength={40}
+                        />
+                        <p className="text-[10px] text-muted-foreground italic">Personalize o texto do botão verde mostrado após o pagamento.</p>
                     </div>
                     
                     <div className="grid gap-2 pt-2 border-t border-dashed">
@@ -510,6 +526,16 @@ function ProductsPage() {
                           onChange={(e) => setAccessLink(e.target.value)} 
                           placeholder="Link do produto, grupo, ou arquivo" 
                           required 
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-thank_you_button_text">Texto do Botão (Página de Obrigado)</Label>
+                        <Input
+                          id="edit-thank_you_button_text"
+                          value={thankYouButtonText}
+                          onChange={(e) => setThankYouButtonText(e.target.value)}
+                          placeholder="Ex: Liberar acesso, Levantar valor, Aceder conteúdo"
+                          maxLength={40}
                         />
                     </div>
                     
