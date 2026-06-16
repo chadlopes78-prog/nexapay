@@ -176,7 +176,9 @@ export const processPayment = createServerFn({ method: "POST" })
       return { success: false, error: "Não foi possível registar a venda." };
     }
 
-    const reference = sale.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20);
+    const MERCHANT_NAME = "PagamentosMZ";
+    const PAYMENT_DESCRIPTION = "Pagamento de produto digital";
+    const reference = `PMZ${sale.id.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 20);
     const localPhone = msisdn.slice(3); // 9-digit local format expected by e2payments
 
     try {
