@@ -375,6 +375,7 @@ export type Database = {
           full_name: string | null
           id: string
           last_login: string | null
+          pushcut_url: string | null
           role: string | null
           status: string | null
           updated_at: string
@@ -386,6 +387,7 @@ export type Database = {
           full_name?: string | null
           id: string
           last_login?: string | null
+          pushcut_url?: string | null
           role?: string | null
           status?: string | null
           updated_at?: string
@@ -397,6 +399,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_login?: string | null
+          pushcut_url?: string | null
           role?: string | null
           status?: string | null
           updated_at?: string

@@ -29,6 +29,7 @@ export const Route = createFileRoute("/_dashboard/settings")({
 function SettingsPage() {
   const queryClient = useQueryClient();
   const [fullName, setFullName] = useState("");
+  const [pushcutUrl, setPushcutUrl] = useState("");
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
@@ -50,10 +51,28 @@ function SettingsPage() {
   });
 
   useEffect(() => {
-    if (profile?.full_name) {
-      setFullName(profile.full_name);
+    if (profile?.full_name) setFullName(profile.full_name);
+    if (profile?.pushcut_url !== undefined && profile?.pushcut_url !== null) {
+      setPushcutUrl(profile.pushcut_url);
     }
   }, [profile]);
+
+  const updatePushcut = useMutation({
+    mutationFn: async (url: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const { error } = await supabase
+        .from("profiles")
+        .update({ pushcut_url: url || null, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Link Pushcut salvo!");
+    },
+    onError: (error: any) => toast.error("Erro ao salvar: " + error.message),
+  });
 
   const updateProfile = useMutation({
     mutationFn: async (name: string) => {
@@ -263,8 +282,39 @@ function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <PushNotificationManager />
-            
+
             <Separator />
+
+            <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-bold">Pushcut (iPhone)</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cole o link do seu webhook do app <span className="font-semibold">Pushcut</span> para receber uma notificação no seu iPhone sempre que uma venda for aprovada.
+                Crie uma notificação no Pushcut e copie a URL em <span className="italic">"URL to trigger"</span>.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="pushcut-url">URL Pushcut</Label>
+                <Input
+                  id="pushcut-url"
+                  type="url"
+                  placeholder="https://api.pushcut.io/.../notifications/..."
+                  value={pushcutUrl}
+                  onChange={(e) => setPushcutUrl(e.target.value)}
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={() => updatePushcut.mutate(pushcutUrl)}
+                disabled={updatePushcut.isPending}
+              >
+                {updatePushcut.isPending ? "Salvando..." : "Salvar Link Pushcut"}
+              </Button>
+            </div>
+
+            <Separator />
+            
             
             <div className="space-y-4">
               <h3 className="text-sm font-medium">Histórico Recente</h3>

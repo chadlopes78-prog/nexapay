@@ -58,9 +58,32 @@ serve(async (req) => {
 
     if (logError) console.error("Error logging notification:", logError);
 
+    // Pushcut iPhone notification (if user has configured) — runs independently of web push
+    try {
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("pushcut_url")
+        .eq("id", user_id)
+        .single();
+
+      if (profile?.pushcut_url) {
+        const pushcutRes = await fetch(profile.pushcut_url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: title || "💰 Pagamento Recebido!",
+            text: body || "Uma nova venda foi confirmada.",
+          }),
+        });
+        console.log(`Pushcut notification sent: ${pushcutRes.status}`);
+      }
+    } catch (pushcutErr) {
+      console.error("Pushcut notification error:", pushcutErr);
+    }
+
     if (!subscriptions || subscriptions.length === 0) {
-      console.log(`No subscriptions found for user ${user_id}`);
-      return new Response(JSON.stringify({ success: true, message: "No subscriptions" }), {
+      console.log(`No web push subscriptions found for user ${user_id}`);
+      return new Response(JSON.stringify({ success: true, message: "Pushcut only / No web subscriptions" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
