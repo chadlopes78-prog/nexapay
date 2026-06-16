@@ -33,37 +33,74 @@ function PaymentSuccessPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchData() {
-      if (!saleId) {
-        setLoading(false);
-        setError("Pagamento não identificado.");
-        return;
-      }
-
-      try {
-        const { data: saleData, error: saleError } = await supabase
-          .from("sales")
-          .select("*, products(id, name, image_url, price, access_link, delivery_link, support_phone, support_number, warranty_days, delivery_type)")
-          .eq("id", saleId)
-          .single();
-
-        if (saleError || !saleData) {
-          setData(null);
-        } else {
-          setData({
-            sale: saleData,
-            product: saleData.products,
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching success data:", err);
-      } finally {
-        setLoading(false);
-      }
+    if (!saleId) {
+      setLoading(false);
+      setError("Pagamento não identificado.");
+      return;
     }
 
-    fetchData();
+    let cancelled = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 40; // ~2 min @ 3s
+
+    const fetchSale = async () => {
+      const { data: saleData, error: saleError } = await supabase
+        .from("sales")
+        .select("*, products(id, name, image_url, price, access_link, delivery_link, support_phone, support_number, warranty_days, delivery_type)")
+        .eq("id", saleId)
+        .maybeSingle();
+
+      if (saleError || !saleData) return null;
+      return { sale: saleData, product: saleData.products };
+    };
+
+    const poll = async () => {
+      while (!cancelled && attempts < MAX_ATTEMPTS) {
+        attempts++;
+        try {
+          const result = await fetchSale();
+          if (cancelled) return;
+          if (result) {
+            setData(result);
+            const status = result.sale?.status;
+            if (status === "paid" || status === "failed") {
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Error polling sale:", err);
+        }
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+      if (!cancelled) setLoading(false);
+    };
+
+    // Realtime: react instantly when webhook updates the sale
+    const channel = supabase
+      .channel(`sale-${saleId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "sales", filter: `id=eq.${saleId}` },
+        async () => {
+          const result = await fetchSale();
+          if (cancelled || !result) return;
+          setData(result);
+          if (result.sale?.status === "paid" || result.sale?.status === "failed") {
+            setLoading(false);
+          }
+        }
+      )
+      .subscribe();
+
+    poll();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [saleId]);
+
 
   if (loading) {
     return (
