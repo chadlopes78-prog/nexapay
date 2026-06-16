@@ -260,12 +260,9 @@ function CheckoutPage() {
       }
 
       trackPurchase();
-      setPaymentStatusMessage("Pagamento confirmado. A redirecionar...");
-      toast.success("Pagamento confirmado!");
+      setPaymentStatusMessage("Pagamento enviado. A redirecionar...");
+      window.location.href = `/payment-success?productId=${productId}&saleId=${result.saleId}`;
 
-      setTimeout(() => {
-        window.location.href = `/payment-success?productId=${productId}&saleId=${result.saleId}`;
-      }, 800);
     } catch (error: any) {
       setPaymentErrorMessage(error?.message || "Erro inesperado ao processar pagamento.");
       setPaymentStatusMessage(null);
