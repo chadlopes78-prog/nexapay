@@ -283,6 +283,7 @@ function ProductsPage() {
           delivery_type: deliveryType,
           delivery_link: deliveryLink,
           access_link: accessLink || deliveryLink,
+          thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: finalImageUrl || null,
         })
         .eq("id", editingProduct.id);
