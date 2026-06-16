@@ -58,15 +58,7 @@ serve(async (req) => {
 
     if (logError) console.error("Error logging notification:", logError);
 
-    if (!subscriptions || subscriptions.length === 0) {
-      console.log(`No subscriptions found for user ${user_id}`);
-      return new Response(JSON.stringify({ success: true, message: "No subscriptions" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
-    // Pushcut iPhone notification (if user has configured)
+    // Pushcut iPhone notification (if user has configured) — runs independently of web push
     try {
       const { data: profile } = await supabaseClient
         .from("profiles")
@@ -87,6 +79,14 @@ serve(async (req) => {
       }
     } catch (pushcutErr) {
       console.error("Pushcut notification error:", pushcutErr);
+    }
+
+    if (!subscriptions || subscriptions.length === 0) {
+      console.log(`No web push subscriptions found for user ${user_id}`);
+      return new Response(JSON.stringify({ success: true, message: "Pushcut only / No web subscriptions" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
     const notifications = subscriptions.map(async (sub) => {
