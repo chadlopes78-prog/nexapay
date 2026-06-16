@@ -366,7 +366,7 @@ function DashboardPage() {
           
           <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10 rounded-xl border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 gap-2 font-black uppercase tracking-tighter text-[10px]">
+              <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 gap-2 font-black uppercase tracking-tighter text-[10px]">
                 <Trash2 className="h-3.5 w-3.5" />
                 Resetar Dados
               </Button>
