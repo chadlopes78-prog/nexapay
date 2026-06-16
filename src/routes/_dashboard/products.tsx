@@ -528,6 +528,16 @@ function ProductsPage() {
                           required 
                         />
                     </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-thank_you_button_text">Texto do Botão (Página de Obrigado)</Label>
+                        <Input
+                          id="edit-thank_you_button_text"
+                          value={thankYouButtonText}
+                          onChange={(e) => setThankYouButtonText(e.target.value)}
+                          placeholder="Ex: Liberar acesso, Levantar valor, Aceder conteúdo"
+                          maxLength={40}
+                        />
+                    </div>
                     
                     <div className="grid gap-2 pt-2 border-t border-dashed">
                         <Label className="text-xs">Entrega Automática (Opcional)</Label>
