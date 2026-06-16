@@ -470,19 +470,16 @@ function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         <Card className="border-none shadow-xl bg-white rounded-3xl overflow-hidden ring-1 ring-slate-100 flex flex-col">
           <CardHeader className="bg-slate-50/50 border-b pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-primary" /> Atividade Recente
-                </CardTitle>
-                <CardDescription className="text-[10px] font-bold uppercase text-slate-400">
-                  Alertas em tempo real do seu checkout.
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 font-black text-[10px] uppercase">Live</Badge>
+            <div>
+              <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-primary" /> Atividade Recente
+              </CardTitle>
+              <CardDescription className="text-[10px] font-bold uppercase text-slate-400">
+                Últimas transações do seu checkout.
+              </CardDescription>
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-auto max-h-[400px]">
@@ -493,18 +490,18 @@ function DashboardPage() {
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "h-10 w-10 rounded-xl flex items-center justify-center shadow-sm",
-                        ["paid", "approved", "success"].includes(sale.status) ? "bg-emerald-100 text-emerald-600" : 
-                        ["failed", "error"].includes(sale.status) ? "bg-rose-100 text-rose-600" : "bg-blue-100 text-blue-600"
+                        ["paid", "approved", "success"].includes(sale.status) ? "bg-emerald-100 text-emerald-600" :
+                        ["failed", "error"].includes(sale.status) ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-600"
                       )}>
-                        {["paid", "approved", "success"].includes(sale.status) ? <TrendingUp className="h-5 w-5" /> : 
+                        {["paid", "approved", "success"].includes(sale.status) ? <TrendingUp className="h-5 w-5" /> :
                          ["failed", "error"].includes(sale.status) ? <TrendingDown className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
                       </div>
                       <div>
                         <p className="text-xs font-black text-slate-900 uppercase tracking-tighter">
-                          {["paid", "approved", "success"].includes(sale.status) ? "Venda Aprovada" : 
+                          {["paid", "approved", "success"].includes(sale.status) ? "Venda Aprovada" :
                            ["failed", "error"].includes(sale.status) ? "Pagamento Falhou" : "Novo Pedido"}
                         </p>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase truncate max-w-[150px]">
+                        <p className="text-[10px] text-slate-500 font-bold uppercase truncate max-w-[200px]">
                           {sale.product_name || "Produto"} • {sale.customer_name || "Cliente"}
                         </p>
                       </div>
@@ -530,10 +527,6 @@ function DashboardPage() {
             )}
           </CardContent>
         </Card>
-
-        <Suspense fallback={<div className="h-64 bg-white rounded-3xl animate-pulse shadow-sm" />}>
-          <PushNotificationManager />
-        </Suspense>
       </div>
     </div>
   );
