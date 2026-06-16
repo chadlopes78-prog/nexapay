@@ -66,6 +66,29 @@ serve(async (req) => {
       });
     }
 
+    // Pushcut iPhone notification (if user has configured)
+    try {
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("pushcut_url")
+        .eq("id", user_id)
+        .single();
+
+      if (profile?.pushcut_url) {
+        const pushcutRes = await fetch(profile.pushcut_url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: title || "💰 Pagamento Recebido!",
+            text: body || "Uma nova venda foi confirmada.",
+          }),
+        });
+        console.log(`Pushcut notification sent: ${pushcutRes.status}`);
+      }
+    } catch (pushcutErr) {
+      console.error("Pushcut notification error:", pushcutErr);
+    }
+
     const notifications = subscriptions.map(async (sub) => {
       try {
         const pushSubscription = {
