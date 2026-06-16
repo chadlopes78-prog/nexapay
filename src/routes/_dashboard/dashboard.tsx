@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   XAxis,
@@ -268,12 +269,47 @@ function DashboardPage() {
     sessionStorage.setItem("dashboard-preset", newPreset);
   };
 
-  const metricCards = useMemo(() => {
-    if (!dashboardData) return [];
-    
+  const { heroKpis, metricCards } = useMemo(() => {
+    if (!dashboardData) return { heroKpis: [], metricCards: [] };
+
     const { stats } = dashboardData;
-    
-    return [
+    const total = Number(stats.total_transactions) || 0;
+    const success = Number(stats.success_count) || 0;
+    const received = Number(stats.received_value) || 0;
+    const conversionRate = total > 0 ? (success / total) * 100 : 0;
+    const avgTicket = success > 0 ? received / success : 0;
+
+    const fmtMT = (v: number) =>
+      `${Number(v).toLocaleString("pt-MZ", { maximumFractionDigits: 0 })} MT`;
+
+    const heroKpis = [
+      {
+        title: "Valor Recebido",
+        value: fmtMT(received),
+        description: "Dinheiro real em caixa",
+        icon: CreditCard,
+        accent: "bg-emerald-500",
+        tone: "text-emerald-600",
+      },
+      {
+        title: "Taxa de Conversão",
+        value: `${conversionRate.toFixed(1)}%`,
+        description: `${success} de ${total} tentativas`,
+        icon: TrendingUp,
+        accent: "bg-blue-600",
+        tone: "text-blue-600",
+      },
+      {
+        title: "Ticket Médio",
+        value: fmtMT(avgTicket),
+        description: "Por venda aprovada",
+        icon: DollarSign,
+        accent: "bg-slate-900",
+        tone: "text-slate-900",
+      },
+    ];
+
+    const metricCards = [
       {
         title: "Total de Transações",
         value: stats.total_transactions,
@@ -297,37 +333,50 @@ function DashboardPage() {
       },
       {
         title: "Valor Total",
-        value: `${Number(stats.total_value).toLocaleString("pt-MZ")} MT`,
+        value: fmtMT(Number(stats.total_value)),
         description: "Soma de todas as tentativas",
         icon: DollarSign,
         color: "bg-blue-600",
       },
       {
-        title: "Valor Recebido",
-        value: `${Number(stats.received_value).toLocaleString("pt-MZ")} MT`,
-        description: "Dinheiro real em caixa",
-        icon: CreditCard,
-        color: "bg-emerald-600",
-      },
-      {
         title: "Valor Perdido",
-        value: `${Number(stats.lost_value).toLocaleString("pt-MZ")} MT`,
+        value: fmtMT(Number(stats.lost_value)),
         description: "Oportunidades perdidas",
         icon: AlertCircle,
         color: "bg-rose-600",
       },
     ];
+
+    return { heroKpis, metricCards };
   }, [dashboardData]);
 
   if (isLoading) return (
-    <div className="flex flex-col items-center justify-center min-h-[600px] space-y-6">
-      <div className="relative h-20 w-20">
-        <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
-        <div className="absolute inset-0 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+    <div className="space-y-6 pb-12 max-w-[1400px] mx-auto px-4 md:px-0 animate-in fade-in duration-300">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48 rounded-xl" />
+          <Skeleton className="h-3 w-64 rounded-md" />
+        </div>
+        <Skeleton className="h-10 w-64 rounded-xl" />
       </div>
-      <p className="font-black text-slate-900 uppercase tracking-widest text-xs animate-pulse">Sincronizando Métricas...</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-32 rounded-3xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-24 rounded-2xl" />
+        ))}
+      </div>
+      <Skeleton className="h-[420px] rounded-3xl" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Skeleton className="h-72 rounded-3xl" />
+        <Skeleton className="h-72 rounded-3xl" />
+      </div>
     </div>
   );
+
 
   if (!dashboardData) return (
     <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
@@ -399,21 +448,49 @@ function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {metricCards.map((metric) => (
-          <Card key={metric.title} className="border-none shadow-sm bg-white overflow-hidden transition-all hover:shadow-lg group">
-            <div className={cn("h-1 w-full transition-all group-hover:h-2", metric.color)} />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{metric.title}</span>
-              <metric.icon className="h-4 w-4 text-slate-400 group-hover:text-slate-900 transition-colors" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-black text-slate-900 tracking-tighter">{metric.value}</div>
-              <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-tighter">{metric.description}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {heroKpis.map((kpi) => (
+          <Card
+            key={kpi.title}
+            className="relative border-none shadow-lg bg-white overflow-hidden rounded-3xl transition-all hover:shadow-2xl hover:-translate-y-0.5"
+          >
+            <div className={cn("absolute inset-x-0 top-0 h-1.5", kpi.accent)} />
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {kpi.title}
+                </span>
+                <div className={cn("p-2 rounded-xl bg-slate-50", kpi.tone)}>
+                  <kpi.icon className="h-4 w-4" />
+                </div>
+              </div>
+              <div className={cn("mt-4 text-4xl md:text-5xl font-black tracking-tighter", kpi.tone)}>
+                {kpi.value}
+              </div>
+              <p className="text-[10px] text-slate-500 font-bold mt-2 uppercase tracking-tighter">
+                {kpi.description}
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {metricCards.map((metric) => (
+          <Card key={metric.title} className="border-none shadow-sm bg-white overflow-hidden rounded-2xl transition-all hover:shadow-md hover:-translate-y-0.5 group">
+            <div className={cn("h-0.5 w-full transition-all group-hover:h-1", metric.color)} />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+              <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 leading-tight">{metric.title}</span>
+              <metric.icon className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-900 transition-colors shrink-0" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl font-black text-slate-900 tracking-tighter truncate">{metric.value}</div>
+              <p className="text-[9px] text-slate-500 font-bold mt-1 uppercase tracking-tighter line-clamp-1">{metric.description}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
 
       <div className="grid grid-cols-1 gap-6">
         <Card className="border-none shadow-xl bg-white p-6 rounded-3xl">
