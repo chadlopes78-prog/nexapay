@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense, useEffect } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   TrendingUp,
@@ -8,13 +8,11 @@ import {
   ShoppingCart,
   AlertCircle,
   BarChart3,
-  Calendar as CalendarIcon,
   Trash2,
   AlertTriangle,
   RefreshCcw
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,7 +25,6 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -37,8 +34,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// Lazy load complex components (Recharts ~220KB is loaded only when chart renders)
-const PushNotificationManager = lazy(() => import("@/components/dashboard/PushNotificationManager").then(m => ({ default: m.PushNotificationManager })));
+// Lazy load chart (Recharts ~220KB)
 const PerformanceChart = lazy(() => import("@/components/dashboard/PerformanceChart"));
 
 export const Route = createFileRoute("/_dashboard/dashboard")({
