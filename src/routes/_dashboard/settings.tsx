@@ -51,10 +51,28 @@ function SettingsPage() {
   });
 
   useEffect(() => {
-    if (profile?.full_name) {
-      setFullName(profile.full_name);
+    if (profile?.full_name) setFullName(profile.full_name);
+    if (profile?.pushcut_url !== undefined && profile?.pushcut_url !== null) {
+      setPushcutUrl(profile.pushcut_url);
     }
   }, [profile]);
+
+  const updatePushcut = useMutation({
+    mutationFn: async (url: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const { error } = await supabase
+        .from("profiles")
+        .update({ pushcut_url: url || null, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Link Pushcut salvo!");
+    },
+    onError: (error: any) => toast.error("Erro ao salvar: " + error.message),
+  });
 
   const updateProfile = useMutation({
     mutationFn: async (name: string) => {
