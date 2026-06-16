@@ -448,21 +448,49 @@ function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {metricCards.map((metric) => (
-          <Card key={metric.title} className="border-none shadow-sm bg-white overflow-hidden transition-all hover:shadow-lg group">
-            <div className={cn("h-1 w-full transition-all group-hover:h-2", metric.color)} />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{metric.title}</span>
-              <metric.icon className="h-4 w-4 text-slate-400 group-hover:text-slate-900 transition-colors" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-black text-slate-900 tracking-tighter">{metric.value}</div>
-              <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-tighter">{metric.description}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {heroKpis.map((kpi) => (
+          <Card
+            key={kpi.title}
+            className="relative border-none shadow-lg bg-white overflow-hidden rounded-3xl transition-all hover:shadow-2xl hover:-translate-y-0.5"
+          >
+            <div className={cn("absolute inset-x-0 top-0 h-1.5", kpi.accent)} />
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {kpi.title}
+                </span>
+                <div className={cn("p-2 rounded-xl bg-slate-50", kpi.tone)}>
+                  <kpi.icon className="h-4 w-4" />
+                </div>
+              </div>
+              <div className={cn("mt-4 text-4xl md:text-5xl font-black tracking-tighter", kpi.tone)}>
+                {kpi.value}
+              </div>
+              <p className="text-[10px] text-slate-500 font-bold mt-2 uppercase tracking-tighter">
+                {kpi.description}
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {metricCards.map((metric) => (
+          <Card key={metric.title} className="border-none shadow-sm bg-white overflow-hidden rounded-2xl transition-all hover:shadow-md hover:-translate-y-0.5 group">
+            <div className={cn("h-0.5 w-full transition-all group-hover:h-1", metric.color)} />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
+              <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 leading-tight">{metric.title}</span>
+              <metric.icon className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-900 transition-colors shrink-0" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl font-black text-slate-900 tracking-tighter truncate">{metric.value}</div>
+              <p className="text-[9px] text-slate-500 font-bold mt-1 uppercase tracking-tighter line-clamp-1">{metric.description}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
 
       <div className="grid grid-cols-1 gap-6">
         <Card className="border-none shadow-xl bg-white p-6 rounded-3xl">
