@@ -110,22 +110,13 @@ function CheckoutPage() {
   const pixelId = product?.facebook_pixel_id || defaultPixel?.fb_pixel_id;
   const pixelToken = product?.facebook_access_token || defaultPixel?.fb_access_token;
   const [isRetrying, setIsRetrying] = useState(false);
-  const [isLoading, setIsLoading] = useState(!product);
-
-  useEffect(() => {
-    if (!product) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-    setIsLoading(false);
-  }, [product]);
+  const isLoading = false;
 
   const handleRetry = async () => {
     setIsRetrying(true);
     window.location.reload();
   };
+
   
   const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -269,12 +260,9 @@ function CheckoutPage() {
       }
 
       trackPurchase();
-      setPaymentStatusMessage("Pagamento confirmado. A redirecionar...");
-      toast.success("Pagamento confirmado!");
+      setPaymentStatusMessage("Pagamento enviado. A redirecionar...");
+      window.location.href = `/payment-success?productId=${productId}&saleId=${result.saleId}`;
 
-      setTimeout(() => {
-        window.location.href = `/payment-success?productId=${productId}&saleId=${result.saleId}`;
-      }, 800);
     } catch (error: any) {
       setPaymentErrorMessage(error?.message || "Erro inesperado ao processar pagamento.");
       setPaymentStatusMessage(null);
