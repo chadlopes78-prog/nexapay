@@ -37,8 +37,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// Lazy load complex components
+// Lazy load complex components (Recharts ~220KB is loaded only when chart renders)
 const PushNotificationManager = lazy(() => import("@/components/dashboard/PushNotificationManager").then(m => ({ default: m.PushNotificationManager })));
+const PerformanceChart = lazy(() => import("@/components/dashboard/PerformanceChart"));
 
 export const Route = createFileRoute("/_dashboard/dashboard")({
   validateSearch: (search: Record<string, unknown>) => {
