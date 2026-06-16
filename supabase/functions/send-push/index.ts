@@ -7,6 +7,48 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Pushcut sender with retry + timeout (resilient, low-latency)
+async function sendPushcut(
+  url: string,
+  payload: { title: string; text: string; input?: string },
+  opts: { maxAttempts?: number; timeoutMs?: number } = {},
+): Promise<{ ok: boolean; status?: number; attempts: number; error?: string }> {
+  const maxAttempts = opts.maxAttempts ?? 3;
+  const timeoutMs = opts.timeoutMs ?? 4000;
+  let lastError: string | undefined;
+  let lastStatus: number | undefined;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      lastStatus = res.status;
+      // Pushcut returns 2xx on success. 4xx (except 429) is non-retryable.
+      if (res.ok) return { ok: true, status: res.status, attempts: attempt };
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+        const text = await res.text().catch(() => "");
+        return { ok: false, status: res.status, attempts: attempt, error: text || `HTTP ${res.status}` };
+      }
+      lastError = `HTTP ${res.status}`;
+    } catch (err) {
+      clearTimeout(timer);
+      lastError = (err as Error)?.message || String(err);
+    }
+    // Exponential backoff before next attempt: 200ms, 600ms
+    if (attempt < maxAttempts) {
+      await new Promise((r) => setTimeout(r, 200 * Math.pow(3, attempt - 1)));
+    }
+  }
+  return { ok: false, status: lastStatus, attempts: maxAttempts, error: lastError };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,131 +66,100 @@ serve(async (req) => {
       throw new Error("user_id is required");
     }
 
-    // Get VAPID keys from environment variables
     const publicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
     const subject = Deno.env.get("VAPID_SUBJECT") || "https://paymentblack.com";
 
-    if (!publicKey || !privateKey) {
-      throw new Error("VAPID keys not configured");
+    if (publicKey && privateKey) {
+      webpush.setVapidDetails(subject, publicKey, privateKey);
     }
 
-    webpush.setVapidDetails(subject, publicKey, privateKey);
+    // Fetch subscriptions and profile (for Pushcut URL) in parallel to cut latency
+    const [subsRes, profileRes, logRes] = await Promise.all([
+      supabaseClient.from("push_subscriptions").select("*").eq("user_id", user_id),
+      supabaseClient.from("profiles").select("pushcut_url").eq("id", user_id).maybeSingle(),
+      supabaseClient
+        .from("notifications_log")
+        .insert({
+          user_id,
+          title,
+          body,
+          type: "push",
+          metadata: { url, attempts: 1 },
+        })
+        .select()
+        .single(),
+    ]);
 
-    // Fetch subscriptions for the user
-    const { data: subscriptions, error: subError } = await supabaseClient
-      .from("push_subscriptions")
-      .select("*")
-      .eq("user_id", user_id);
+    if (subsRes.error) throw subsRes.error;
+    const subscriptions = subsRes.data ?? [];
+    const pushcutUrl = profileRes.data?.pushcut_url as string | undefined;
+    const logEntry = logRes.data;
 
-    if (subError) throw subError;
+    // Lightweight Pushcut payload — only essential data
+    const pushcutPayload = {
+      title: title || "💰 Pagamento Recebido!",
+      text: body || "Uma nova venda foi confirmada.",
+    };
 
-    // Log the notification attempt
-    const { data: logEntry, error: logError } = await supabaseClient
-      .from("notifications_log")
-      .insert({
-        user_id,
-        title,
-        body,
-        type: "push",
-        metadata: { url, attempts: 1 }
-      })
-      .select()
-      .single();
-
-    if (logError) console.error("Error logging notification:", logError);
-
-    // Pushcut iPhone notification (if user has configured) — runs independently of web push
-    try {
-      const { data: profile } = await supabaseClient
-        .from("profiles")
-        .select("pushcut_url")
-        .eq("id", user_id)
-        .single();
-
-      if (profile?.pushcut_url) {
-        const pushcutRes = await fetch(profile.pushcut_url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: title || "💰 Pagamento Recebido!",
-            text: body || "Uma nova venda foi confirmada.",
-          }),
-        });
-        console.log(`Pushcut notification sent: ${pushcutRes.status}`);
-      }
-    } catch (pushcutErr) {
-      console.error("Pushcut notification error:", pushcutErr);
-    }
-
-    if (!subscriptions || subscriptions.length === 0) {
-      console.log(`No web push subscriptions found for user ${user_id}`);
-      return new Response(JSON.stringify({ success: true, message: "Pushcut only / No web subscriptions" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
-    const notifications = subscriptions.map(async (sub) => {
+    // Web push tasks
+    const webPushTasks = subscriptions.map(async (sub) => {
       try {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        };
-
         const payload = JSON.stringify({
           title: title || "💰 Pagamento Recebido!",
           body: body || "Uma nova venda foi confirmada no seu checkout.",
           url: url || "/dashboard",
           badge: "/logo-192.png",
           icon: "/logo-192.png",
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
-
-        // Use webpush for all as it is the standard supported by iOS 16.4+
-        // and modern Android/Desktop browsers.
-        await webpush.sendNotification(pushSubscription, payload);
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload,
+        );
         return { success: true, endpoint: sub.endpoint };
-      } catch (err) {
-        console.error(`Error sending push to ${sub.endpoint}:`, err);
-        
-        // Handle failed attempts with forward compatibility (retry/cleanup)
-        if (err.statusCode === 410 || err.statusCode === 404) {
-          await supabaseClient
-            .from("push_subscriptions")
-            .delete()
-            .eq("id", sub.id);
-          console.log(`Removed invalid/expired subscription: ${sub.id}`);
+      } catch (err: any) {
+        console.error(`Web push error to ${sub.endpoint}:`, err?.message);
+        if (err?.statusCode === 410 || err?.statusCode === 404) {
+          await supabaseClient.from("push_subscriptions").delete().eq("id", sub.id);
         }
-        
-        return { success: false, endpoint: sub.endpoint, error: err.message, statusCode: err.statusCode };
+        return { success: false, endpoint: sub.endpoint, error: err?.message, statusCode: err?.statusCode };
       }
     });
 
-    const results = await Promise.all(notifications);
-    
-    // Update log with results
+    // Pushcut task (runs in parallel with web push)
+    const pushcutTask = pushcutUrl
+      ? sendPushcut(pushcutUrl, pushcutPayload)
+      : Promise.resolve({ ok: false, attempts: 0, error: "no_pushcut_url" } as const);
+
+    const [webResults, pushcutResult] = await Promise.all([
+      Promise.all(webPushTasks),
+      pushcutTask,
+    ]);
+
+    console.log(
+      `Pushcut: ${pushcutResult.ok ? "OK" : "FAIL"} status=${pushcutResult.status ?? "-"} attempts=${pushcutResult.attempts}${pushcutResult.error ? ` err=${pushcutResult.error}` : ""}`,
+    );
+
     if (logEntry) {
       await supabaseClient
         .from("notifications_log")
         .update({
-          metadata: { 
-            url, 
-            results,
-            sent_at: new Date().toISOString()
-          }
+          metadata: {
+            url,
+            results: webResults,
+            pushcut: pushcutResult,
+            sent_at: new Date().toISOString(),
+          },
         })
         .eq("id", logEntry.id);
     }
 
-    return new Response(JSON.stringify({ success: true, results }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: true, results: webResults, pushcut: pushcutResult }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+    );
+  } catch (error: any) {
     console.error("Error in send-push function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
