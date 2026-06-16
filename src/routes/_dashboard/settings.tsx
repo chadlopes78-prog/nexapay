@@ -29,6 +29,7 @@ export const Route = createFileRoute("/_dashboard/settings")({
 function SettingsPage() {
   const queryClient = useQueryClient();
   const [fullName, setFullName] = useState("");
+  const [pushcutUrl, setPushcutUrl] = useState("");
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
