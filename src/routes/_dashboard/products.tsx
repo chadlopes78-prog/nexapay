@@ -394,7 +394,18 @@ function ProductsPage() {
                           placeholder="Link do produto, grupo, ou arquivo" 
                           required 
                         />
-                        <p className="text-[10px] text-muted-foreground italic">Este link será usado no botão "Acessar Produto" após o pagamento.</p>
+                        <p className="text-[10px] text-muted-foreground italic">Este link será usado no botão da página de obrigado após o pagamento.</p>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="thank_you_button_text">Texto do Botão (Página de Obrigado)</Label>
+                        <Input
+                          id="thank_you_button_text"
+                          value={thankYouButtonText}
+                          onChange={(e) => setThankYouButtonText(e.target.value)}
+                          placeholder="Ex: Liberar acesso, Levantar valor, Aceder conteúdo"
+                          maxLength={40}
+                        />
+                        <p className="text-[10px] text-muted-foreground italic">Personalize o texto do botão verde mostrado após o pagamento.</p>
                     </div>
                     
                     <div className="grid gap-2 pt-2 border-t border-dashed">
