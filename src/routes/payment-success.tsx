@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
+
 import { CheckCircle2, ArrowRight, MessageCircle } from "lucide-react";
 import { z } from "zod";
 
