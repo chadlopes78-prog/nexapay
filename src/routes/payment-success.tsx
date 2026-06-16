@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2, ArrowRight, MessageCircle, AlertCircle, Loader2 } from "lucide-react";
+
+import { CheckCircle2, ArrowRight, MessageCircle } from "lucide-react";
 import { z } from "zod";
 
 const successSearchSchema = z.object({
@@ -17,18 +17,14 @@ export const Route = createFileRoute("/payment-success")({
 
 function PaymentSuccessPage() {
   const { saleId } = Route.useSearch();
-  const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{ sale: any; product: any } | null>(null);
 
   useEffect(() => {
-    if (!saleId) {
-      setLoading(false);
-      return;
-    }
+    if (!saleId) return;
 
     let cancelled = false;
     let attempts = 0;
-    const MAX_ATTEMPTS = 40;
+    const MAX_ATTEMPTS = 60;
 
     const fetchSale = async () => {
       const { data: saleData } = await supabase
@@ -47,14 +43,10 @@ function PaymentSuccessPage() {
         if (cancelled) return;
         if (result) {
           setData(result);
-          if (result.sale?.status === "paid" || result.sale?.status === "failed") {
-            setLoading(false);
-            return;
-          }
+          if (result.sale?.status === "paid") return;
         }
-        await new Promise((r) => setTimeout(r, 3000));
+        await new Promise((r) => setTimeout(r, 2500));
       }
-      if (!cancelled) setLoading(false);
     };
 
     const channel = supabase
@@ -66,9 +58,6 @@ function PaymentSuccessPage() {
           const result = await fetchSale();
           if (cancelled || !result) return;
           setData(result);
-          if (result.sale?.status === "paid" || result.sale?.status === "failed") {
-            setLoading(false);
-          }
         }
       )
       .subscribe();
@@ -81,48 +70,10 @@ function PaymentSuccessPage() {
     };
   }, [saleId]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-10 w-10 animate-spin text-slate-400 mx-auto" />
-          <p className="text-slate-500 text-sm font-medium">A confirmar o seu pagamento...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const isPaid = data?.sale?.status === "paid";
   const product = data?.product;
   const accessLink = product?.access_link || product?.delivery_link;
   const supportNumber = product?.support_number || product?.support_phone || "258840000000";
   const buttonText = (product?.thank_you_button_text || "Liberar acesso").trim();
-
-  if (!isPaid) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white p-6">
-        <div className="max-w-md w-full text-center space-y-6">
-          <div className="h-16 w-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
-            <AlertCircle className="h-8 w-8 text-amber-500" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-slate-900">Acesso em processamento</h1>
-            <p className="text-slate-500">
-              Se já concluiu o pagamento, fale com o suporte para liberar o seu acesso.
-            </p>
-          </div>
-          <a
-            href={`https://wa.me/${supportNumber.replace(/\D/g, "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full bg-[#25D366] hover:bg-[#1fb959] text-white font-semibold text-base shadow-lg shadow-emerald-200 transition-all active:scale-[0.98]"
-          >
-            Falar com suporte <MessageCircle className="h-5 w-5" />
-          </a>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-6 py-12">
