@@ -164,6 +164,10 @@ function ProductsPage() {
       if (imageFile) {
         uploadedImageUrl = await uploadProductImage(user.id, imageFile);
       }
+      let uploadedBannerUrl = "";
+      if (bannerFile) {
+        uploadedBannerUrl = await uploadProductImage(user.id, bannerFile);
+      }
 
       const { data, error } = await supabase
         .from("products")
