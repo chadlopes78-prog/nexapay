@@ -242,6 +242,8 @@ function ProductsPage() {
     setDeliveryFile(null);
     setImageFile(null);
     setImageUrl("");
+    setBannerFile(null);
+    setBannerUrl("");
   };
 
   const handleEditProduct = (product: any) => {
