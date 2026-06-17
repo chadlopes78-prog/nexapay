@@ -79,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Paymentblack Mozambique | Plataforma de Pagamentos" },
       { name: "description", content: "A plataforma de pagamentos e checkout mais completa para Moçambique. Aceite M-Pesa e e-Mola." },
 
