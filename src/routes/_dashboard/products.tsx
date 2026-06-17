@@ -300,6 +300,7 @@ function ProductsPage() {
           access_link: accessLink || deliveryLink,
           thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: finalImageUrl || null,
+          checkout_banner_url: finalBannerUrl || null,
         })
         .eq("id", editingProduct.id);
 
