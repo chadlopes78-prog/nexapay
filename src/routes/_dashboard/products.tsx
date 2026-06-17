@@ -262,6 +262,8 @@ function ProductsPage() {
     setThankYouButtonText(product.thank_you_button_text || "Liberar acesso");
     setImageUrl(product.image_url || "");
     setImageFile(null);
+    setBannerUrl(product.checkout_banner_url || "");
+    setBannerFile(null);
     setIsEditDialogOpen(true);
   };
 
