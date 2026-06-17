@@ -2,6 +2,7 @@ import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { processPayment, type PaymentResult } from "@/lib/api/payments.functions";
+import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,51 +23,7 @@ import mozFlag from "@/assets/moz-flag.png.asset.json";
 export const Route = createFileRoute("/p/$productId")({
   loader: async ({ params: { productId } }) => {
     try {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId);
-      const PUBLIC_PRODUCT_COLUMNS = "id, user_id, name, description, price, image_url, checkout_banner_url, category, status, custom_url, warranty_days, delivery_type, facebook_pixel_id, support_number";
-
-      const productRes = await supabase
-        .from("products")
-        .select(PUBLIC_PRODUCT_COLUMNS)
-        .eq(isUuid ? "id" : "custom_url", productId)
-        .maybeSingle();
-
-      let finalProduct = productRes.data as any;
-
-      if (!finalProduct && isUuid) {
-        const fallbackRes = await supabase
-          .from("products")
-          .select(PUBLIC_PRODUCT_COLUMNS)
-          .eq("custom_url", productId)
-          .maybeSingle();
-        finalProduct = fallbackRes.data;
-      }
-
-      if (!finalProduct) {
-        return { product: null, checkout: null, defaultPixel: null };
-      }
-
-      const checkoutPromise = supabase
-        .from("checkouts")
-        .select("*")
-        .eq("product_id", finalProduct.id)
-        .maybeSingle();
-
-      const pixelPromise = finalProduct.facebook_pixel_id
-        ? Promise.resolve({ data: null })
-        : supabase
-            .from("pixel_configs")
-            .select("fb_pixel_id, fb_access_token")
-            .eq("user_id", finalProduct.user_id)
-            .maybeSingle();
-
-      const [checkoutRes, pixelRes] = await Promise.all([checkoutPromise, pixelPromise]);
-
-      return {
-        product: finalProduct,
-        checkout: checkoutRes.data ?? null,
-        defaultPixel: pixelRes.data ?? null,
-      };
+      return await getPublicProduct({ data: { productId } });
     } catch (err) {
       console.error("Loader error:", err);
       return { product: null, checkout: null, defaultPixel: null };
