@@ -499,6 +499,18 @@ function ProductsPage() {
                   )}
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="edit-banner">Banner do Checkout (opcional)</Label>
+                  <Input id="edit-banner" type="file" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] || null)} />
+                  <p className="text-[10px] text-muted-foreground italic">Aparece no topo do checkout. Deixe em branco para não exibir.</p>
+                  {(bannerFile || bannerUrl) && (
+                    <img
+                      src={bannerFile ? URL.createObjectURL(bannerFile) : bannerUrl}
+                      alt="Preview banner"
+                      className="mt-2 w-full h-auto rounded border"
+                    />
+                  )}
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="edit-facebook_pixel_id">Facebook Pixel ID</Label>
                   <Input id="edit-facebook_pixel_id" value={facebookPixelId} onChange={(e) => setFacebookPixelId(e.target.value)} placeholder="Ex: 123456789" />
                 </div>
