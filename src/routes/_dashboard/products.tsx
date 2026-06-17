@@ -188,6 +188,7 @@ function ProductsPage() {
           access_link: accessLink || deliveryLink,
           thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: uploadedImageUrl || null,
+          checkout_banner_url: uploadedBannerUrl || null,
         })
         .select()
         .single();
