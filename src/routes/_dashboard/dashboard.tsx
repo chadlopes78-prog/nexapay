@@ -233,20 +233,28 @@ function DashboardPage() {
 
   // Realtime: refresh dashboard the moment a sale is inserted/updated (e.g. status -> paid)
   useEffect(() => {
-    const channel = supabase
-      .channel("dashboard-sales")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "sales" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
-        }
-      )
-      .subscribe();
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || !session?.user?.id) return;
+      channel = supabase
+        .channel(`dashboard-sales-${session.user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "sales", filter: `user_id=eq.${session.user.id}` },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] });
+          }
+        )
+        .subscribe();
+    })();
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [queryClient]);
+
 
 
   const { heroKpis, metricCards } = useMemo(() => {
