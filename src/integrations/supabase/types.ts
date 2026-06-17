@@ -302,6 +302,7 @@ export type Database = {
         Row: {
           access_link: string | null
           category: string | null
+          checkout_banner_url: string | null
           created_at: string
           custom_url: string | null
           delivery_file_url: string | null
@@ -325,6 +326,7 @@ export type Database = {
         Insert: {
           access_link?: string | null
           category?: string | null
+          checkout_banner_url?: string | null
           created_at?: string
           custom_url?: string | null
           delivery_file_url?: string | null
@@ -348,6 +350,7 @@ export type Database = {
         Update: {
           access_link?: string | null
           category?: string | null
+          checkout_banner_url?: string | null
           created_at?: string
           custom_url?: string | null
           delivery_file_url?: string | null

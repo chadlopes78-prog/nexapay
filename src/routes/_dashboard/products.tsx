@@ -72,6 +72,8 @@ function ProductsPage() {
   const [deliveryFile, setDeliveryFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerUrl, setBannerUrl] = useState<string>("");
 
   const uploadProductImage = async (userId: string, file: File): Promise<string> => {
     const fileExt = file.name.split(".").pop();
@@ -162,6 +164,10 @@ function ProductsPage() {
       if (imageFile) {
         uploadedImageUrl = await uploadProductImage(user.id, imageFile);
       }
+      let uploadedBannerUrl = "";
+      if (bannerFile) {
+        uploadedBannerUrl = await uploadProductImage(user.id, bannerFile);
+      }
 
       const { data, error } = await supabase
         .from("products")
@@ -182,6 +188,7 @@ function ProductsPage() {
           access_link: accessLink || deliveryLink,
           thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: uploadedImageUrl || null,
+          checkout_banner_url: uploadedBannerUrl || null,
         })
         .select()
         .single();
@@ -235,6 +242,8 @@ function ProductsPage() {
     setDeliveryFile(null);
     setImageFile(null);
     setImageUrl("");
+    setBannerFile(null);
+    setBannerUrl("");
   };
 
   const handleEditProduct = (product: any) => {
@@ -253,6 +262,8 @@ function ProductsPage() {
     setThankYouButtonText(product.thank_you_button_text || "Liberar acesso");
     setImageUrl(product.image_url || "");
     setImageFile(null);
+    setBannerUrl(product.checkout_banner_url || "");
+    setBannerFile(null);
     setIsEditDialogOpen(true);
   };
 
@@ -267,6 +278,10 @@ function ProductsPage() {
       let finalImageUrl = imageUrl;
       if (imageFile) {
         finalImageUrl = await uploadProductImage(editingProduct.user_id, imageFile);
+      }
+      let finalBannerUrl = bannerUrl;
+      if (bannerFile) {
+        finalBannerUrl = await uploadProductImage(editingProduct.user_id, bannerFile);
       }
 
       const { error } = await supabase
@@ -285,6 +300,7 @@ function ProductsPage() {
           access_link: accessLink || deliveryLink,
           thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: finalImageUrl || null,
+          checkout_banner_url: finalBannerUrl || null,
         })
         .eq("id", editingProduct.id);
 
@@ -351,6 +367,14 @@ function ProductsPage() {
                   <Input id="image" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
                   {imageFile && (
                     <img src={URL.createObjectURL(imageFile)} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded border" />
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="banner">Banner do Checkout (opcional)</Label>
+                  <Input id="banner" type="file" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] || null)} />
+                  <p className="text-[10px] text-muted-foreground italic">Aparece no topo do checkout. Use para oferta, garantia, bónus ou aviso.</p>
+                  {bannerFile && (
+                    <img src={URL.createObjectURL(bannerFile)} alt="Preview banner" className="mt-2 w-full h-auto rounded border" />
                   )}
                 </div>
                 <div className="grid gap-2">
@@ -471,6 +495,18 @@ function ProductsPage() {
                       src={imageFile ? URL.createObjectURL(imageFile) : imageUrl}
                       alt="Preview"
                       className="mt-2 h-24 w-24 object-cover rounded border"
+                    />
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-banner">Banner do Checkout (opcional)</Label>
+                  <Input id="edit-banner" type="file" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] || null)} />
+                  <p className="text-[10px] text-muted-foreground italic">Aparece no topo do checkout. Deixe em branco para não exibir.</p>
+                  {(bannerFile || bannerUrl) && (
+                    <img
+                      src={bannerFile ? URL.createObjectURL(bannerFile) : bannerUrl}
+                      alt="Preview banner"
+                      className="mt-2 w-full h-auto rounded border"
                     />
                   )}
                 </div>
