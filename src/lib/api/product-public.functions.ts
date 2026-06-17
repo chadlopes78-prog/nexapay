@@ -27,6 +27,10 @@ export const getPublicProduct = createServerFn({ method: "GET" })
       .select(PUBLIC_PRODUCT_COLUMNS)
       .eq(isUuid ? "id" : "custom_url", productId)
       .maybeSingle();
+
+    if (primary.error) {
+      console.error("Public checkout product lookup failed:", primary.error.message);
+    }
     product = primary.data;
 
     if (!product && isUuid) {
@@ -35,6 +39,10 @@ export const getPublicProduct = createServerFn({ method: "GET" })
         .select(PUBLIC_PRODUCT_COLUMNS)
         .eq("custom_url", productId)
         .maybeSingle();
+
+      if (fallback.error) {
+        console.error("Public checkout fallback lookup failed:", fallback.error.message);
+      }
       product = fallback.data;
     }
 
@@ -48,7 +56,7 @@ export const getPublicProduct = createServerFn({ method: "GET" })
         ? Promise.resolve({ data: null })
         : supabase
             .from("pixel_configs")
-            .select("fb_pixel_id, fb_access_token")
+            .select("fb_pixel_id")
             .eq("user_id", product.user_id)
             .maybeSingle(),
     ]);
