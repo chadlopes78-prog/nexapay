@@ -116,7 +116,10 @@ export function normalizeGatewayStatus(input: unknown, httpOk = true): Normalize
   if (httpOk && /(pagamento\s+realizado\s+com\s+sucesso|payment\s+successful|successfully\s+paid|sucesso)/i.test(combinedSuccessMessage)) {
     return "paid";
   }
-  if (successValue === true) return "paid";
+  if (httpOk && (successValue === true || successText === "true")) return "paid";
+  if (/(customer\s+did\s+not\s+enter\s+pin|pin\s+incorret|recus|reject|declin|cancel|insufficient|saldo\s+insuficiente)/i.test(`${combinedSuccessMessage} ${raw}`)) {
+    return "failed";
+  }
   if (
     successValue === false &&
     httpOk &&
