@@ -119,18 +119,40 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
     const { readPushcutOrderId, sendPushcutOnce } = await import("@/lib/pushcut/reliability.server");
     const orderId = readPushcutOrderId(payload);
     const paymentStatus = String(payload.payment_status ?? payload.status ?? "").toLowerCase().trim();
+    const webhookOnlySource = payload.pushcut_source === "payment_webhook";
 
     console.log("[webhooks] pushcut webhook received", {
       deliveryId,
       orderId,
       paymentStatus,
       eventType: delivery.event,
+      webhookOnlySource,
     });
 
     if (!orderId) {
       await supabaseAdmin
         .from("webhook_deliveries")
         .update({ status: "failed", attempts: attempt, error: "Missing orderId for Pushcut" })
+        .eq("id", deliveryId);
+      return;
+    }
+
+    if (!webhookOnlySource) {
+      console.log("[pushcut] blocked: not payment webhook source", {
+        deliveryId,
+        orderId,
+        eventType: delivery.event,
+        paymentStatus,
+      });
+      await supabaseAdmin
+        .from("webhook_deliveries")
+        .update({
+          status: "success",
+          attempts: attempt,
+          response_code: 208,
+          response_body: JSON.stringify({ blocked: true, reason: "webhook_only" }),
+          error: null,
+        })
         .eq("id", deliveryId);
       return;
     }
