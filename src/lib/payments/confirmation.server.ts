@@ -106,7 +106,7 @@ export async function confirmSalePayment(options: {
 }) {
   const { saleId, transactionId, reference, rawPayload } = options;
 
-  const updatePayload: Record<string, unknown> = {
+  const updatePayload: { status: string; payment_reference: string; transaction_id?: string } = {
     status: "paid",
     payment_reference: reference ? reference.slice(0, 200) : paymentReferenceForSale(saleId),
   };
@@ -133,7 +133,13 @@ export async function confirmSalePayment(options: {
         .eq("id", saleId)
         .eq("status", "paid");
     }
-    return { sale: await fetchSaleById(saleId), becamePaid: false };
+    const currentSale = await fetchSaleById(saleId);
+    if (currentSale?.status === "paid") {
+      await dispatchApprovedSideEffects(currentSale, rawPayload).catch((err) => {
+        console.error("[payments] approved side-effects retry failed", err);
+      });
+    }
+    return { sale: currentSale, becamePaid: false };
   }
 
   await dispatchApprovedSideEffects(updated, rawPayload).catch((err) => {

@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CreditCard, Search, ExternalLink, MoreHorizontal, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/_dashboard/sales")({
 });
 
 function SalesPage() {
+  const queryClient = useQueryClient();
   const { data: sales, isLoading } = useQuery({
     queryKey: ["sales"],
     queryFn: async () => {
@@ -37,8 +39,28 @@ function SalesPage() {
       
       if (error) throw error;
       return data;
-    }
+    },
+    staleTime: 5_000,
   });
+
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || !session?.user?.id) return;
+      channel = supabase
+        .channel(`sales-list-${session.user.id}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "sales", filter: `user_id=eq.${session.user.id}` }, () => {
+          queryClient.invalidateQueries({ queryKey: ["sales"] });
+        })
+        .subscribe();
+    })();
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   return (
     <div className="space-y-8">
@@ -117,11 +139,17 @@ function SalesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge 
-                        variant={sale.status === "approved" ? "secondary" : "outline"}
-                        className={sale.status === "approved" ? "bg-green-100 text-green-700 hover:bg-green-100" : ""}
+                      <Badge
+                        variant={["approved", "paid", "success"].includes(sale.status || "") ? "secondary" : "outline"}
+                        className={["approved", "paid", "success"].includes(sale.status || "") ? "bg-green-100 text-green-700 hover:bg-green-100" : ""}
                       >
-                        {sale.status === "approved" ? "Aprovado" : sale.status}
+                        {["approved", "paid", "success"].includes(sale.status || "")
+                          ? "Aprovado"
+                          : sale.status === "pending"
+                            ? "Pendente"
+                            : sale.status === "failed"
+                              ? "Falhou"
+                              : sale.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

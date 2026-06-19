@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-import { CheckCircle2, ArrowRight, MessageCircle } from "lucide-react";
+import { CheckCircle2, ArrowRight, MessageCircle, Loader2 } from "lucide-react";
 import { z } from "zod";
 
 const successSearchSchema = z.object({
@@ -71,6 +71,7 @@ function PaymentSuccessPage() {
   }, [saleId]);
 
   const product = data?.product;
+  const isPaid = data?.sale?.status === "paid" || data?.sale?.status === "approved" || data?.sale?.status === "success";
   const accessLink = product?.access_link || product?.delivery_link;
   const supportNumber = product?.support_number || product?.support_phone || "258840000000";
   const buttonText = (product?.thank_you_button_text || "Liberar acesso").trim();
@@ -80,19 +81,23 @@ function PaymentSuccessPage() {
       <div className="w-full max-w-md text-center space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="space-y-6">
           <div className="h-20 w-20 rounded-full bg-emerald-50 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="h-10 w-10 text-emerald-500" strokeWidth={2.2} />
+            {isPaid ? (
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" strokeWidth={2.2} />
+            ) : (
+              <Loader2 className="h-10 w-10 text-emerald-500 animate-spin" strokeWidth={2.2} />
+            )}
           </div>
           <div className="space-y-3">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
-              Obrigado por confiar na gente
+              {isPaid ? "Obrigado por confiar na gente" : "A confirmar pagamento"}
             </h1>
             <p className="text-slate-500 text-base md:text-lg">
-              Para liberar o seu acesso, clique no botão abaixo
+              {isPaid ? "Para liberar o seu acesso, clique no botão abaixo" : "Assim que a confirmação chegar, o acesso será liberado automaticamente."}
             </p>
           </div>
         </div>
 
-        {accessLink ? (
+        {isPaid && accessLink ? (
           <a
             href={accessLink}
             target="_blank"
@@ -102,9 +107,13 @@ function PaymentSuccessPage() {
             {buttonText}
             <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
           </a>
-        ) : (
+        ) : isPaid ? (
           <p className="text-slate-500 text-sm">
             O seu acesso será enviado em breve. Em caso de dúvida, contacte o suporte.
+          </p>
+        ) : (
+          <p className="text-slate-500 text-sm">
+            Mantenha esta página aberta. O pagamento ainda está pendente de confirmação.
           </p>
         )}
 
