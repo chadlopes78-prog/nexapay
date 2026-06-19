@@ -317,6 +317,7 @@ async function dispatchApprovedSideEffects(
     amount: sale.amount,
     payment_method: sale.payment_method,
     status: "paid",
+    payment_status: "paid",
     transaction_id: sale.transaction_id,
     payment_reference: sale.payment_reference,
     paid_at: new Date().toISOString(),
