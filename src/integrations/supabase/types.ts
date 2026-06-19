@@ -592,6 +592,101 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          event: string
+          id: string
+          next_attempt_at: string
+          payload: Json
+          response_body: string | null
+          response_code: number | null
+          status: string
+          updated_at: string
+          user_id: string
+          webhook_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          event: string
+          id?: string
+          next_attempt_at?: string
+          payload?: Json
+          response_body?: string | null
+          response_code?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          webhook_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          event?: string
+          id?: string
+          next_attempt_at?: string
+          payload?: Json
+          response_body?: string | null
+          response_code?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_endpoints: {
+        Row: {
+          active: boolean
+          created_at: string
+          events: string[]
+          id: string
+          is_pushcut: boolean
+          name: string
+          secret: string | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          events?: string[]
+          id?: string
+          is_pushcut?: boolean
+          name: string
+          secret?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          events?: string[]
+          id?: string
+          is_pushcut?: boolean
+          name?: string
+          secret?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       funnel_stats: {

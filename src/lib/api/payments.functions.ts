@@ -176,6 +176,26 @@ export const processPayment = createServerFn({ method: "POST" })
       return { success: false, error: "Não foi possível registar a venda." };
     }
 
+    // Eventos: venda criada + pagamento solicitado (fire-and-forget)
+    {
+      const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+      const basePayload = {
+        sale_id: sale.id,
+        product_id: data.productId,
+        customer_name: customerName.slice(0, 100),
+        customer_phone: msisdn,
+        amount,
+        payment_method: data.method,
+        status: "pending",
+        created_at: new Date().toISOString(),
+      };
+      void (async () => {
+        await enqueueWebhookEvent({ userId: product.user_id, event: "sale.created", payload: basePayload });
+        await enqueueWebhookEvent({ userId: product.user_id, event: "payment.requested", payload: basePayload });
+        await processPendingForUser(product.user_id);
+      })().catch((e) => console.error("[webhooks] enqueue pre-payment err", e));
+    }
+
     const MERCHANT_NAME = "PagamentosMZ";
     const PAYMENT_DESCRIPTION = "Pagamento de produto digital";
     const reference = `PMZ${sale.id.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 20);
@@ -250,6 +270,23 @@ export const processPayment = createServerFn({ method: "POST" })
             payment_reference: String(message).slice(0, 200),
           })
           .eq("id", sale.id);
+
+        // Evento: pagamento recusado
+        void (async () => {
+          const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+          await enqueueWebhookEvent({
+            userId: product.user_id,
+            event: "payment.refused",
+            payload: {
+              sale_id: sale.id, product_id: data.productId,
+              customer_name: customerName.slice(0, 100), customer_phone: msisdn,
+              amount, payment_method: data.method, status: "failed",
+              reason: String(message).slice(0, 200),
+            },
+          });
+          await processPendingForUser(product.user_id);
+        })().catch((e) => console.error("[webhooks] payment.refused err", e));
+
         return {
           success: false,
           saleId: sale.id,
@@ -277,6 +314,22 @@ export const processPayment = createServerFn({ method: "POST" })
         triggerSaleApprovedNotification(sale.id).catch(err => 
           console.error("Error triggering sale notification:", err)
         );
+
+        // Eventos: pagamento recebido + venda aprovada + produto entregue
+        void (async () => {
+          const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+          const payload = {
+            sale_id: sale.id, product_id: data.productId,
+            customer_name: customerName.slice(0, 100), customer_phone: msisdn,
+            amount, payment_method: data.method, status: "paid",
+            transaction_id: transactionId ? String(transactionId) : null,
+            paid_at: new Date().toISOString(),
+          };
+          await enqueueWebhookEvent({ userId: product.user_id, event: "payment.received", payload });
+          await enqueueWebhookEvent({ userId: product.user_id, event: "sale.approved", payload });
+          await enqueueWebhookEvent({ userId: product.user_id, event: "product.delivered", payload });
+          await processPendingForUser(product.user_id);
+        })().catch((e) => console.error("[webhooks] paid events err", e));
 
         if (finalTrafficPageId) {
           await supabaseAdmin.from("traffic_events").insert({

@@ -1,0 +1,185 @@
+// Server-only helpers para enfileirar e enviar webhooks.
+// NÃO importar diretamente a partir de rotas/componentes —
+// usar via dynamic import dentro do handler de uma server fn / route.
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { WebhookEventId } from "./events";
+
+const MAX_ATTEMPTS = 6;
+// Backoff: 30s, 2m, 10m, 30m, 2h, 6h
+const BACKOFF_SECONDS = [30, 120, 600, 1800, 7200, 21600];
+
+interface EnqueueOptions {
+  userId: string;
+  event: WebhookEventId;
+  payload: Record<string, unknown>;
+}
+
+/**
+ * Insere uma delivery pendente para cada webhook do user que está
+ * inscrito neste evento. Dispara imediatamente (fire-and-forget) o
+ * processador, mas o cron garante reentrega em caso de falha.
+ */
+export async function enqueueWebhookEvent({ userId, event, payload }: EnqueueOptions): Promise<void> {
+  try {
+    const { data: hooks, error } = await supabaseAdmin
+      .from("webhook_endpoints")
+      .select("id, events, active")
+      .eq("user_id", userId)
+      .eq("active", true);
+
+    if (error) {
+      console.error("[webhooks] enqueue: list endpoints failed", error);
+      return;
+    }
+    if (!hooks?.length) return;
+
+    const targets = hooks.filter((h) => Array.isArray(h.events) && h.events.includes(event));
+    if (!targets.length) return;
+
+    const rows = targets.map((h) => ({
+      webhook_id: h.id,
+      user_id: userId,
+      event,
+      payload: payload as never,
+    }));
+
+    const { error: insertErr } = await supabaseAdmin.from("webhook_deliveries").insert(rows);
+    if (insertErr) console.error("[webhooks] enqueue insert failed", insertErr);
+  } catch (err) {
+    console.error("[webhooks] enqueue critical error", err);
+  }
+}
+
+/**
+ * Envia UMA delivery. Atualiza a row com resultado (success/failed/pending+retry).
+ */
+export async function deliverOnce(deliveryId: string): Promise<void> {
+  const { data: delivery, error } = await supabaseAdmin
+    .from("webhook_deliveries")
+    .select("id, webhook_id, user_id, event, payload, attempts, webhook_endpoints!inner(url, secret, is_pushcut, active)")
+    .eq("id", deliveryId)
+    .maybeSingle();
+
+  if (error || !delivery) {
+    console.error("[webhooks] deliverOnce: not found", deliveryId, error);
+    return;
+  }
+
+  const endpoint = (delivery as any).webhook_endpoints as {
+    url: string; secret: string | null; is_pushcut: boolean; active: boolean;
+  };
+
+  if (!endpoint?.active) {
+    await supabaseAdmin.from("webhook_deliveries").update({
+      status: "failed",
+      error: "Endpoint desativado",
+    }).eq("id", deliveryId);
+    return;
+  }
+
+  const attempt = (delivery.attempts ?? 0) + 1;
+  const body = endpoint.is_pushcut
+    ? buildPushcutBody(delivery.event, delivery.payload as Record<string, unknown>)
+    : buildStandardBody(delivery.event, delivery.payload as Record<string, unknown>);
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (!endpoint.is_pushcut && endpoint.secret) {
+    headers["X-Webhook-Secret"] = endpoint.secret;
+  }
+  headers["X-Webhook-Event"] = delivery.event;
+
+  let responseCode: number | null = null;
+  let responseBody: string | null = null;
+  let errorMsg: string | null = null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    const res = await fetch(endpoint.url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout));
+    responseCode = res.status;
+    responseBody = (await res.text().catch(() => "")).slice(0, 2000);
+    if (!res.ok) errorMsg = `HTTP ${res.status}`;
+  } catch (err) {
+    errorMsg = err instanceof Error ? err.message : String(err);
+  }
+
+  const success = !errorMsg && responseCode !== null && responseCode >= 200 && responseCode < 300;
+
+  if (success) {
+    await supabaseAdmin.from("webhook_deliveries").update({
+      status: "success",
+      attempts: attempt,
+      response_code: responseCode,
+      response_body: responseBody,
+      error: null,
+    }).eq("id", deliveryId);
+    return;
+  }
+
+  if (attempt >= MAX_ATTEMPTS) {
+    await supabaseAdmin.from("webhook_deliveries").update({
+      status: "failed",
+      attempts: attempt,
+      response_code: responseCode,
+      response_body: responseBody,
+      error: errorMsg,
+    }).eq("id", deliveryId);
+    return;
+  }
+
+  const delaySec = BACKOFF_SECONDS[Math.min(attempt - 1, BACKOFF_SECONDS.length - 1)];
+  const nextAt = new Date(Date.now() + delaySec * 1000).toISOString();
+  await supabaseAdmin.from("webhook_deliveries").update({
+    status: "pending",
+    attempts: attempt,
+    response_code: responseCode,
+    response_body: responseBody,
+    error: errorMsg,
+    next_attempt_at: nextAt,
+  }).eq("id", deliveryId);
+}
+
+function buildStandardBody(event: string, payload: Record<string, unknown>) {
+  return {
+    event,
+    sent_at: new Date().toISOString(),
+    data: payload,
+  };
+}
+
+function buildPushcutBody(event: string, payload: Record<string, unknown>) {
+  const eventLabel = event.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const productName = (payload.product_name as string) || (payload.product as any)?.name || "Produto";
+  const amount = payload.amount as number | undefined;
+  const customer = (payload.customer_name as string) || (payload.customer as any)?.name || "";
+  const method = (payload.payment_method as string)?.toUpperCase?.() || "";
+
+  const text =
+    amount != null
+      ? `${amount} MT • ${productName}${method ? ` • ${method}` : ""}${customer ? ` • ${customer}` : ""}`
+      : `${productName}${customer ? ` • ${customer}` : ""}`;
+
+  return { title: eventLabel, text };
+}
+
+/**
+ * Dispara fire-and-forget para todas as deliveries que acabaram de ser enfileiradas
+ * para este user/evento. Usado para entrega quase-imediata sem esperar o cron.
+ */
+export async function processPendingForUser(userId: string): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from("webhook_deliveries")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .lte("next_attempt_at", new Date().toISOString())
+    .order("created_at", { ascending: true })
+    .limit(20);
+  if (error || !data?.length) return;
+  await Promise.all(data.map((d) => deliverOnce(d.id).catch((e) => console.error("[webhooks] deliver err", e))));
+}
