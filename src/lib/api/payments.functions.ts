@@ -270,6 +270,23 @@ export const processPayment = createServerFn({ method: "POST" })
             payment_reference: String(message).slice(0, 200),
           })
           .eq("id", sale.id);
+
+        // Evento: pagamento recusado
+        void (async () => {
+          const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+          await enqueueWebhookEvent({
+            userId: product.user_id,
+            event: "payment.refused",
+            payload: {
+              sale_id: sale.id, product_id: data.productId,
+              customer_name: customerName.slice(0, 100), customer_phone: msisdn,
+              amount, payment_method: data.method, status: "failed",
+              reason: String(message).slice(0, 200),
+            },
+          });
+          await processPendingForUser(product.user_id);
+        })().catch((e) => console.error("[webhooks] payment.refused err", e));
+
         return {
           success: false,
           saleId: sale.id,
