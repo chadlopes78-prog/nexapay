@@ -176,6 +176,26 @@ export const processPayment = createServerFn({ method: "POST" })
       return { success: false, error: "Não foi possível registar a venda." };
     }
 
+    // Eventos: venda criada + pagamento solicitado (fire-and-forget)
+    {
+      const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+      const basePayload = {
+        sale_id: sale.id,
+        product_id: data.productId,
+        customer_name: customerName.slice(0, 100),
+        customer_phone: msisdn,
+        amount,
+        payment_method: data.method,
+        status: "pending",
+        created_at: new Date().toISOString(),
+      };
+      void (async () => {
+        await enqueueWebhookEvent({ userId: product.user_id, event: "sale.created", payload: basePayload });
+        await enqueueWebhookEvent({ userId: product.user_id, event: "payment.requested", payload: basePayload });
+        await processPendingForUser(product.user_id);
+      })().catch((e) => console.error("[webhooks] enqueue pre-payment err", e));
+    }
+
     const MERCHANT_NAME = "PagamentosMZ";
     const PAYMENT_DESCRIPTION = "Pagamento de produto digital";
     const reference = `PMZ${sale.id.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 20);
