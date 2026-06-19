@@ -5,7 +5,7 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
     handlers: {
       POST: async ({ request }) => {
         const bodyText = await request.text();
-        let payload: any = null;
+        let payload: unknown = null;
         try {
           payload = bodyText ? JSON.parse(bodyText) : null;
         } catch {
@@ -41,6 +41,7 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
         }
 
         const status = normalizeGatewayStatus(payload, true);
+        const payloadObject = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
         const saleData = await findSaleForGatewayEvent(transactionId, reference);
         if (!saleData) {
           console.error("Sale not found for webhook", { transactionId, reference });
@@ -62,7 +63,7 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
             status,
             transactionId,
             reference,
-            reason: String(payload?.message ?? payload?.error ?? status),
+            reason: String(payloadObject.message ?? payloadObject.error ?? status),
           });
         }
 
