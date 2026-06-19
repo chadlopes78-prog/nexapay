@@ -38,27 +38,45 @@ function PaymentSuccessPage() {
 
     let cancelled = false;
     let attempts = 0;
-    const MAX_ATTEMPTS = 90;
+    // Fast cadence first (1.2s), then slow (3s). Total ~3min.
+    const FAST_ATTEMPTS = 25;
+    const MAX_ATTEMPTS = 80;
+    const TERMINAL = ["paid", "approved", "success", "completed", "failed", "expired", "cancelled", "canceled"];
 
     const poll = async () => {
       while (!cancelled && attempts < MAX_ATTEMPTS) {
         attempts++;
-        const result = await fetchPaymentData({ data: { saleId } });
-        if (cancelled) return;
-        if (result) {
-          setData(result);
-          const status = String(result.sale?.status ?? "").toLowerCase();
-          if (["paid", "approved", "success", "completed"].includes(status)) return;
+        try {
+          const result = await fetchPaymentData({ data: { saleId } });
+          if (cancelled) return;
+          if (result) {
+            setData(result);
+            const status = String(result.sale?.status ?? "").toLowerCase();
+            if (TERMINAL.includes(status)) return;
+          }
+        } catch (e) {
+          console.error("[payment-success] poll error", e);
         }
-        await new Promise((r) => setTimeout(r, 2500));
+        const delay = attempts < FAST_ATTEMPTS ? 1200 : 3000;
+        await new Promise((r) => setTimeout(r, delay));
       }
       if (!cancelled) setTimedOut(true);
     };
 
     poll();
 
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && !cancelled) {
+        fetchPaymentData({ data: { saleId } })
+          .then((r) => r && setData(r))
+          .catch(() => undefined);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [saleId, fetchPaymentData]);
 
