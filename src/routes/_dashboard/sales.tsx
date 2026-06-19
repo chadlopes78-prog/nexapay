@@ -23,6 +23,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+type SaleProduct = { name?: string | null } | null;
+
 export const Route = createFileRoute("/_dashboard/sales")({
   component: SalesPage,
 });
@@ -128,7 +130,7 @@ function SalesPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>{(sale.products as any)?.name || "Produto Removido"}</TableCell>
+                    <TableCell>{(sale.products as SaleProduct)?.name || "Produto Removido"}</TableCell>
                     <TableCell>{Number(sale.amount).toLocaleString("pt-MZ")} MT</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
