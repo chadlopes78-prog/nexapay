@@ -79,35 +79,39 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
           return new Response("DB error", { status: 500 });
         }
 
+        const userId = saleData.user_id;
+
         if (isBecomingPaid) {
           console.log("[Webhook] Sale became paid:", saleData.id);
           triggerSaleApprovedNotification(saleData.id).catch(err =>
             console.error("Error triggering sale notification:", err)
           );
 
-          void (async () => {
-            const payload = {
-              sale_id: saleData.id,
-              product_id: saleData.product_id,
-              product_name: (saleData as any).products?.name ?? null,
-              customer_name: saleData.customer_name,
-              customer_phone: saleData.customer_phone,
-              amount: saleData.amount,
-              payment_method: saleData.payment_method,
-              status: "paid",
-              transaction_id: transactionId ? String(transactionId) : null,
-              paid_at: new Date().toISOString(),
-            };
-            await enqueueWebhookEvent({ userId: saleData.user_id, event: "payment.received", payload });
-            await enqueueWebhookEvent({ userId: saleData.user_id, event: "sale.approved", payload });
-            await enqueueWebhookEvent({ userId: saleData.user_id, event: "product.delivered", payload });
-            await processPendingForUser(saleData.user_id);
-          })().catch((e) => console.error("[webhooks] paid events err", e));
-        } else if (isBecomingFailed) {
+          if (userId) {
+            void (async () => {
+              const payload = {
+                sale_id: saleData.id,
+                product_id: saleData.product_id,
+                product_name: (saleData as any).products?.name ?? null,
+                customer_name: saleData.customer_name,
+                customer_phone: saleData.customer_phone,
+                amount: saleData.amount,
+                payment_method: saleData.payment_method,
+                status: "paid",
+                transaction_id: transactionId ? String(transactionId) : null,
+                paid_at: new Date().toISOString(),
+              };
+              await enqueueWebhookEvent({ userId, event: "payment.received", payload });
+              await enqueueWebhookEvent({ userId, event: "sale.approved", payload });
+              await enqueueWebhookEvent({ userId, event: "product.delivered", payload });
+              await processPendingForUser(userId);
+            })().catch((e) => console.error("[webhooks] paid events err", e));
+          }
+        } else if (isBecomingFailed && userId) {
           console.log("[Webhook] Sale failed:", saleData.id);
           void (async () => {
             await enqueueWebhookEvent({
-              userId: saleData.user_id,
+              userId,
               event: "payment.refused",
               payload: {
                 sale_id: saleData.id, product_id: saleData.product_id,
@@ -116,7 +120,7 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
                 status: "failed",
               },
             });
-            await processPendingForUser(saleData.user_id);
+            await processPendingForUser(userId);
           })().catch((e) => console.error("[webhooks] refused err", e));
         }
 
