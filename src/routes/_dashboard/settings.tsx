@@ -341,6 +341,9 @@ function SettingsPage() {
           </CardContent>
         </Card>
 
+        <WebhooksSection />
+
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
