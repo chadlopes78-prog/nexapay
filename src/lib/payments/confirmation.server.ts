@@ -196,8 +196,9 @@ export async function confirmSalePayment(options: {
   transactionId?: string | null;
   reference?: string | null;
   rawPayload?: unknown;
+  triggerPushcut?: boolean;
 }) {
-  const { saleId, transactionId, reference, rawPayload } = options;
+  const { saleId, transactionId, reference, rawPayload, triggerPushcut = false } = options;
 
   const updatePayload: { status: string; payment_reference: string; transaction_id?: string } = {
     status: "paid",
@@ -230,14 +231,14 @@ export async function confirmSalePayment(options: {
     }
     const currentSale = await fetchSaleById(saleId);
     if (currentSale?.status === "paid") {
-      await dispatchApprovedSideEffects(currentSale, rawPayload).catch((err) => {
+      await dispatchApprovedSideEffects(currentSale, rawPayload, triggerPushcut).catch((err) => {
         console.error("[payments] approved side-effects retry failed", err);
       });
     }
     return { sale: currentSale, becamePaid: false };
   }
 
-  await dispatchApprovedSideEffects(updated, rawPayload).catch((err) => {
+  await dispatchApprovedSideEffects(updated, rawPayload, triggerPushcut).catch((err) => {
     console.error("[payments] approved side-effects failed", err);
   });
 
@@ -296,11 +297,14 @@ export async function markSaleTerminalFailure(options: {
   return { becameFailed: true };
 }
 
-async function dispatchApprovedSideEffects(sale: SaleForConfirmation, rawPayload: unknown) {
+async function dispatchApprovedSideEffects(
+  sale: SaleForConfirmation,
+  rawPayload: unknown,
+  triggerPushcut: boolean,
+) {
   const userId = sale.user_id as string | null;
   if (!userId) return;
 
-  const { triggerSaleApprovedNotification } = await import("@/lib/api/notifications.server");
   const { enqueueWebhookEvent, processPendingForUser } =
     await import("@/lib/webhooks/dispatcher.server");
   const productName = sale.products?.name ?? null;
@@ -319,8 +323,6 @@ async function dispatchApprovedSideEffects(sale: SaleForConfirmation, rawPayload
     gateway_payload: rawPayload ?? null,
   };
 
-  await triggerSaleApprovedNotification(sale.id);
-
   // SINGLE EVENT POLICY: insert exactly ONE delivery per endpoint per sale.
   // Bypass the fan-out enqueue helper — for each endpoint we choose the highest
   // priority subscribed event and insert that single delivery directly.
@@ -329,7 +331,7 @@ async function dispatchApprovedSideEffects(sale: SaleForConfirmation, rawPayload
   const PRIORITY = ["sale.approved", "payment.received", "product.delivered"] as const;
   const { data: endpoints } = await supabaseAdmin
     .from("webhook_endpoints")
-    .select("id, events, active, product_ids")
+    .select("id, events, active, product_ids, is_pushcut")
     .eq("user_id", userId)
     .eq("active", true);
 
@@ -346,8 +348,14 @@ async function dispatchApprovedSideEffects(sale: SaleForConfirmation, rawPayload
       subscribed: events,
       matchesProduct,
       chosen: chosen ?? null,
+      isPushcut: ep.is_pushcut,
+      allowedPushcutSource: triggerPushcut,
     });
     if (!matchesProduct || !chosen) continue;
+    if (ep.is_pushcut && !triggerPushcut) {
+      console.log("[pushcut] blocked: non-webhook source", { orderId: sale.id, endpointId: ep.id });
+      continue;
+    }
 
     const { error: insertErr } = await supabaseAdmin
       .from("webhook_deliveries")
