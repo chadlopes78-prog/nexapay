@@ -284,7 +284,7 @@ function EndpointDialog({ initial, products, onSave }: DialogProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <ScrollArea className="flex-1 px-6">
+      <div className="flex-1 overflow-y-auto overscroll-contain px-6">
         <div className="space-y-4 py-2 pb-4">
           <div className="space-y-2">
             <Label>Nome</Label>
@@ -318,14 +318,14 @@ function EndpointDialog({ initial, products, onSave }: DialogProps) {
 
           <div className="space-y-2">
             <Label>Produtos</Label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button type="button" size="sm" variant={scope === "all" ? "default" : "outline"}
                 onClick={() => setScope("all")}>Todos os produtos</Button>
               <Button type="button" size="sm" variant={scope === "specific" ? "default" : "outline"}
                 onClick={() => setScope("specific")}>Produtos específicos</Button>
             </div>
             {scope === "specific" && (
-              <div className="rounded border p-2 space-y-1 max-h-48 overflow-auto">
+              <div className="rounded border p-2 space-y-1">
                 {products.length === 0 && (
                   <p className="text-xs text-muted-foreground italic p-2">Nenhum produto cadastrado.</p>
                 )}
@@ -356,7 +356,7 @@ function EndpointDialog({ initial, products, onSave }: DialogProps) {
             </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       <DialogFooter className="px-6 py-4 border-t">
         <Button
