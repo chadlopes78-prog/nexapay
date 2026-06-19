@@ -1,7 +1,26 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const PAID_STATUSES = new Set(["success", "successful", "paid", "completed", "complete", "approved", "confirmed", "processed"]);
-const FAILED_STATUSES = new Set(["failed", "failure", "error", "cancelled", "canceled", "rejected", "refused", "declined", "denied"]);
+const PAID_STATUSES = new Set([
+  "success",
+  "successful",
+  "paid",
+  "completed",
+  "complete",
+  "approved",
+  "confirmed",
+  "processed",
+]);
+const FAILED_STATUSES = new Set([
+  "failed",
+  "failure",
+  "error",
+  "cancelled",
+  "canceled",
+  "rejected",
+  "refused",
+  "declined",
+  "denied",
+]);
 const EXPIRED_STATUSES = new Set(["expired", "timeout", "timed_out"]);
 
 export type NormalizedPaymentStatus = "paid" | "failed" | "expired" | "pending";
@@ -49,7 +68,9 @@ export function normalizeGatewayStatus(payload: any, httpOk = true): NormalizedP
       payload?.data?.state ??
       payload?.data?.result ??
       "",
-  ).toLowerCase().trim();
+  )
+    .toLowerCase()
+    .trim();
 
   if (PAID_STATUSES.has(raw)) return "paid";
   if (EXPIRED_STATUSES.has(raw)) return "expired";
@@ -57,7 +78,11 @@ export function normalizeGatewayStatus(payload: any, httpOk = true): NormalizedP
 
   const message = String(payload?.message ?? payload?.error ?? payload?.detail ?? "").toLowerCase();
   if (payload?.success === true || payload?.ok === true) return "pending";
-  if (payload?.success === false && httpOk && /(recus|reject|declin|cancel|fail|erro|expir)/i.test(message)) {
+  if (
+    payload?.success === false &&
+    httpOk &&
+    /(recus|reject|declin|cancel|fail|erro|expir)/i.test(message)
+  ) {
     return message.includes("expir") ? "expired" : "failed";
   }
 
@@ -67,18 +92,25 @@ export function normalizeGatewayStatus(payload: any, httpOk = true): NormalizedP
 async function fetchSaleById(saleId: string) {
   const { data, error } = await supabaseAdmin
     .from("sales")
-    .select("id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)")
+    .select(
+      "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)",
+    )
     .eq("id", saleId)
     .maybeSingle();
   if (error) throw error;
   return data;
 }
 
-export async function findSaleForGatewayEvent(transactionId: string | null, reference: string | null) {
+export async function findSaleForGatewayEvent(
+  transactionId: string | null,
+  reference: string | null,
+) {
   if (transactionId) {
     const { data, error } = await supabaseAdmin
       .from("sales")
-      .select("id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)")
+      .select(
+        "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)",
+      )
       .eq("transaction_id", transactionId.slice(0, 200))
       .maybeSingle();
     if (error) throw error;
@@ -88,7 +120,9 @@ export async function findSaleForGatewayEvent(transactionId: string | null, refe
   if (reference) {
     const { data, error } = await supabaseAdmin
       .from("sales")
-      .select("id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)")
+      .select(
+        "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)",
+      )
       .eq("payment_reference", reference.slice(0, 200))
       .maybeSingle();
     if (error) throw error;
@@ -117,7 +151,9 @@ export async function confirmSalePayment(options: {
     .update(updatePayload)
     .eq("id", saleId)
     .neq("status", "paid")
-    .select("id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)")
+    .select(
+      "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)",
+    )
     .maybeSingle();
 
   if (updateError) throw updateError;
@@ -163,18 +199,25 @@ export async function markSaleTerminalFailure(options: {
     .update({
       status: finalStatus,
       transaction_id: transactionId ? transactionId.slice(0, 200) : undefined,
-      payment_reference: reference ? reference.slice(0, 200) : reason ? reason.slice(0, 200) : undefined,
+      payment_reference: reference
+        ? reference.slice(0, 200)
+        : reason
+          ? reason.slice(0, 200)
+          : undefined,
     })
     .eq("id", saleId)
     .neq("status", "paid")
     .neq("status", "failed")
-    .select("id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method")
+    .select(
+      "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method",
+    )
     .maybeSingle();
 
   if (error) throw error;
   if (!updated?.user_id) return { becameFailed: false };
 
-  const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+  const { enqueueWebhookEvent, processPendingForUser } =
+    await import("@/lib/webhooks/dispatcher.server");
   await enqueueWebhookEvent({
     userId: updated.user_id,
     productId: updated.product_id,
@@ -199,7 +242,8 @@ async function dispatchApprovedSideEffects(sale: any, rawPayload: unknown) {
   if (!userId) return;
 
   const { triggerSaleApprovedNotification } = await import("@/lib/api/notifications.server");
-  const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+  const { enqueueWebhookEvent, processPendingForUser } =
+    await import("@/lib/webhooks/dispatcher.server");
   const productName = (sale as any).products?.name ?? null;
   const payload = {
     sale_id: sale.id,
@@ -217,9 +261,24 @@ async function dispatchApprovedSideEffects(sale: any, rawPayload: unknown) {
   };
 
   await triggerSaleApprovedNotification(sale.id);
-  await enqueueWebhookEvent({ userId, event: "payment.received", payload, productId: sale.product_id });
-  await enqueueWebhookEvent({ userId, event: "sale.approved", payload, productId: sale.product_id });
-  await enqueueWebhookEvent({ userId, event: "product.delivered", payload, productId: sale.product_id });
+  await enqueueWebhookEvent({
+    userId,
+    event: "payment.received",
+    payload,
+    productId: sale.product_id,
+  });
+  await enqueueWebhookEvent({
+    userId,
+    event: "sale.approved",
+    payload,
+    productId: sale.product_id,
+  });
+  await enqueueWebhookEvent({
+    userId,
+    event: "product.delivered",
+    payload,
+    productId: sale.product_id,
+  });
   await processPendingForUser(userId);
 
   if (sale.traffic_page_id) {

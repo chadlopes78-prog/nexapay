@@ -29,7 +29,9 @@ function PaymentSuccessPage() {
     const fetchSale = async () => {
       const { data: saleData } = await supabase
         .from("sales")
-        .select("*, products(id, name, access_link, delivery_link, support_phone, support_number, thank_you_button_text)")
+        .select(
+          "*, products(id, name, access_link, delivery_link, support_phone, support_number, thank_you_button_text)",
+        )
         .eq("id", saleId)
         .maybeSingle();
       if (!saleData) return null;
@@ -58,7 +60,7 @@ function PaymentSuccessPage() {
           const result = await fetchSale();
           if (cancelled || !result) return;
           setData(result);
-        }
+        },
       )
       .subscribe();
 
@@ -71,7 +73,10 @@ function PaymentSuccessPage() {
   }, [saleId]);
 
   const product = data?.product;
-  const isPaid = data?.sale?.status === "paid" || data?.sale?.status === "approved" || data?.sale?.status === "success";
+  const isPaid =
+    data?.sale?.status === "paid" ||
+    data?.sale?.status === "approved" ||
+    data?.sale?.status === "success";
   const accessLink = product?.access_link || product?.delivery_link;
   const supportNumber = product?.support_number || product?.support_phone || "258840000000";
   const buttonText = (product?.thank_you_button_text || "Liberar acesso").trim();
@@ -92,7 +97,9 @@ function PaymentSuccessPage() {
               {isPaid ? "Obrigado por confiar na gente" : "A confirmar pagamento"}
             </h1>
             <p className="text-slate-500 text-base md:text-lg">
-              {isPaid ? "Para liberar o seu acesso, clique no botão abaixo" : "Assim que a confirmação chegar, o acesso será liberado automaticamente."}
+              {isPaid
+                ? "Para liberar o seu acesso, clique no botão abaixo"
+                : "Assim que a confirmação chegar, o acesso será liberado automaticamente."}
             </p>
           </div>
         </div>

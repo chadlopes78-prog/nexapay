@@ -49,7 +49,12 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
 
         if (status === "paid") {
           console.log("[Webhook] Sale became paid:", saleData.id);
-          await confirmSalePayment({ saleId: saleData.id, transactionId, reference, rawPayload: payload });
+          await confirmSalePayment({
+            saleId: saleData.id,
+            transactionId,
+            reference,
+            rawPayload: payload,
+          });
         } else if (status === "failed" || status === "expired") {
           console.log("[Webhook] Sale failed:", saleData.id);
           await markSaleTerminalFailure({

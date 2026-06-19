@@ -52,7 +52,6 @@ async function getAccessToken(): Promise<string> {
       "Content-Type": "application/json",
       Accept: "application/json",
       "User-Agent": "Mozilla/5.0 (compatible; PaymentBlackmz/1.0)",
-
     },
     body: JSON.stringify({
       grant_type: "client_credentials",
@@ -115,12 +114,13 @@ export const processPayment = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.productId);
-    
-    let productQuery = supabaseAdmin
-      .from("products")
-      .select("id, price, status, user_id");
-    
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        data.productId,
+      );
+
+    let productQuery = supabaseAdmin.from("products").select("id, price, status, user_id");
+
     if (isUuid) {
       productQuery = productQuery.eq("id", data.productId);
     } else {
@@ -178,7 +178,8 @@ export const processPayment = createServerFn({ method: "POST" })
 
     // Eventos: venda criada + pagamento solicitado (fire-and-forget)
     {
-      const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+      const { enqueueWebhookEvent, processPendingForUser } =
+        await import("@/lib/webhooks/dispatcher.server");
       const basePayload = {
         sale_id: sale.id,
         product_id: product.id,
@@ -190,8 +191,18 @@ export const processPayment = createServerFn({ method: "POST" })
         created_at: new Date().toISOString(),
       };
       void (async () => {
-        await enqueueWebhookEvent({ userId: product.user_id, event: "sale.created", payload: basePayload, productId: product.id });
-        await enqueueWebhookEvent({ userId: product.user_id, event: "payment.requested", payload: basePayload, productId: product.id });
+        await enqueueWebhookEvent({
+          userId: product.user_id,
+          event: "sale.created",
+          payload: basePayload,
+          productId: product.id,
+        });
+        await enqueueWebhookEvent({
+          userId: product.user_id,
+          event: "payment.requested",
+          payload: basePayload,
+          productId: product.id,
+        });
         await processPendingForUser(product.user_id);
       })().catch((e) => console.error("[webhooks] enqueue pre-payment err", e));
     }
@@ -208,10 +219,7 @@ export const processPayment = createServerFn({ method: "POST" })
     const reference = paymentReferenceForSale(sale.id);
     const localPhone = msisdn.slice(3); // 9-digit local format expected by e2payments
 
-    await supabaseAdmin
-      .from("sales")
-      .update({ payment_reference: reference })
-      .eq("id", sale.id);
+    await supabaseAdmin.from("sales").update({ payment_reference: reference }).eq("id", sale.id);
 
     try {
       const token = await getAccessToken();
@@ -271,7 +279,13 @@ export const processPayment = createServerFn({ method: "POST" })
           json?.error ||
           json?.detail ||
           (finalStatus === "expired" ? "Pagamento expirado." : "Pagamento recusado pelo gateway.");
-        await markSaleTerminalFailure({ saleId: sale.id, status: finalStatus, transactionId, reference, reason: String(message) });
+        await markSaleTerminalFailure({
+          saleId: sale.id,
+          status: finalStatus,
+          transactionId,
+          reference,
+          reason: String(message),
+        });
         return { success: false, saleId: sale.id, error: String(message) };
       } else {
         await supabaseAdmin

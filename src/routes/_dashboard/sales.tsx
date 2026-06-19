@@ -36,7 +36,7 @@ function SalesPage() {
         .from("sales")
         .select("*, products(name)")
         .order("created_at", { ascending: false });
-      
+
       if (error) throw error;
       return data;
     },
@@ -47,13 +47,19 @@ function SalesPage() {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (cancelled || !session?.user?.id) return;
       channel = supabase
         .channel(`sales-list-${session.user.id}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "sales", filter: `user_id=eq.${session.user.id}` }, () => {
-          queryClient.invalidateQueries({ queryKey: ["sales"] });
-        })
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "sales", filter: `user_id=eq.${session.user.id}` },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["sales"] });
+          },
+        )
         .subscribe();
     })();
     return () => {
@@ -101,7 +107,9 @@ function SalesPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12">Carregando vendas...</TableCell>
+                  <TableCell colSpan={8} className="text-center py-12">
+                    Carregando vendas...
+                  </TableCell>
                 </TableRow>
               ) : !sales || sales.length === 0 ? (
                 <TableRow>
@@ -115,7 +123,9 @@ function SalesPage() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{sale.customer_name || "Desconhecido"}</span>
-                        <span className="text-xs text-muted-foreground">{sale.customer_phone || "-"}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {sale.customer_phone || "-"}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>{(sale.products as any)?.name || "Produto Removido"}</TableCell>
@@ -134,14 +144,25 @@ function SalesPage() {
                       <div className="flex flex-col">
                         <span>{new Date(sale.created_at).toLocaleDateString("pt-MZ")}</span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(sale.created_at).toLocaleTimeString("pt-MZ", { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(sale.created_at).toLocaleTimeString("pt-MZ", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={["approved", "paid", "success"].includes(sale.status || "") ? "secondary" : "outline"}
-                        className={["approved", "paid", "success"].includes(sale.status || "") ? "bg-green-100 text-green-700 hover:bg-green-100" : ""}
+                        variant={
+                          ["approved", "paid", "success"].includes(sale.status || "")
+                            ? "secondary"
+                            : "outline"
+                        }
+                        className={
+                          ["approved", "paid", "success"].includes(sale.status || "")
+                            ? "bg-green-100 text-green-700 hover:bg-green-100"
+                            : ""
+                        }
                       >
                         {["approved", "paid", "success"].includes(sale.status || "")
                           ? "Aprovado"
