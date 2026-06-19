@@ -190,8 +190,8 @@ export const processPayment = createServerFn({ method: "POST" })
         created_at: new Date().toISOString(),
       };
       void (async () => {
-        await enqueueWebhookEvent({ userId: product.user_id, event: "sale.created", payload: basePayload });
-        await enqueueWebhookEvent({ userId: product.user_id, event: "payment.requested", payload: basePayload });
+        await enqueueWebhookEvent({ userId: product.user_id, event: "sale.created", payload: basePayload, productId: product.id });
+        await enqueueWebhookEvent({ userId: product.user_id, event: "payment.requested", payload: basePayload, productId: product.id });
         await processPendingForUser(product.user_id);
       })().catch((e) => console.error("[webhooks] enqueue pre-payment err", e));
     }
@@ -276,6 +276,7 @@ export const processPayment = createServerFn({ method: "POST" })
           const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
           await enqueueWebhookEvent({
             userId: product.user_id,
+            productId: product.id,
             event: "payment.refused",
             payload: {
               sale_id: sale.id, product_id: data.productId,

@@ -101,9 +101,9 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
                 transaction_id: transactionId ? String(transactionId) : null,
                 paid_at: new Date().toISOString(),
               };
-              await enqueueWebhookEvent({ userId, event: "payment.received", payload });
-              await enqueueWebhookEvent({ userId, event: "sale.approved", payload });
-              await enqueueWebhookEvent({ userId, event: "product.delivered", payload });
+              await enqueueWebhookEvent({ userId, event: "payment.received", payload, productId: saleData.product_id });
+              await enqueueWebhookEvent({ userId, event: "sale.approved", payload, productId: saleData.product_id });
+              await enqueueWebhookEvent({ userId, event: "product.delivered", payload, productId: saleData.product_id });
               await processPendingForUser(userId);
             })().catch((e) => console.error("[webhooks] paid events err", e));
           }
@@ -112,6 +112,7 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
           void (async () => {
             await enqueueWebhookEvent({
               userId,
+              productId: saleData.product_id,
               event: "payment.refused",
               payload: {
                 sale_id: saleData.id, product_id: saleData.product_id,
