@@ -15,8 +15,6 @@ type WebhookEndpointRef = {
   active: boolean;
 };
 
-type PayloadProduct = { name?: string | null };
-
 interface EnqueueOptions {
   userId: string;
   event: WebhookEventId;
