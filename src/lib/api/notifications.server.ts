@@ -26,7 +26,7 @@ export async function triggerSaleApprovedNotification(saleId: string) {
       return;
     }
 
-    const products = sale.products as any;
+    const products = sale.products as { name?: string | null } | null;
     const userId = sale.user_id;
     const productName = products?.name || "Produto";
     const amount = sale.amount || 0;
