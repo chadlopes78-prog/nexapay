@@ -199,19 +199,30 @@ function buildStandardBody(event: string, payload: Record<string, unknown>) {
 }
 
 function buildPushcutBody(event: string, payload: Record<string, unknown>) {
+  const amount = payload.amount as number | undefined;
+  const formatted =
+    amount != null
+      ? new Intl.NumberFormat("pt-MZ", {
+          style: "currency",
+          currency: "MZN",
+          minimumFractionDigits: 0,
+        }).format(amount)
+      : "";
+
+  // Approved-sale events get the standard "Venda Finalizada" copy.
+  const approvedEvents = new Set(["sale.approved", "payment.received", "product.delivered"]);
+  if (approvedEvents.has(event)) {
+    return {
+      title: "Venda Finalizada ✅",
+      text: formatted ? `Pingo +${formatted} 🎉` : "Pingo 🎉",
+    };
+  }
+
+  // Fallback for non-approved events (e.g. payment.refused, payment.expired).
   const eventLabel = event.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const product = payload.product as PayloadProduct | undefined;
   const productName = (payload.product_name as string) || product?.name || "Produto";
-  const amount = payload.amount as number | undefined;
-  const customerPayload = payload.customer as { name?: string | null } | undefined;
-  const customer = (payload.customer_name as string) || customerPayload?.name || "";
-  const method = (payload.payment_method as string)?.toUpperCase?.() || "";
-
-  const text =
-    amount != null
-      ? `${amount} MT • ${productName}${method ? ` • ${method}` : ""}${customer ? ` • ${customer}` : ""}`
-      : `${productName}${customer ? ` • ${customer}` : ""}`;
-
+  const text = formatted ? `${formatted} • ${productName}` : productName;
   return { title: eventLabel, text };
 }
 
