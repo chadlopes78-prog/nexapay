@@ -10,6 +10,17 @@ const successSearchSchema = z.object({
   productId: z.string().optional(),
 });
 
+type SaleSuccessData = {
+  sale: { status?: string | null };
+  product: {
+    access_link?: string | null;
+    delivery_link?: string | null;
+    support_phone?: string | null;
+    support_number?: string | null;
+    thank_you_button_text?: string | null;
+  } | null;
+};
+
 export const Route = createFileRoute("/payment-success")({
   validateSearch: successSearchSchema,
   component: PaymentSuccessPage,
@@ -17,7 +28,7 @@ export const Route = createFileRoute("/payment-success")({
 
 function PaymentSuccessPage() {
   const { saleId } = Route.useSearch();
-  const [data, setData] = useState<{ sale: any; product: any } | null>(null);
+  const [data, setData] = useState<SaleSuccessData | null>(null);
 
   useEffect(() => {
     if (!saleId) return;
@@ -35,7 +46,7 @@ function PaymentSuccessPage() {
         .eq("id", saleId)
         .maybeSingle();
       if (!saleData) return null;
-      return { sale: saleData, product: (saleData as any).products };
+      return { sale: saleData, product: saleData.products };
     };
 
     const poll = async () => {
