@@ -15,8 +15,6 @@ type WebhookEndpointRef = {
   active: boolean;
 };
 
-type PayloadProduct = { name?: string | null };
-
 interface EnqueueOptions {
   userId: string;
   event: WebhookEventId;
@@ -115,9 +113,74 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
   }
 
   const attempt = (delivery.attempts ?? 0) + 1;
-  const body = endpoint.is_pushcut
-    ? buildPushcutBody(delivery.event, delivery.payload as Record<string, unknown>)
-    : buildStandardBody(delivery.event, delivery.payload as Record<string, unknown>);
+  const payload = delivery.payload as Record<string, unknown>;
+
+  if (endpoint.is_pushcut) {
+    const { readPushcutOrderId, sendPushcutOnce } = await import("@/lib/pushcut/reliability.server");
+    const orderId = readPushcutOrderId(payload);
+    const paymentStatus = String(payload.payment_status ?? payload.status ?? "").toLowerCase().trim();
+    const webhookOnlySource = payload.pushcut_source === "payment_webhook";
+
+    console.log("[webhooks] pushcut webhook received", {
+      deliveryId,
+      orderId,
+      paymentStatus,
+      eventType: delivery.event,
+      webhookOnlySource,
+    });
+
+    if (!orderId) {
+      await supabaseAdmin
+        .from("webhook_deliveries")
+        .update({ status: "failed", attempts: attempt, error: "Missing orderId for Pushcut" })
+        .eq("id", deliveryId);
+      return;
+    }
+
+    if (!webhookOnlySource) {
+      console.log("[pushcut] blocked: not payment webhook source", {
+        deliveryId,
+        orderId,
+        eventType: delivery.event,
+        paymentStatus,
+      });
+      await supabaseAdmin
+        .from("webhook_deliveries")
+        .update({
+          status: "success",
+          attempts: attempt,
+          response_code: 208,
+          response_body: JSON.stringify({ blocked: true, reason: "webhook_only" }),
+          error: null,
+        })
+        .eq("id", deliveryId);
+      return;
+    }
+
+    const result = await sendPushcutOnce({
+      orderId,
+      userId: delivery.user_id,
+      webhookId: delivery.webhook_id,
+      url: endpoint.url,
+      eventType: delivery.event,
+      paymentStatus,
+      source: "webhook_deliveries",
+    });
+
+    await supabaseAdmin
+      .from("webhook_deliveries")
+      .update({
+        status: "success",
+        attempts: attempt,
+        response_code: result.sent ? 200 : 208,
+        response_body: JSON.stringify(result).slice(0, 2000),
+        error: null,
+      })
+      .eq("id", deliveryId);
+    return;
+  }
+
+  const body = buildStandardBody(delivery.event, payload);
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (!endpoint.is_pushcut && endpoint.secret) {
@@ -196,34 +259,6 @@ function buildStandardBody(event: string, payload: Record<string, unknown>) {
     sent_at: new Date().toISOString(),
     data: payload,
   };
-}
-
-function buildPushcutBody(event: string, payload: Record<string, unknown>) {
-  const amount = payload.amount as number | undefined;
-  const formatted =
-    amount != null
-      ? new Intl.NumberFormat("pt-MZ", {
-          style: "currency",
-          currency: "MZN",
-          minimumFractionDigits: 0,
-        }).format(amount)
-      : "";
-
-  // Approved-sale events get the standard "Venda Finalizada" copy.
-  const approvedEvents = new Set(["sale.approved", "payment.received", "product.delivered"]);
-  if (approvedEvents.has(event)) {
-    return {
-      title: "Venda Finalizada ✅",
-      text: formatted ? `Pingo +${formatted} 🎉` : "Pingo 🎉",
-    };
-  }
-
-  // Fallback for non-approved events (e.g. payment.refused, payment.expired).
-  const eventLabel = event.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  const product = payload.product as PayloadProduct | undefined;
-  const productName = (payload.product_name as string) || product?.name || "Produto";
-  const text = formatted ? `${formatted} • ${productName}` : productName;
-  return { title: eventLabel, text };
 }
 
 /**

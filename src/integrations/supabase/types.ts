@@ -445,6 +445,50 @@ export type Database = {
         }
         Relationships: []
       }
+      pushcut_logs: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          order_id: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+          webhook_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          order_id: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          webhook_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          order_id?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pushcut_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           amount: number
