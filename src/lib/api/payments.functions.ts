@@ -4,7 +4,7 @@ import { z } from "zod";
 const E2PAY_BASE_URL = "https://e2payments.explicador.co.mz";
 
 const PaymentInput = z.object({
-  productId: z.string().uuid(),
+  productId: z.string().min(1).max(120),
   method: z.enum(["mpesa", "emola"]),
   msisdn: z.string().min(9).max(20),
   customerName: z.string().min(1).max(100),
@@ -52,7 +52,6 @@ async function getAccessToken(): Promise<string> {
       "Content-Type": "application/json",
       Accept: "application/json",
       "User-Agent": "Mozilla/5.0 (compatible; PaymentBlackmz/1.0)",
-
     },
     body: JSON.stringify({
       grant_type: "client_credentials",
@@ -62,7 +61,7 @@ async function getAccessToken(): Promise<string> {
   });
 
   const text = await res.text();
-  let json: any = null;
+  let json: Record<string, unknown> | null = null;
   try {
     json = text ? JSON.parse(text) : null;
   } catch {
@@ -115,12 +114,13 @@ export const processPayment = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.productId);
-    
-    let productQuery = supabaseAdmin
-      .from("products")
-      .select("id, price, status, user_id");
-    
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        data.productId,
+      );
+
+    let productQuery = supabaseAdmin.from("products").select("id, price, status, user_id");
+
     if (isUuid) {
       productQuery = productQuery.eq("id", data.productId);
     } else {
@@ -159,7 +159,7 @@ export const processPayment = createServerFn({ method: "POST" })
     const { data: sale, error: saleError } = await supabaseAdmin
       .from("sales")
       .insert({
-        product_id: data.productId,
+        product_id: product.id,
         user_id: product.user_id,
         customer_name: customerName.slice(0, 100),
         customer_phone: msisdn,
@@ -178,10 +178,11 @@ export const processPayment = createServerFn({ method: "POST" })
 
     // Eventos: venda criada + pagamento solicitado (fire-and-forget)
     {
-      const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+      const { enqueueWebhookEvent, processPendingForUser } =
+        await import("@/lib/webhooks/dispatcher.server");
       const basePayload = {
         sale_id: sale.id,
-        product_id: data.productId,
+        product_id: product.id,
         customer_name: customerName.slice(0, 100),
         customer_phone: msisdn,
         amount,
@@ -190,16 +191,35 @@ export const processPayment = createServerFn({ method: "POST" })
         created_at: new Date().toISOString(),
       };
       void (async () => {
-        await enqueueWebhookEvent({ userId: product.user_id, event: "sale.created", payload: basePayload, productId: product.id });
-        await enqueueWebhookEvent({ userId: product.user_id, event: "payment.requested", payload: basePayload, productId: product.id });
+        await enqueueWebhookEvent({
+          userId: product.user_id,
+          event: "sale.created",
+          payload: basePayload,
+          productId: product.id,
+        });
+        await enqueueWebhookEvent({
+          userId: product.user_id,
+          event: "payment.requested",
+          payload: basePayload,
+          productId: product.id,
+        });
         await processPendingForUser(product.user_id);
       })().catch((e) => console.error("[webhooks] enqueue pre-payment err", e));
     }
 
     const MERCHANT_NAME = "PagamentosMZ";
     const PAYMENT_DESCRIPTION = "Pagamento de produto digital";
-    const reference = `PMZ${sale.id.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 20);
+    const {
+      confirmSalePayment,
+      markSaleTerminalFailure,
+      normalizeGatewayStatus,
+      paymentReferenceForSale,
+      readGatewayTransactionId,
+    } = await import("@/lib/payments/confirmation.server");
+    const reference = paymentReferenceForSale(sale.id);
     const localPhone = msisdn.slice(3); // 9-digit local format expected by e2payments
+
+    await supabaseAdmin.from("sales").update({ payment_reference: reference }).eq("id", sale.id);
 
     try {
       const token = await getAccessToken();
@@ -233,7 +253,7 @@ export const processPayment = createServerFn({ method: "POST" })
       }).finally(() => clearTimeout(timeoutId));
 
       const text = await res.text();
-      let json: any = null;
+      let json: Record<string, unknown> | null = null;
       try {
         json = text ? JSON.parse(text) : null;
       } catch {
@@ -248,97 +268,35 @@ export const processPayment = createServerFn({ method: "POST" })
         body: text?.slice(0, 800),
       });
 
-      const transactionId =
-        json?.transaction_id ?? json?.id ?? json?.data?.transaction_id ?? null;
-      const status = String(json?.status ?? "").toLowerCase();
-      const succeeded =
-        res.ok &&
-        json?.success !== false &&
-        !["failed", "error", "cancelled", "canceled"].includes(status);
+      const transactionId = readGatewayTransactionId(json);
+      const finalStatus = normalizeGatewayStatus(json, res.ok);
 
-      if (!succeeded) {
+      if (finalStatus === "paid") {
+        await confirmSalePayment({ saleId: sale.id, transactionId, reference, rawPayload: json });
+      } else if (finalStatus === "failed" || finalStatus === "expired") {
         const message =
           json?.message ||
           json?.error ||
           json?.detail ||
-          `Pagamento recusado pelo gateway (HTTP ${res.status}).`;
+          (finalStatus === "expired" ? "Pagamento expirado." : "Pagamento recusado pelo gateway.");
+        await markSaleTerminalFailure({
+          saleId: sale.id,
+          status: finalStatus,
+          transactionId,
+          reference,
+          reason: String(message),
+        });
+        return { success: false, saleId: sale.id, error: String(message) };
+      } else {
         await supabaseAdmin
           .from("sales")
           .update({
-            status: "failed",
+            status: "pending",
             transaction_id: transactionId ? String(transactionId).slice(0, 200) : null,
-            payment_reference: String(message).slice(0, 200),
+            payment_reference: reference,
           })
-          .eq("id", sale.id);
-
-        // Evento: pagamento recusado
-        void (async () => {
-          const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
-          await enqueueWebhookEvent({
-            userId: product.user_id,
-            productId: product.id,
-            event: "payment.refused",
-            payload: {
-              sale_id: sale.id, product_id: data.productId,
-              customer_name: customerName.slice(0, 100), customer_phone: msisdn,
-              amount, payment_method: data.method, status: "failed",
-              reason: String(message).slice(0, 200),
-            },
-          });
-          await processPendingForUser(product.user_id);
-        })().catch((e) => console.error("[webhooks] payment.refused err", e));
-
-        return {
-          success: false,
-          saleId: sale.id,
-          error: String(message),
-        };
-      }
-
-      const finalStatus = ["success", "paid", "completed", "approved"].includes(status)
-        ? "paid"
-        : "pending";
-
-      await supabaseAdmin
-        .from("sales")
-        .update({
-          status: finalStatus,
-          transaction_id: transactionId ? String(transactionId).slice(0, 200) : null,
-          payment_reference: reference,
-        })
-        .eq("id", sale.id);
-
-      if (finalStatus === "paid") {
-        const { triggerSaleApprovedNotification } = await import("@/lib/api/notifications.server");
-        
-        // Trigger notification
-        triggerSaleApprovedNotification(sale.id).catch(err => 
-          console.error("Error triggering sale notification:", err)
-        );
-
-        // Eventos: pagamento recebido + venda aprovada + produto entregue
-        void (async () => {
-          const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
-          const payload = {
-            sale_id: sale.id, product_id: data.productId,
-            customer_name: customerName.slice(0, 100), customer_phone: msisdn,
-            amount, payment_method: data.method, status: "paid",
-            transaction_id: transactionId ? String(transactionId) : null,
-            paid_at: new Date().toISOString(),
-          };
-          await enqueueWebhookEvent({ userId: product.user_id, event: "payment.received", payload, productId: product.id });
-          await enqueueWebhookEvent({ userId: product.user_id, event: "sale.approved", payload, productId: product.id });
-          await enqueueWebhookEvent({ userId: product.user_id, event: "product.delivered", payload, productId: product.id });
-          await processPendingForUser(product.user_id);
-        })().catch((e) => console.error("[webhooks] paid events err", e));
-
-        if (finalTrafficPageId) {
-          await supabaseAdmin.from("traffic_events").insert({
-            page_id: finalTrafficPageId,
-            event_type: "purchase",
-            metadata: { saleId: sale.id, productId: data.productId },
-          });
-        }
+          .eq("id", sale.id)
+          .neq("status", "paid");
       }
 
       return {
@@ -351,20 +309,15 @@ export const processPayment = createServerFn({ method: "POST" })
       await supabaseAdmin
         .from("sales")
         .update({
-          status: "failed",
-          payment_reference:
-            err instanceof Error ? err.message.slice(0, 200) : "Erro de rede",
+          status: "pending",
+          payment_reference: reference,
         })
+        .neq("status", "paid")
         .eq("id", sale.id);
       return {
-        success: false,
+        success: true,
         saleId: sale.id,
-        error:
-          err instanceof Error && err.name === "AbortError"
-            ? "Tempo esgotado ao contactar a gateway e2payment."
-            : err instanceof Error
-              ? err.message
-              : "Erro ao processar pagamento.",
+        transactionId: null,
       };
     }
   });

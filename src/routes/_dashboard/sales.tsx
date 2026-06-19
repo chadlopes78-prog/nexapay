@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CreditCard, Search, ExternalLink, MoreHorizontal, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -22,11 +23,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+type SaleProduct = { name?: string | null } | null;
+
 export const Route = createFileRoute("/_dashboard/sales")({
   component: SalesPage,
 });
 
 function SalesPage() {
+  const queryClient = useQueryClient();
   const { data: sales, isLoading } = useQuery({
     queryKey: ["sales"],
     queryFn: async () => {
@@ -34,11 +38,37 @@ function SalesPage() {
         .from("sales")
         .select("*, products(name)")
         .order("created_at", { ascending: false });
-      
+
       if (error) throw error;
       return data;
-    }
+    },
+    staleTime: 5_000,
   });
+
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled || !session?.user?.id) return;
+      channel = supabase
+        .channel(`sales-list-${session.user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "sales", filter: `user_id=eq.${session.user.id}` },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["sales"] });
+          },
+        )
+        .subscribe();
+    })();
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   return (
     <div className="space-y-8">
@@ -79,7 +109,9 @@ function SalesPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12">Carregando vendas...</TableCell>
+                  <TableCell colSpan={8} className="text-center py-12">
+                    Carregando vendas...
+                  </TableCell>
                 </TableRow>
               ) : !sales || sales.length === 0 ? (
                 <TableRow>
@@ -93,10 +125,14 @@ function SalesPage() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium">{sale.customer_name || "Desconhecido"}</span>
-                        <span className="text-xs text-muted-foreground">{sale.customer_phone || "-"}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {sale.customer_phone || "-"}
+                        </span>
                       </div>
                     </TableCell>
-                    <TableCell>{(sale.products as any)?.name || "Produto Removido"}</TableCell>
+                    <TableCell>
+                      {(sale.products as SaleProduct)?.name || "Produto Removido"}
+                    </TableCell>
                     <TableCell>{Number(sale.amount).toLocaleString("pt-MZ")} MT</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
@@ -112,16 +148,33 @@ function SalesPage() {
                       <div className="flex flex-col">
                         <span>{new Date(sale.created_at).toLocaleDateString("pt-MZ")}</span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(sale.created_at).toLocaleTimeString("pt-MZ", { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(sale.created_at).toLocaleTimeString("pt-MZ", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge 
-                        variant={sale.status === "approved" ? "secondary" : "outline"}
-                        className={sale.status === "approved" ? "bg-green-100 text-green-700 hover:bg-green-100" : ""}
+                      <Badge
+                        variant={
+                          ["approved", "paid", "success"].includes(sale.status || "")
+                            ? "secondary"
+                            : "outline"
+                        }
+                        className={
+                          ["approved", "paid", "success"].includes(sale.status || "")
+                            ? "bg-green-100 text-green-700 hover:bg-green-100"
+                            : ""
+                        }
                       >
-                        {sale.status === "approved" ? "Aprovado" : sale.status}
+                        {["approved", "paid", "success"].includes(sale.status || "")
+                          ? "Aprovado"
+                          : sale.status === "pending"
+                            ? "Pendente"
+                            : sale.status === "failed"
+                              ? "Falhou"
+                              : sale.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

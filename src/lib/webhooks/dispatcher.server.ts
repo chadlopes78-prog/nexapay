@@ -8,6 +8,15 @@ const MAX_ATTEMPTS = 6;
 // Backoff: 30s, 2m, 10m, 30m, 2h, 6h
 const BACKOFF_SECONDS = [30, 120, 600, 1800, 7200, 21600];
 
+type WebhookEndpointRef = {
+  url: string;
+  secret: string | null;
+  is_pushcut: boolean;
+  active: boolean;
+};
+
+type PayloadProduct = { name?: string | null };
+
 interface EnqueueOptions {
   userId: string;
   event: WebhookEventId;
@@ -20,8 +29,15 @@ interface EnqueueOptions {
  * Insere uma delivery pendente para cada webhook do user que está
  * inscrito neste evento E que mira este produto (ou todos).
  */
-export async function enqueueWebhookEvent({ userId, event, payload, productId }: EnqueueOptions): Promise<void> {
+export async function enqueueWebhookEvent({
+  userId,
+  event,
+  payload,
+  productId,
+}: EnqueueOptions): Promise<void> {
   try {
+    const saleId = typeof payload.sale_id === "string" ? payload.sale_id : null;
+    const dedupeKey = saleId ? `${event}:${saleId}` : null;
     const { data: hooks, error } = await supabaseAdmin
       .from("webhook_endpoints")
       .select("id, events, active, product_ids")
@@ -36,7 +52,7 @@ export async function enqueueWebhookEvent({ userId, event, payload, productId }:
 
     const targets = hooks.filter((h) => {
       if (!Array.isArray(h.events) || !h.events.includes(event)) return false;
-      const productScope = (h as any).product_ids as string[] | null;
+      const productScope = h.product_ids as string[] | null;
       // empty/null array = all products
       if (!productScope || productScope.length === 0) return true;
       if (!productId) return false;
@@ -49,10 +65,17 @@ export async function enqueueWebhookEvent({ userId, event, payload, productId }:
       user_id: userId,
       event,
       payload: payload as never,
+      dedupe_key: dedupeKey,
     }));
 
-    const { error: insertErr } = await supabaseAdmin.from("webhook_deliveries").insert(rows);
-    if (insertErr) console.error("[webhooks] enqueue insert failed", insertErr);
+    await Promise.all(
+      rows.map(async (row) => {
+        const { error: insertErr } = await supabaseAdmin.from("webhook_deliveries").insert(row);
+        if (insertErr && insertErr.code !== "23505") {
+          console.error("[webhooks] enqueue insert failed", insertErr);
+        }
+      }),
+    );
   } catch (err) {
     console.error("[webhooks] enqueue critical error", err);
   }
@@ -64,24 +87,30 @@ export async function enqueueWebhookEvent({ userId, event, payload, productId }:
 export async function deliverOnce(deliveryId: string): Promise<void> {
   const { data: delivery, error } = await supabaseAdmin
     .from("webhook_deliveries")
-    .select("id, webhook_id, user_id, event, payload, attempts, webhook_endpoints!inner(url, secret, is_pushcut, active)")
+    .update({ status: "processing" })
     .eq("id", deliveryId)
+    .eq("status", "pending")
+    .lte("next_attempt_at", new Date().toISOString())
+    .select(
+      "id, webhook_id, user_id, event, payload, attempts, webhook_endpoints!inner(url, secret, is_pushcut, active)",
+    )
     .maybeSingle();
 
   if (error || !delivery) {
-    console.error("[webhooks] deliverOnce: not found", deliveryId, error);
+    if (error) console.error("[webhooks] deliverOnce: claim failed", deliveryId, error);
     return;
   }
 
-  const endpoint = (delivery as any).webhook_endpoints as {
-    url: string; secret: string | null; is_pushcut: boolean; active: boolean;
-  };
+  const endpoint = delivery.webhook_endpoints as unknown as WebhookEndpointRef;
 
   if (!endpoint?.active) {
-    await supabaseAdmin.from("webhook_deliveries").update({
-      status: "failed",
-      error: "Endpoint desativado",
-    }).eq("id", deliveryId);
+    await supabaseAdmin
+      .from("webhook_deliveries")
+      .update({
+        status: "failed",
+        error: "Endpoint desativado",
+      })
+      .eq("id", deliveryId);
     return;
   }
 
@@ -119,37 +148,46 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
   const success = !errorMsg && responseCode !== null && responseCode >= 200 && responseCode < 300;
 
   if (success) {
-    await supabaseAdmin.from("webhook_deliveries").update({
-      status: "success",
-      attempts: attempt,
-      response_code: responseCode,
-      response_body: responseBody,
-      error: null,
-    }).eq("id", deliveryId);
+    await supabaseAdmin
+      .from("webhook_deliveries")
+      .update({
+        status: "success",
+        attempts: attempt,
+        response_code: responseCode,
+        response_body: responseBody,
+        error: null,
+      })
+      .eq("id", deliveryId);
     return;
   }
 
   if (attempt >= MAX_ATTEMPTS) {
-    await supabaseAdmin.from("webhook_deliveries").update({
-      status: "failed",
-      attempts: attempt,
-      response_code: responseCode,
-      response_body: responseBody,
-      error: errorMsg,
-    }).eq("id", deliveryId);
+    await supabaseAdmin
+      .from("webhook_deliveries")
+      .update({
+        status: "failed",
+        attempts: attempt,
+        response_code: responseCode,
+        response_body: responseBody,
+        error: errorMsg,
+      })
+      .eq("id", deliveryId);
     return;
   }
 
   const delaySec = BACKOFF_SECONDS[Math.min(attempt - 1, BACKOFF_SECONDS.length - 1)];
   const nextAt = new Date(Date.now() + delaySec * 1000).toISOString();
-  await supabaseAdmin.from("webhook_deliveries").update({
-    status: "pending",
-    attempts: attempt,
-    response_code: responseCode,
-    response_body: responseBody,
-    error: errorMsg,
-    next_attempt_at: nextAt,
-  }).eq("id", deliveryId);
+  await supabaseAdmin
+    .from("webhook_deliveries")
+    .update({
+      status: "pending",
+      attempts: attempt,
+      response_code: responseCode,
+      response_body: responseBody,
+      error: errorMsg,
+      next_attempt_at: nextAt,
+    })
+    .eq("id", deliveryId);
 }
 
 function buildStandardBody(event: string, payload: Record<string, unknown>) {
@@ -162,9 +200,11 @@ function buildStandardBody(event: string, payload: Record<string, unknown>) {
 
 function buildPushcutBody(event: string, payload: Record<string, unknown>) {
   const eventLabel = event.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  const productName = (payload.product_name as string) || (payload.product as any)?.name || "Produto";
+  const product = payload.product as PayloadProduct | undefined;
+  const productName = (payload.product_name as string) || product?.name || "Produto";
   const amount = payload.amount as number | undefined;
-  const customer = (payload.customer_name as string) || (payload.customer as any)?.name || "";
+  const customerPayload = payload.customer as { name?: string | null } | undefined;
+  const customer = (payload.customer_name as string) || customerPayload?.name || "";
   const method = (payload.payment_method as string)?.toUpperCase?.() || "";
 
   const text =
@@ -180,6 +220,13 @@ function buildPushcutBody(event: string, payload: Record<string, unknown>) {
  * para este user/evento. Usado para entrega quase-imediata sem esperar o cron.
  */
 export async function processPendingForUser(userId: string): Promise<void> {
+  await supabaseAdmin
+    .from("webhook_deliveries")
+    .update({ status: "pending" })
+    .eq("user_id", userId)
+    .eq("status", "processing")
+    .lt("updated_at", new Date(Date.now() - 5 * 60_000).toISOString());
+
   const { data, error } = await supabaseAdmin
     .from("webhook_deliveries")
     .select("id")
@@ -189,5 +236,7 @@ export async function processPendingForUser(userId: string): Promise<void> {
     .order("created_at", { ascending: true })
     .limit(20);
   if (error || !data?.length) return;
-  await Promise.all(data.map((d) => deliverOnce(d.id).catch((e) => console.error("[webhooks] deliver err", e))));
+  await Promise.all(
+    data.map((d) => deliverOnce(d.id).catch((e) => console.error("[webhooks] deliver err", e))),
+  );
 }

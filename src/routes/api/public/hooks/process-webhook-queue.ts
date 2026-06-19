@@ -8,6 +8,12 @@ export const Route = createFileRoute("/api/public/hooks/process-webhook-queue")(
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { deliverOnce } = await import("@/lib/webhooks/dispatcher.server");
 
+        await supabaseAdmin
+          .from("webhook_deliveries")
+          .update({ status: "pending" })
+          .eq("status", "processing")
+          .lt("updated_at", new Date(Date.now() - 5 * 60_000).toISOString());
+
         const { data, error } = await supabaseAdmin
           .from("webhook_deliveries")
           .select("id")
@@ -19,12 +25,17 @@ export const Route = createFileRoute("/api/public/hooks/process-webhook-queue")(
         if (error) {
           console.error("[webhook-queue] list error", error);
           return new Response(JSON.stringify({ ok: false, error: error.message }), {
-            status: 500, headers: { "Content-Type": "application/json" },
+            status: 500,
+            headers: { "Content-Type": "application/json" },
           });
         }
 
         const ids = (data ?? []).map((d) => d.id);
-        await Promise.all(ids.map((id) => deliverOnce(id).catch((e) => console.error("[webhook-queue] deliver err", e))));
+        await Promise.all(
+          ids.map((id) =>
+            deliverOnce(id).catch((e) => console.error("[webhook-queue] deliver err", e)),
+          ),
+        );
 
         return Response.json({ ok: true, processed: ids.length });
       },

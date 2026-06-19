@@ -5,7 +5,7 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
     handlers: {
       POST: async ({ request }) => {
         const bodyText = await request.text();
-        let payload: any = null;
+        let payload: unknown = null;
         try {
           payload = bodyText ? JSON.parse(bodyText) : null;
         } catch {
@@ -24,108 +24,51 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
           }
         }
 
-        const transactionId =
-          payload?.transaction_id ?? payload?.id ?? payload?.data?.transaction_id ?? null;
-        const reference =
-          payload?.reference ?? payload?.data?.reference ?? null;
-        const rawStatus = String(
-          payload?.status ?? payload?.data?.status ?? "",
-        ).toLowerCase();
+        const {
+          confirmSalePayment,
+          findSaleForGatewayEvent,
+          markSaleTerminalFailure,
+          normalizeGatewayStatus,
+          readGatewayReference,
+          readGatewayTransactionId,
+        } = await import("@/lib/payments/confirmation.server");
+
+        const transactionId = readGatewayTransactionId(payload);
+        const reference = readGatewayReference(payload);
 
         if (!transactionId && !reference) {
           return new Response("Missing transaction id/reference", { status: 400 });
         }
 
-        const status = ["success", "paid", "completed", "approved"].includes(rawStatus)
-          ? "paid"
-          : ["failed", "error", "cancelled", "canceled"].includes(rawStatus)
-            ? "failed"
-            : "pending";
-
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { triggerSaleApprovedNotification } = await import("@/lib/api/notifications.server");
-        const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
-
-        // Fetch the sale first to get current status + context
-        let saleQuery = supabaseAdmin.from("sales").select(
-          "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, products(name)",
-        );
-        if (transactionId) {
-          saleQuery = saleQuery.eq("transaction_id", String(transactionId));
-        } else {
-          saleQuery = saleQuery.eq("payment_reference", String(reference));
-        }
-
-        const { data: saleData, error: saleFetchError } = await saleQuery.maybeSingle();
-
-        if (saleFetchError || !saleData) {
+        const status = normalizeGatewayStatus(payload, true);
+        const payloadObject =
+          payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+        const saleData = await findSaleForGatewayEvent(transactionId, reference);
+        if (!saleData) {
           console.error("Sale not found for webhook", { transactionId, reference });
           return new Response("Sale not found", { status: 404 });
         }
 
-        const isBecomingPaid = status === "paid" && saleData.status !== "paid";
-        const isBecomingFailed = status === "failed" && saleData.status !== "failed";
-
-        const { error: updateError } = await supabaseAdmin
-          .from("sales")
-          .update({
-            status,
-            transaction_id: transactionId ? String(transactionId).slice(0, 200) : undefined,
-          })
-          .eq("id", saleData.id);
-
-        if (updateError) {
-          console.error("webhook update error", updateError);
-          return new Response("DB error", { status: 500 });
-        }
-
-        const userId = saleData.user_id;
-
-        if (isBecomingPaid) {
+        if (status === "paid") {
           console.log("[Webhook] Sale became paid:", saleData.id);
-          triggerSaleApprovedNotification(saleData.id).catch(err =>
-            console.error("Error triggering sale notification:", err)
-          );
-
-          if (userId) {
-            void (async () => {
-              const payload = {
-                sale_id: saleData.id,
-                product_id: saleData.product_id,
-                product_name: (saleData as any).products?.name ?? null,
-                customer_name: saleData.customer_name,
-                customer_phone: saleData.customer_phone,
-                amount: saleData.amount,
-                payment_method: saleData.payment_method,
-                status: "paid",
-                transaction_id: transactionId ? String(transactionId) : null,
-                paid_at: new Date().toISOString(),
-              };
-              await enqueueWebhookEvent({ userId, event: "payment.received", payload, productId: saleData.product_id });
-              await enqueueWebhookEvent({ userId, event: "sale.approved", payload, productId: saleData.product_id });
-              await enqueueWebhookEvent({ userId, event: "product.delivered", payload, productId: saleData.product_id });
-              await processPendingForUser(userId);
-            })().catch((e) => console.error("[webhooks] paid events err", e));
-          }
-        } else if (isBecomingFailed && userId) {
+          await confirmSalePayment({
+            saleId: saleData.id,
+            transactionId,
+            reference,
+            rawPayload: payload,
+          });
+        } else if (status === "failed" || status === "expired") {
           console.log("[Webhook] Sale failed:", saleData.id);
-          void (async () => {
-            await enqueueWebhookEvent({
-              userId,
-              productId: saleData.product_id,
-              event: "payment.refused",
-              payload: {
-                sale_id: saleData.id, product_id: saleData.product_id,
-                customer_name: saleData.customer_name, customer_phone: saleData.customer_phone,
-                amount: saleData.amount, payment_method: saleData.payment_method,
-                status: "failed",
-              },
-            });
-            await processPendingForUser(userId);
-          })().catch((e) => console.error("[webhooks] refused err", e));
+          await markSaleTerminalFailure({
+            saleId: saleData.id,
+            status,
+            transactionId,
+            reference,
+            reason: String(payloadObject.message ?? payloadObject.error ?? status),
+          });
         }
 
-        return Response.json({ ok: true });
+        return Response.json({ ok: true, status });
       },
     },
   },
