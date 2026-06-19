@@ -320,25 +320,38 @@ async function dispatchApprovedSideEffects(sale: SaleForConfirmation, rawPayload
   };
 
   await triggerSaleApprovedNotification(sale.id);
-  await enqueueWebhookEvent({
-    userId,
-    event: "payment.received",
-    payload,
-    productId: sale.product_id,
-  });
-  await enqueueWebhookEvent({
-    userId,
-    event: "sale.approved",
-    payload,
-    productId: sale.product_id,
-  });
-  await enqueueWebhookEvent({
-    userId,
-    event: "product.delivered",
-    payload,
-    productId: sale.product_id,
-  });
-  await processPendingForUser(userId);
+
+  // SINGLE EVENT POLICY: enqueue only ONE event per endpoint per sale.
+  // If an endpoint is subscribed to multiple approved-related events,
+  // pick the highest-priority one to avoid duplicate Pushcut/webhook firings.
+  const PRIORITY = ["sale.approved", "payment.received", "product.delivered"] as const;
+  const { data: endpoints } = await supabaseAdmin
+    .from("webhook_endpoints")
+    .select("id, events, active, product_ids")
+    .eq("user_id", userId)
+    .eq("active", true);
+
+  const eventsToFire = new Set<(typeof PRIORITY)[number]>();
+  for (const ep of endpoints ?? []) {
+    const events = Array.isArray(ep.events) ? (ep.events as string[]) : [];
+    const scope = ep.product_ids as string[] | null;
+    const matchesProduct =
+      !scope || scope.length === 0 || (sale.product_id ? scope.includes(sale.product_id) : false);
+    if (!matchesProduct) continue;
+    const chosen = PRIORITY.find((e) => events.includes(e));
+    console.log("[webhooks] dispatch decision", {
+      endpointId: ep.id,
+      saleId: sale.id,
+      subscribed: events,
+      chosen: chosen ?? null,
+    });
+    if (chosen) eventsToFire.add(chosen);
+  }
+
+  for (const event of eventsToFire) {
+    await enqueueWebhookEvent({ userId, event, payload, productId: sale.product_id });
+  }
+  if (eventsToFire.size > 0) await processPendingForUser(userId);
 
   if (sale.traffic_page_id) {
     await supabaseAdmin.from("traffic_events").insert({
