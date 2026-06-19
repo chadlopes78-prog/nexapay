@@ -326,9 +326,9 @@ export const processPayment = createServerFn({ method: "POST" })
             transaction_id: transactionId ? String(transactionId) : null,
             paid_at: new Date().toISOString(),
           };
-          await enqueueWebhookEvent({ userId: product.user_id, event: "payment.received", payload });
-          await enqueueWebhookEvent({ userId: product.user_id, event: "sale.approved", payload });
-          await enqueueWebhookEvent({ userId: product.user_id, event: "product.delivered", payload });
+          await enqueueWebhookEvent({ userId: product.user_id, event: "payment.received", payload, productId: product.id });
+          await enqueueWebhookEvent({ userId: product.user_id, event: "sale.approved", payload, productId: product.id });
+          await enqueueWebhookEvent({ userId: product.user_id, event: "product.delivered", payload, productId: product.id });
           await processPendingForUser(product.user_id);
         })().catch((e) => console.error("[webhooks] paid events err", e));
 
