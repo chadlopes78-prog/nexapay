@@ -315,6 +315,22 @@ export const processPayment = createServerFn({ method: "POST" })
           console.error("Error triggering sale notification:", err)
         );
 
+        // Eventos: pagamento recebido + venda aprovada + produto entregue
+        void (async () => {
+          const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
+          const payload = {
+            sale_id: sale.id, product_id: data.productId,
+            customer_name: customerName.slice(0, 100), customer_phone: msisdn,
+            amount, payment_method: data.method, status: "paid",
+            transaction_id: transactionId ? String(transactionId) : null,
+            paid_at: new Date().toISOString(),
+          };
+          await enqueueWebhookEvent({ userId: product.user_id, event: "payment.received", payload });
+          await enqueueWebhookEvent({ userId: product.user_id, event: "sale.approved", payload });
+          await enqueueWebhookEvent({ userId: product.user_id, event: "product.delivered", payload });
+          await processPendingForUser(product.user_id);
+        })().catch((e) => console.error("[webhooks] paid events err", e));
+
         if (finalTrafficPageId) {
           await supabaseAdmin.from("traffic_events").insert({
             page_id: finalTrafficPageId,
