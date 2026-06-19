@@ -61,7 +61,7 @@ async function getAccessToken(): Promise<string> {
   });
 
   const text = await res.text();
-  let json: any = null;
+  let json: Record<string, unknown> | null = null;
   try {
     json = text ? JSON.parse(text) : null;
   } catch {
@@ -253,7 +253,7 @@ export const processPayment = createServerFn({ method: "POST" })
       }).finally(() => clearTimeout(timeoutId));
 
       const text = await res.text();
-      let json: any = null;
+      let json: Record<string, unknown> | null = null;
       try {
         json = text ? JSON.parse(text) : null;
       } catch {
