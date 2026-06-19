@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getPaymentSuccessData } from "@/lib/api/payments.functions";
 
 import { CheckCircle2, ArrowRight, MessageCircle, Loader2 } from "lucide-react";
 import { z } from "zod";
@@ -11,7 +12,7 @@ const successSearchSchema = z.object({
 });
 
 type SaleSuccessData = {
-  sale: { status?: string | null };
+  sale: { status?: string | null } | null;
   product: {
     access_link?: string | null;
     delivery_link?: string | null;
@@ -29,65 +30,41 @@ export const Route = createFileRoute("/payment-success")({
 function PaymentSuccessPage() {
   const { saleId } = Route.useSearch();
   const [data, setData] = useState<SaleSuccessData | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
+  const fetchPaymentData = useServerFn(getPaymentSuccessData);
 
   useEffect(() => {
     if (!saleId) return;
 
     let cancelled = false;
     let attempts = 0;
-    const MAX_ATTEMPTS = 60;
-
-    const fetchSale = async () => {
-      const { data: saleData } = await supabase
-        .from("sales")
-        .select(
-          "*, products(id, name, access_link, delivery_link, support_phone, support_number, thank_you_button_text)",
-        )
-        .eq("id", saleId)
-        .maybeSingle();
-      if (!saleData) return null;
-      return { sale: saleData, product: saleData.products };
-    };
+    const MAX_ATTEMPTS = 90;
 
     const poll = async () => {
       while (!cancelled && attempts < MAX_ATTEMPTS) {
         attempts++;
-        const result = await fetchSale();
+        const result = await fetchPaymentData({ data: { saleId } });
         if (cancelled) return;
         if (result) {
           setData(result);
-          if (result.sale?.status === "paid") return;
+          const status = String(result.sale?.status ?? "").toLowerCase();
+          if (["paid", "approved", "success", "completed"].includes(status)) return;
         }
         await new Promise((r) => setTimeout(r, 2500));
       }
+      if (!cancelled) setTimedOut(true);
     };
-
-    const channel = supabase
-      .channel(`sale-${saleId}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "sales", filter: `id=eq.${saleId}` },
-        async () => {
-          const result = await fetchSale();
-          if (cancelled || !result) return;
-          setData(result);
-        },
-      )
-      .subscribe();
 
     poll();
 
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
     };
-  }, [saleId]);
+  }, [saleId, fetchPaymentData]);
 
   const product = data?.product;
-  const isPaid =
-    data?.sale?.status === "paid" ||
-    data?.sale?.status === "approved" ||
-    data?.sale?.status === "success";
+  const status = String(data?.sale?.status ?? "").toLowerCase();
+  const isPaid = ["paid", "approved", "success", "completed"].includes(status);
   const accessLink = product?.access_link || product?.delivery_link;
   const supportNumber = product?.support_number || product?.support_phone || "258840000000";
   const buttonText = (product?.thank_you_button_text || "Liberar acesso").trim();
