@@ -320,6 +320,7 @@ async function dispatchApprovedSideEffects(
     transaction_id: sale.transaction_id,
     payment_reference: sale.payment_reference,
     paid_at: new Date().toISOString(),
+    pushcut_source: triggerPushcut ? "payment_webhook" : "blocked",
     gateway_payload: rawPayload ?? null,
   };
 
