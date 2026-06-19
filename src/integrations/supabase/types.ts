@@ -656,6 +656,7 @@ export type Database = {
           id: string
           is_pushcut: boolean
           name: string
+          product_ids: string[]
           secret: string | null
           updated_at: string
           url: string
@@ -668,6 +669,7 @@ export type Database = {
           id?: string
           is_pushcut?: boolean
           name: string
+          product_ids?: string[]
           secret?: string | null
           updated_at?: string
           url: string
@@ -680,6 +682,7 @@ export type Database = {
           id?: string
           is_pushcut?: boolean
           name?: string
+          product_ids?: string[]
           secret?: string | null
           updated_at?: string
           url?: string

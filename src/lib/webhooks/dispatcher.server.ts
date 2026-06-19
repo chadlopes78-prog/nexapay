@@ -12,18 +12,19 @@ interface EnqueueOptions {
   userId: string;
   event: WebhookEventId;
   payload: Record<string, unknown>;
+  /** If provided, only webhooks targeting this product (or all products) receive the event. */
+  productId?: string | null;
 }
 
 /**
  * Insere uma delivery pendente para cada webhook do user que está
- * inscrito neste evento. Dispara imediatamente (fire-and-forget) o
- * processador, mas o cron garante reentrega em caso de falha.
+ * inscrito neste evento E que mira este produto (ou todos).
  */
-export async function enqueueWebhookEvent({ userId, event, payload }: EnqueueOptions): Promise<void> {
+export async function enqueueWebhookEvent({ userId, event, payload, productId }: EnqueueOptions): Promise<void> {
   try {
     const { data: hooks, error } = await supabaseAdmin
       .from("webhook_endpoints")
-      .select("id, events, active")
+      .select("id, events, active, product_ids")
       .eq("user_id", userId)
       .eq("active", true);
 
@@ -33,7 +34,14 @@ export async function enqueueWebhookEvent({ userId, event, payload }: EnqueueOpt
     }
     if (!hooks?.length) return;
 
-    const targets = hooks.filter((h) => Array.isArray(h.events) && h.events.includes(event));
+    const targets = hooks.filter((h) => {
+      if (!Array.isArray(h.events) || !h.events.includes(event)) return false;
+      const productScope = (h as any).product_ids as string[] | null;
+      // empty/null array = all products
+      if (!productScope || productScope.length === 0) return true;
+      if (!productId) return false;
+      return productScope.includes(productId);
+    });
     if (!targets.length) return;
 
     const rows = targets.map((h) => ({

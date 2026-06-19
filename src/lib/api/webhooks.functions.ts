@@ -6,9 +6,10 @@ import { WEBHOOK_EVENT_IDS } from "@/lib/webhooks/events";
 const UpsertSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(80),
-  url: z.string().trim().url().max(2000),
+  url: z.string().trim().url("URL inválida").max(2000),
   secret: z.string().trim().max(200).optional().nullable(),
-  events: z.array(z.string().max(64)).max(50),
+  events: z.array(z.string().max(64)).min(1, "Selecione pelo menos 1 evento").max(50),
+  product_ids: z.array(z.string().uuid()).max(200).default([]),
   is_pushcut: z.boolean().default(false),
   active: z.boolean().default(true),
 });
@@ -24,6 +25,7 @@ export const upsertWebhook = createServerFn({ method: "POST" })
       url: data.url,
       secret: data.secret || null,
       events,
+      product_ids: data.product_ids ?? [],
       is_pushcut: data.is_pushcut,
       active: data.active,
     };
