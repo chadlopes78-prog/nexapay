@@ -12,6 +12,10 @@ const PaymentInput = z.object({
   trafficPageTrackingId: z.string().max(100).nullable().optional(),
 });
 
+const PaymentSuccessInput = z.object({
+  saleId: z.string().uuid(),
+});
+
 export type PaymentResult =
   | {
       success: true;
@@ -23,6 +27,48 @@ export type PaymentResult =
       error: string;
       saleId?: string;
     };
+
+export const getPaymentSuccessData = createServerFn({ method: "GET" })
+  .inputValidator((input) => PaymentSuccessInput.parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: sale, error } = await supabaseAdmin
+      .from("sales")
+      .select(
+        "id, status, products(id, access_link, delivery_link, support_phone, support_number, thank_you_button_text)",
+      )
+      .eq("id", data.saleId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("payment-success lookup error", error);
+      throw new Error("Não foi possível consultar o estado do pagamento.");
+    }
+    if (!sale) return { sale: null, product: null };
+
+    const status = String(sale.status ?? "").toLowerCase();
+    const isPaid = ["paid", "approved", "success", "completed"].includes(status);
+    const product = sale.products as {
+      access_link?: string | null;
+      delivery_link?: string | null;
+      support_phone?: string | null;
+      support_number?: string | null;
+      thank_you_button_text?: string | null;
+    } | null;
+
+    return {
+      sale: { status: sale.status },
+      product: product
+        ? {
+            access_link: isPaid ? product.access_link : null,
+            delivery_link: isPaid ? product.delivery_link : null,
+            support_phone: product.support_phone,
+            support_number: product.support_number,
+            thank_you_button_text: product.thank_you_button_text,
+          }
+        : null,
+    };
+  });
 
 function normalizeMozambicanPhone(value: string) {
   const digits = value.replace(/\D/g, "");

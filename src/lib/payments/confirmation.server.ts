@@ -88,6 +88,7 @@ export function readGatewayReference(input: unknown): string | null {
 export function normalizeGatewayStatus(input: unknown, httpOk = true): NormalizedPaymentStatus {
   const payload = asObject(input);
   const data = nestedObject(payload, "data");
+  const successValue = payload.success ?? payload.ok ?? data.success ?? data.ok;
   const raw = String(
     payload.status ??
       payload.payment_status ??
@@ -101,15 +102,43 @@ export function normalizeGatewayStatus(input: unknown, httpOk = true): Normalize
   )
     .toLowerCase()
     .trim();
+  const successText = String(successValue ?? "")
+    .toLowerCase()
+    .trim();
 
   if (PAID_STATUSES.has(raw)) return "paid";
   if (EXPIRED_STATUSES.has(raw)) return "expired";
   if (FAILED_STATUSES.has(raw)) return "failed";
 
-  const message = String(payload.message ?? payload.error ?? payload.detail ?? "").toLowerCase();
-  if (payload.success === true || payload.ok === true) return "pending";
+  const message = String(
+    payload.message ??
+      payload.error ??
+      payload.detail ??
+      data.message ??
+      data.error ??
+      data.detail ??
+      "",
+  ).toLowerCase();
+  const combinedSuccessMessage = `${successText} ${message}`.trim();
+
   if (
-    payload.success === false &&
+    httpOk &&
+    /(pagamento\s+realizado\s+com\s+sucesso|payment\s+successful|successfully\s+paid|sucesso)/i.test(
+      combinedSuccessMessage,
+    )
+  ) {
+    return "paid";
+  }
+  if (httpOk && (successValue === true || successText === "true")) return "paid";
+  if (
+    /(customer\s+did\s+not\s+enter\s+pin|pin\s+incorret|recus|reject|declin|cancel|insufficient|saldo\s+insuficiente)/i.test(
+      `${combinedSuccessMessage} ${raw}`,
+    )
+  ) {
+    return "failed";
+  }
+  if (
+    successValue === false &&
     httpOk &&
     /(recus|reject|declin|cancel|fail|erro|expir)/i.test(message)
   ) {
