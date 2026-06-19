@@ -44,9 +44,12 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { triggerSaleApprovedNotification } = await import("@/lib/api/notifications.server");
+        const { enqueueWebhookEvent, processPendingForUser } = await import("@/lib/webhooks/dispatcher.server");
 
-        // Fetch the sale first to get current status
-        let saleQuery = supabaseAdmin.from("sales").select("id, status");
+        // Fetch the sale first to get current status + context
+        let saleQuery = supabaseAdmin.from("sales").select(
+          "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, products(name)",
+        );
         if (transactionId) {
           saleQuery = saleQuery.eq("transaction_id", String(transactionId));
         } else {
@@ -60,8 +63,8 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
           return new Response("Sale not found", { status: 404 });
         }
 
-        // Only trigger push if status is changing to paid
         const isBecomingPaid = status === "paid" && saleData.status !== "paid";
+        const isBecomingFailed = status === "failed" && saleData.status !== "failed";
 
         const { error: updateError } = await supabaseAdmin
           .from("sales")
@@ -76,15 +79,45 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
           return new Response("DB error", { status: 500 });
         }
 
-        // Trigger push notification if paid
         if (isBecomingPaid) {
-          console.log("[Webhook] Sale became paid, triggering notification for:", saleData.id);
-          // Fire and forget notification trigger
-          triggerSaleApprovedNotification(saleData.id).catch(err => 
+          console.log("[Webhook] Sale became paid:", saleData.id);
+          triggerSaleApprovedNotification(saleData.id).catch(err =>
             console.error("Error triggering sale notification:", err)
           );
-        } else if (status === "failed" && saleData.status !== "failed") {
-          console.log("[Webhook] Sale failed, updating status for:", saleData.id);
+
+          void (async () => {
+            const payload = {
+              sale_id: saleData.id,
+              product_id: saleData.product_id,
+              product_name: (saleData as any).products?.name ?? null,
+              customer_name: saleData.customer_name,
+              customer_phone: saleData.customer_phone,
+              amount: saleData.amount,
+              payment_method: saleData.payment_method,
+              status: "paid",
+              transaction_id: transactionId ? String(transactionId) : null,
+              paid_at: new Date().toISOString(),
+            };
+            await enqueueWebhookEvent({ userId: saleData.user_id, event: "payment.received", payload });
+            await enqueueWebhookEvent({ userId: saleData.user_id, event: "sale.approved", payload });
+            await enqueueWebhookEvent({ userId: saleData.user_id, event: "product.delivered", payload });
+            await processPendingForUser(saleData.user_id);
+          })().catch((e) => console.error("[webhooks] paid events err", e));
+        } else if (isBecomingFailed) {
+          console.log("[Webhook] Sale failed:", saleData.id);
+          void (async () => {
+            await enqueueWebhookEvent({
+              userId: saleData.user_id,
+              event: "payment.refused",
+              payload: {
+                sale_id: saleData.id, product_id: saleData.product_id,
+                customer_name: saleData.customer_name, customer_phone: saleData.customer_phone,
+                amount: saleData.amount, payment_method: saleData.payment_method,
+                status: "failed",
+              },
+            });
+            await processPendingForUser(saleData.user_id);
+          })().catch((e) => console.error("[webhooks] refused err", e));
         }
 
         return Response.json({ ok: true });
