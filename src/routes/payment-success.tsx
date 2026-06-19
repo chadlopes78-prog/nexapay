@@ -82,12 +82,18 @@ function PaymentSuccessPage() {
           </div>
           <div className="space-y-3">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">
-              {isPaid ? "Obrigado por confiar na gente" : "A confirmar pagamento"}
+              {isPaid
+                ? "Obrigado por confiar na gente"
+                : timedOut
+                  ? "Confirmação em processamento"
+                  : "A confirmar pagamento"}
             </h1>
             <p className="text-slate-500 text-base md:text-lg">
               {isPaid
                 ? "Para liberar o seu acesso, clique no botão abaixo"
-                : "Assim que a confirmação chegar, o acesso será liberado automaticamente."}
+                : timedOut
+                  ? "Se o valor saiu da sua conta, a venda será aprovada automaticamente assim que o banco finalizar a confirmação."
+                  : "Assim que a confirmação chegar, o acesso será liberado automaticamente."}
             </p>
           </div>
         </div>
@@ -108,7 +114,9 @@ function PaymentSuccessPage() {
           </p>
         ) : (
           <p className="text-slate-500 text-sm">
-            Mantenha esta página aberta. O pagamento ainda está pendente de confirmação.
+            {timedOut
+              ? "Pode falar com o suporte com o comprovativo se precisar de ajuda imediata."
+              : "Mantenha esta página aberta. O pagamento ainda está pendente de confirmação."}
           </p>
         )}
 
