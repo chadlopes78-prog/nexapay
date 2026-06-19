@@ -196,36 +196,34 @@ export function WebhooksSection() {
             <History className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold">Histórico de envios</h3>
           </div>
-          <ScrollArea className="h-72 rounded border">
-            <div className="p-2 space-y-1">
-              {(deliveries ?? []).length === 0 && (
-                <p className="text-xs text-muted-foreground italic p-2">Sem envios ainda.</p>
-              )}
-              {(deliveries ?? []).map((d) => {
-                const pid = (d.payload as any)?.product_id;
-                const productName = pid ? productNameById.get(pid) : null;
-                return (
-                  <div key={d.id} className="flex items-center gap-2 text-xs p-2 rounded border bg-card flex-wrap">
-                    <StatusIcon status={d.status} />
-                    <span className="font-mono">{d.event}</span>
-                    {productName && (
-                      <Badge variant="outline" className="text-[10px] gap-1">
-                        <Package className="h-3 w-3" />{productName}
-                      </Badge>
-                    )}
-                    <span className="text-muted-foreground ml-auto">
-                      {new Date(d.created_at).toLocaleString("pt-PT")}
-                    </span>
-                    {d.response_code != null && (
-                      <Badge variant="outline">HTTP {d.response_code}</Badge>
-                    )}
-                    {d.attempts > 1 && <span className="text-amber-600">×{d.attempts}</span>}
-                    {d.error && <span className="text-destructive truncate max-w-full">{d.error}</span>}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
+          <div className="rounded border p-2 space-y-1">
+            {(deliveries ?? []).length === 0 && (
+              <p className="text-xs text-muted-foreground italic p-2">Sem envios ainda.</p>
+            )}
+            {(deliveries ?? []).slice(0, 20).map((d) => {
+              const pid = (d.payload as any)?.product_id;
+              const productName = pid ? productNameById.get(pid) : null;
+              return (
+                <div key={d.id} className="flex items-center gap-2 text-xs p-2 rounded border bg-card flex-wrap">
+                  <StatusIcon status={d.status} />
+                  <span className="font-mono">{d.event}</span>
+                  {productName && (
+                    <Badge variant="outline" className="text-[10px] gap-1">
+                      <Package className="h-3 w-3" />{productName}
+                    </Badge>
+                  )}
+                  <span className="text-muted-foreground ml-auto">
+                    {new Date(d.created_at).toLocaleString("pt-PT")}
+                  </span>
+                  {d.response_code != null && (
+                    <Badge variant="outline">HTTP {d.response_code}</Badge>
+                  )}
+                  {d.attempts > 1 && <span className="text-amber-600">×{d.attempts}</span>}
+                  {d.error && <span className="text-destructive truncate max-w-full">{d.error}</span>}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </CardContent>
     </Card>
