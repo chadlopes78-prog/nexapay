@@ -8,6 +8,15 @@ const MAX_ATTEMPTS = 6;
 // Backoff: 30s, 2m, 10m, 30m, 2h, 6h
 const BACKOFF_SECONDS = [30, 120, 600, 1800, 7200, 21600];
 
+type WebhookEndpointRef = {
+  url: string;
+  secret: string | null;
+  is_pushcut: boolean;
+  active: boolean;
+};
+
+type PayloadProduct = { name?: string | null };
+
 interface EnqueueOptions {
   userId: string;
   event: WebhookEventId;
@@ -43,7 +52,7 @@ export async function enqueueWebhookEvent({
 
     const targets = hooks.filter((h) => {
       if (!Array.isArray(h.events) || !h.events.includes(event)) return false;
-      const productScope = (h as any).product_ids as string[] | null;
+      const productScope = h.product_ids as string[] | null;
       // empty/null array = all products
       if (!productScope || productScope.length === 0) return true;
       if (!productId) return false;
@@ -92,12 +101,7 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
     return;
   }
 
-  const endpoint = (delivery as any).webhook_endpoints as {
-    url: string;
-    secret: string | null;
-    is_pushcut: boolean;
-    active: boolean;
-  };
+  const endpoint = delivery.webhook_endpoints as unknown as WebhookEndpointRef;
 
   if (!endpoint?.active) {
     await supabaseAdmin
@@ -196,10 +200,12 @@ function buildStandardBody(event: string, payload: Record<string, unknown>) {
 
 function buildPushcutBody(event: string, payload: Record<string, unknown>) {
   const eventLabel = event.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const product = payload.product as PayloadProduct | undefined;
   const productName =
-    (payload.product_name as string) || (payload.product as any)?.name || "Produto";
+    (payload.product_name as string) || product?.name || "Produto";
   const amount = payload.amount as number | undefined;
-  const customer = (payload.customer_name as string) || (payload.customer as any)?.name || "";
+  const customerPayload = payload.customer as { name?: string | null } | undefined;
+  const customer = (payload.customer_name as string) || customerPayload?.name || "";
   const method = (payload.payment_method as string)?.toUpperCase?.() || "";
 
   const text =
