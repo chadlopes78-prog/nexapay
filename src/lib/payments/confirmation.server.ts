@@ -25,48 +25,78 @@ const EXPIRED_STATUSES = new Set(["expired", "timeout", "timed_out"]);
 
 export type NormalizedPaymentStatus = "paid" | "failed" | "expired" | "pending";
 
+type GatewayPayload = Record<string, unknown>;
+type SaleForConfirmation = {
+  id: string;
+  status?: string | null;
+  user_id?: string | null;
+  product_id?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  amount?: number | string | null;
+  payment_method?: string | null;
+  transaction_id?: string | null;
+  payment_reference?: string | null;
+  traffic_page_id?: string | null;
+  products?: { name?: string | null } | null;
+};
+
+function asObject(value: unknown): GatewayPayload {
+  return value && typeof value === "object" ? (value as GatewayPayload) : {};
+}
+
+function nestedObject(payload: GatewayPayload, key: string): GatewayPayload {
+  return asObject(payload[key]);
+}
+
 export function paymentReferenceForSale(saleId: string) {
   return `PMZ${saleId.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 20);
 }
 
-export function readGatewayTransactionId(payload: any): string | null {
+export function readGatewayTransactionId(input: unknown): string | null {
+  const payload = asObject(input);
+  const data = nestedObject(payload, "data");
   const value =
-    payload?.transaction_id ??
-    payload?.transactionId ??
-    payload?.payment_id ??
-    payload?.paymentId ??
-    payload?.id ??
-    payload?.data?.transaction_id ??
-    payload?.data?.transactionId ??
-    payload?.data?.payment_id ??
-    payload?.data?.paymentId ??
-    payload?.data?.id ??
+    payload.transaction_id ??
+    payload.transactionId ??
+    payload.payment_id ??
+    payload.paymentId ??
+    payload.id ??
+    data.transaction_id ??
+    data.transactionId ??
+    data.payment_id ??
+    data.paymentId ??
+    data.id ??
     null;
   return value == null ? null : String(value);
 }
 
-export function readGatewayReference(payload: any): string | null {
+export function readGatewayReference(input: unknown): string | null {
+  const payload = asObject(input);
+  const data = nestedObject(payload, "data");
   const value =
-    payload?.reference ??
-    payload?.external_reference ??
-    payload?.merchant_reference ??
-    payload?.data?.reference ??
-    payload?.data?.external_reference ??
-    payload?.data?.merchant_reference ??
+    payload.reference ??
+    payload.external_reference ??
+    payload.merchant_reference ??
+    data.reference ??
+    data.external_reference ??
+    data.merchant_reference ??
     null;
   return value == null ? null : String(value);
 }
 
-export function normalizeGatewayStatus(payload: any, httpOk = true): NormalizedPaymentStatus {
+export function normalizeGatewayStatus(input: unknown, httpOk = true): NormalizedPaymentStatus {
+  const payload = asObject(input);
+  const data = nestedObject(payload, "data");
   const raw = String(
-    payload?.status ??
-      payload?.payment_status ??
-      payload?.state ??
-      payload?.result ??
-      payload?.data?.status ??
-      payload?.data?.payment_status ??
-      payload?.data?.state ??
-      payload?.data?.result ??
+    payload.status ??
+      payload.payment_status ??
+      payload.state ??
+      payload.result ??
+      data.status ??
+      data.payment_status ??
+      data.state ??
+      data.result ??
       "",
   )
     .toLowerCase()
@@ -76,10 +106,10 @@ export function normalizeGatewayStatus(payload: any, httpOk = true): NormalizedP
   if (EXPIRED_STATUSES.has(raw)) return "expired";
   if (FAILED_STATUSES.has(raw)) return "failed";
 
-  const message = String(payload?.message ?? payload?.error ?? payload?.detail ?? "").toLowerCase();
-  if (payload?.success === true || payload?.ok === true) return "pending";
+  const message = String(payload.message ?? payload.error ?? payload.detail ?? "").toLowerCase();
+  if (payload.success === true || payload.ok === true) return "pending";
   if (
-    payload?.success === false &&
+    payload.success === false &&
     httpOk &&
     /(recus|reject|declin|cancel|fail|erro|expir)/i.test(message)
   ) {
@@ -237,14 +267,14 @@ export async function markSaleTerminalFailure(options: {
   return { becameFailed: true };
 }
 
-async function dispatchApprovedSideEffects(sale: any, rawPayload: unknown) {
+async function dispatchApprovedSideEffects(sale: SaleForConfirmation, rawPayload: unknown) {
   const userId = sale.user_id as string | null;
   if (!userId) return;
 
   const { triggerSaleApprovedNotification } = await import("@/lib/api/notifications.server");
   const { enqueueWebhookEvent, processPendingForUser } =
     await import("@/lib/webhooks/dispatcher.server");
-  const productName = (sale as any).products?.name ?? null;
+  const productName = sale.products?.name ?? null;
   const payload = {
     sale_id: sale.id,
     product_id: sale.product_id,
