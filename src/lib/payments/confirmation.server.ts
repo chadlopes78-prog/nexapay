@@ -102,22 +102,39 @@ export function normalizeGatewayStatus(input: unknown, httpOk = true): Normalize
   )
     .toLowerCase()
     .trim();
-  const successText = String(successValue ?? "").toLowerCase().trim();
+  const successText = String(successValue ?? "")
+    .toLowerCase()
+    .trim();
 
   if (PAID_STATUSES.has(raw)) return "paid";
   if (EXPIRED_STATUSES.has(raw)) return "expired";
   if (FAILED_STATUSES.has(raw)) return "failed";
 
   const message = String(
-    payload.message ?? payload.error ?? payload.detail ?? data.message ?? data.error ?? data.detail ?? "",
+    payload.message ??
+      payload.error ??
+      payload.detail ??
+      data.message ??
+      data.error ??
+      data.detail ??
+      "",
   ).toLowerCase();
   const combinedSuccessMessage = `${successText} ${message}`.trim();
 
-  if (httpOk && /(pagamento\s+realizado\s+com\s+sucesso|payment\s+successful|successfully\s+paid|sucesso)/i.test(combinedSuccessMessage)) {
+  if (
+    httpOk &&
+    /(pagamento\s+realizado\s+com\s+sucesso|payment\s+successful|successfully\s+paid|sucesso)/i.test(
+      combinedSuccessMessage,
+    )
+  ) {
     return "paid";
   }
   if (httpOk && (successValue === true || successText === "true")) return "paid";
-  if (/(customer\s+did\s+not\s+enter\s+pin|pin\s+incorret|recus|reject|declin|cancel|insufficient|saldo\s+insuficiente)/i.test(`${combinedSuccessMessage} ${raw}`)) {
+  if (
+    /(customer\s+did\s+not\s+enter\s+pin|pin\s+incorret|recus|reject|declin|cancel|insufficient|saldo\s+insuficiente)/i.test(
+      `${combinedSuccessMessage} ${raw}`,
+    )
+  ) {
     return "failed";
   }
   if (
