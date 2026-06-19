@@ -41,7 +41,8 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
         }
 
         const status = normalizeGatewayStatus(payload, true);
-        const payloadObject = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+        const payloadObject =
+          payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
         const saleData = await findSaleForGatewayEvent(transactionId, reference);
         if (!saleData) {
           console.error("Sale not found for webhook", { transactionId, reference });

@@ -201,8 +201,7 @@ function buildStandardBody(event: string, payload: Record<string, unknown>) {
 function buildPushcutBody(event: string, payload: Record<string, unknown>) {
   const eventLabel = event.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const product = payload.product as PayloadProduct | undefined;
-  const productName =
-    (payload.product_name as string) || product?.name || "Produto";
+  const productName = (payload.product_name as string) || product?.name || "Produto";
   const amount = payload.amount as number | undefined;
   const customerPayload = payload.customer as { name?: string | null } | undefined;
   const customer = (payload.customer_name as string) || customerPayload?.name || "";

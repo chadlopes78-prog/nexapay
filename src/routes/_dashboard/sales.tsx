@@ -130,7 +130,9 @@ function SalesPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>{(sale.products as SaleProduct)?.name || "Produto Removido"}</TableCell>
+                    <TableCell>
+                      {(sale.products as SaleProduct)?.name || "Produto Removido"}
+                    </TableCell>
                     <TableCell>{Number(sale.amount).toLocaleString("pt-MZ")} MT</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
