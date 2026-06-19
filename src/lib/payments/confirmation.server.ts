@@ -321,9 +321,11 @@ async function dispatchApprovedSideEffects(sale: SaleForConfirmation, rawPayload
 
   await triggerSaleApprovedNotification(sale.id);
 
-  // SINGLE EVENT POLICY: enqueue only ONE event per endpoint per sale.
-  // If an endpoint is subscribed to multiple approved-related events,
-  // pick the highest-priority one to avoid duplicate Pushcut/webhook firings.
+  // SINGLE EVENT POLICY: insert exactly ONE delivery per endpoint per sale.
+  // Bypass the fan-out enqueue helper — for each endpoint we choose the highest
+  // priority subscribed event and insert that single delivery directly.
+  // Dedupe key `${saleId}` (no event prefix) guarantees that even if this code
+  // runs twice for the same sale, the unique index blocks duplicates.
   const PRIORITY = ["sale.approved", "payment.received", "product.delivered"] as const;
   const { data: endpoints } = await supabaseAdmin
     .from("webhook_endpoints")
@@ -331,27 +333,44 @@ async function dispatchApprovedSideEffects(sale: SaleForConfirmation, rawPayload
     .eq("user_id", userId)
     .eq("active", true);
 
-  const eventsToFire = new Set<(typeof PRIORITY)[number]>();
+  let inserted = 0;
   for (const ep of endpoints ?? []) {
     const events = Array.isArray(ep.events) ? (ep.events as string[]) : [];
     const scope = ep.product_ids as string[] | null;
     const matchesProduct =
       !scope || scope.length === 0 || (sale.product_id ? scope.includes(sale.product_id) : false);
-    if (!matchesProduct) continue;
     const chosen = PRIORITY.find((e) => events.includes(e));
     console.log("[webhooks] dispatch decision", {
       endpointId: ep.id,
       saleId: sale.id,
       subscribed: events,
+      matchesProduct,
       chosen: chosen ?? null,
     });
-    if (chosen) eventsToFire.add(chosen);
-  }
+    if (!matchesProduct || !chosen) continue;
 
-  for (const event of eventsToFire) {
-    await enqueueWebhookEvent({ userId, event, payload, productId: sale.product_id });
+    const { error: insertErr } = await supabaseAdmin
+      .from("webhook_deliveries")
+      .insert({
+        webhook_id: ep.id,
+        user_id: userId,
+        event: chosen,
+        payload: payload as never,
+        dedupe_key: `approved:${sale.id}:${ep.id}`,
+      });
+    if (insertErr) {
+      if (insertErr.code !== "23505") {
+        console.error("[webhooks] direct enqueue failed", insertErr);
+      } else {
+        console.log("[webhooks] dedupe skipped", { endpointId: ep.id, saleId: sale.id });
+      }
+      continue;
+    }
+    inserted++;
   }
-  if (eventsToFire.size > 0) await processPendingForUser(userId);
+  if (inserted > 0) await processPendingForUser(userId);
+  // Silence unused warning for helper kept for non-approved flows.
+  void enqueueWebhookEvent;
 
   if (sale.traffic_page_id) {
     await supabaseAdmin.from("traffic_events").insert({
