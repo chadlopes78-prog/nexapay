@@ -19,8 +19,11 @@ import {
   Target,
   Zap,
   AlertCircle,
-  Loader2
+  Loader2,
+  MessageCircle
 } from "lucide-react";
+
+const isAdminEmail = (email?: string | null) => email === 'chadlopesff@gmail.com';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -245,9 +248,10 @@ function DashboardLayout() {
         { name: "Análise de Tráfego", icon: Globe, path: "/reports/traffic" }
       ]
     },
+    { name: "Recuperação de Vendas", icon: MessageCircle, path: "/recovery" },
     { name: "Pixel Facebook", icon: Target, path: "/pixel" },
-    { name: "Assistente IA", icon: Zap, path: "/dashboard", params: { tab: 'ai' } },
-    ...(profile?.role === 'admin' || user?.email === 'chadlopesff@gmail.com' ? [{ name: "Painel Operacional", icon: ShieldCheck, path: "/admin" }] : []),
+    { name: "Notificações", icon: AlertCircle, path: "/notifications" },
+    ...(profile?.role === 'admin' || isAdminEmail(user?.email) ? [{ name: "Controle do Sistema", icon: ShieldCheck, path: "/admin" }] : []),
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
 
