@@ -1,3 +1,4 @@
+import { NotificationPreferences } from "@/components/dashboard/NotificationPreferences";
 import { createFileRoute } from "@tanstack/react-router";
 import { Settings, Shield, Globe, Bell, User, History, MessageSquare, PieChart, Smartphone, Lock, Trash2, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -287,6 +288,23 @@ function SettingsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground italic">Em breve novas integrações disponíveis.</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              <CardTitle>Notificações Push</CardTitle>
+            </div>
+            <CardDescription>Configure quais eventos geram notificações no seu dispositivo.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <PushNotificationManager />
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Eventos</p>
+              <NotificationPreferences />
+            </div>
           </CardContent>
         </Card>
 

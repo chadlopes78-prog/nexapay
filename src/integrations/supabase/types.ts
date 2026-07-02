@@ -157,6 +157,51 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          "checkout.abandoned": boolean
+          created_at: string
+          daily_summary: boolean
+          id: string
+          new_customer: boolean
+          refund: boolean
+          "sale.approved": boolean
+          "sale.failed": boolean
+          "sale.pending": boolean
+          system: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          "checkout.abandoned"?: boolean
+          created_at?: string
+          daily_summary?: boolean
+          id?: string
+          new_customer?: boolean
+          refund?: boolean
+          "sale.approved"?: boolean
+          "sale.failed"?: boolean
+          "sale.pending"?: boolean
+          system?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          "checkout.abandoned"?: boolean
+          created_at?: string
+          daily_summary?: boolean
+          id?: string
+          new_customer?: boolean
+          refund?: boolean
+          "sale.approved"?: boolean
+          "sale.failed"?: boolean
+          "sale.pending"?: boolean
+          system?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications_log: {
         Row: {
           body: string
