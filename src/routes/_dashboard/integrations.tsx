@@ -56,7 +56,7 @@ interface IntegrationDef {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   fields?: FieldDef[];
-  customEditor?: "webhooks" | "custom_api";
+  customEditor?: "webhooks" | "custom_api" | "e2payments";
 }
 
 const INTEGRATIONS: IntegrationDef[] = [
