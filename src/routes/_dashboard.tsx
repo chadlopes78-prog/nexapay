@@ -238,7 +238,7 @@ function DashboardLayout() {
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Produtos", icon: Package, path: "/products" },
-    { name: "Vendas", icon: CreditCard, path: "/sales" },
+    { name: "Desempenho do Checkout", icon: CreditCard, path: "/sales" },
     { name: "Recuperação de Vendas", icon: MessageCircle, path: "/recovery" },
     { name: "Integrações", icon: Zap, path: "/integrations" },
     ...(profile?.role === 'admin' || isAdminEmail(user?.email) ? [{ name: "Controle do Sistema", icon: ShieldCheck, path: "/admin" }] : []),
