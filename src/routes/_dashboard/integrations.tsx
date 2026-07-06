@@ -89,9 +89,17 @@ const INTEGRATIONS: IntegrationDef[] = [
     customEditor: "webhooks",
   },
   {
+    id: "e2payments",
+    name: "e2Payments",
+    description: "Configure suas credenciais M-Pesa e e-Mola para receber pagamentos.",
+    icon: Wallet,
+    color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    customEditor: "e2payments",
+  },
+  {
     id: "custom_api",
     name: "API Personalizada",
-    description: "Integre com sua própria API interna.",
+    description: "Conecte outras APIs próprias via endpoints e headers.",
     icon: Code2,
     color: "text-slate-700 bg-slate-100 border-slate-200",
     customEditor: "custom_api",
