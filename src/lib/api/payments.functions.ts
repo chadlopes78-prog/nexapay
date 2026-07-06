@@ -267,6 +267,7 @@ export const chargeSale = createServerFn({ method: "POST" })
       return { success: true, saleId: sale.id, transactionId: null, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
     }
 
+    if (!sale.user_id) return { success: false, saleId: sale.id, error: "Venda sem vendedor associado." };
     const creds = await loadUserCreds(sale.user_id);
     if (!creds) {
       return { success: false, saleId: sale.id, error: "Vendedor sem integração de pagamento configurada." };
@@ -274,7 +275,6 @@ export const chargeSale = createServerFn({ method: "POST" })
     const method = sale.payment_method as "mpesa" | "emola";
     const walletId = method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
     if (!walletId) return { success: false, saleId: sale.id, error: "Carteira não configurada." };
-    const walletIdStr: string = walletId;
 
     const {
       confirmSalePayment,
