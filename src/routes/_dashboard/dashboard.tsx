@@ -198,6 +198,42 @@ function DashboardPage() {
     retry: 1,
   });
 
+  // Sales in range for the revenue AreaChart (same as Desempenho do Checkout)
+  const { data: rangeSales } = useQuery({
+    queryKey: ["dashboard-range-sales", dateRange.from.toISOString(), dateRange.to.toISOString()],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("sales")
+        .select("amount, status, created_at")
+        .eq("user_id", user.id)
+        .gte("created_at", dateRange.from.toISOString())
+        .lte("created_at", dateRange.to.toISOString());
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 1000 * 10,
+  });
+
+  const revenueSeries = useMemo(() => {
+    const map = new Map<string, { day: string; receita: number; aprovadas: number; falhas: number }>();
+    (rangeSales || []).forEach((s: any) => {
+      const d = new Date(s.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      if (!map.has(key)) map.set(key, { day: key.slice(5), receita: 0, aprovadas: 0, falhas: 0 });
+      const row = map.get(key)!;
+      const st = normalizeSaleStatus(s.status);
+      if (st === "approved") {
+        row.receita += Number(s.amount || 0);
+        row.aprovadas += 1;
+      }
+      if (st === "failed" || st === "cancelled") row.falhas += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => a.day.localeCompare(b.day));
+  }, [rangeSales]);
+
+
   const resetData = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
