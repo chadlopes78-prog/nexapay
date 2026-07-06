@@ -169,8 +169,24 @@ function CheckoutPage() {
     setPaymentStatusMessage(`Pedido enviado para ${paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}. Confirme no seu telefone.`);
     trackEvent('InitiateCheckout');
 
+    let settled = false;
+    const finishPaid = (link: string | null, saleId: string) => {
+      if (settled) return;
+      settled = true;
+      trackEvent('Purchase');
+      window.location.replace(link || `/payment-success?productId=${productId}&saleId=${saleId}`);
+    };
+    const finishFailed = (msg: string) => {
+      if (settled) return;
+      settled = true;
+      setPaymentErrorMessage(msg);
+      setPaymentStatusMessage(null);
+      setProcessingPayment(false);
+    };
+
     try {
-      const result = (await payFn({
+      // Kick off gateway call
+      const payPromise = payFn({
         data: {
           productId,
           method: paymentMethod,
@@ -179,34 +195,54 @@ function CheckoutPage() {
           contactPhone: contactPhone || undefined,
           trafficPageTrackingId: trafficPageId,
         },
-      })) as PaymentResult;
+      }) as Promise<PaymentResult>;
 
-      if (!result.success) {
-        setPaymentErrorMessage(result.error || "Pagamento cancelado ou recusado.");
-        setPaymentStatusMessage(null);
-        setProcessingPayment(false);
-        return;
-      }
+      // Handle direct gateway response (may be first or last)
+      payPromise
+        .then((result) => {
+          if (settled) return;
+          if (!result.success) {
+            finishFailed(result.error || "Pagamento cancelado ou recusado.");
+            return;
+          }
+          if (result.status === "paid") {
+            finishPaid(result.accessLink ?? null, result.saleId);
+            return;
+          }
+          // pending → poll continues
+          if (result.saleId) startPolling(result.saleId);
+        })
+        .catch((error) => {
+          finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
+        });
 
-      if (result.status === "paid") {
-        trackEvent('Purchase');
-        const link = result.accessLink;
-        if (link) {
-          window.location.replace(link);
-        } else {
-          window.location.replace(`/payment-success?productId=${productId}&saleId=${result.saleId}`);
-        }
-        return;
-      }
+      // Poll DB status (webhook path — usually beats sync response)
+      const startPolling = (saleId: string) => {
+        let attempts = 0;
+        const maxAttempts = 90; // ~90s @ 1s
+        const tick = async () => {
+          if (settled || attempts >= maxAttempts) {
+            if (!settled) finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
+            return;
+          }
+          attempts++;
+          try {
+            const s = await statusFn({ data: { saleId } });
+            if (settled) return;
+            if (s.status === "paid") return finishPaid(s.accessLink, saleId);
+            if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
+          } catch {
+            /* ignore transient */
+          }
+          setTimeout(tick, 1000);
+        };
+        setTimeout(tick, 1000);
+      };
 
-      // status pending → tratou como não confirmado (cancelado/timeout)
-      setPaymentErrorMessage("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
-      setPaymentStatusMessage(null);
-      setProcessingPayment(false);
+      // We need a saleId to poll — wait briefly for payPromise to give one, or infer from webhook by phone
+      // Simplest: poll starts once payPromise resolves with a saleId (see above).
     } catch (error: any) {
-      setPaymentErrorMessage(error?.message || "Erro inesperado ao processar pagamento.");
-      setPaymentStatusMessage(null);
-      setProcessingPayment(false);
+      finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
     }
   };
 
