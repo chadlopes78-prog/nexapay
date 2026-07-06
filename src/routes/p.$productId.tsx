@@ -84,7 +84,7 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!processingPayment) return;
-    setPinSecondsLeft(120);
+    setPinSecondsLeft(10);
     const t = setInterval(() => {
       setPinSecondsLeft((p) => (p > 0 ? p - 1 : 0));
     }, 1000);
@@ -181,20 +181,30 @@ function CheckoutPage() {
       })) as PaymentResult;
 
       if (!result.success) {
-        setPaymentErrorMessage(result.error || "Pagamento recusado.");
+        setPaymentErrorMessage(result.error || "Pagamento cancelado ou recusado.");
         setPaymentStatusMessage(null);
-        toast.error(result.error || "Pagamento recusado.");
         setProcessingPayment(false);
         return;
       }
 
-      trackEvent('Purchase');
-      setPaymentStatusMessage("Pagamento enviado. A redirecionar...");
-      window.location.href = `/payment-success?productId=${productId}&saleId=${result.saleId}`;
+      if (result.status === "paid") {
+        trackEvent('Purchase');
+        const link = result.accessLink;
+        if (link) {
+          window.location.replace(link);
+        } else {
+          window.location.replace(`/payment-success?productId=${productId}&saleId=${result.saleId}`);
+        }
+        return;
+      }
+
+      // status pending → tratou como não confirmado (cancelado/timeout)
+      setPaymentErrorMessage("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
+      setPaymentStatusMessage(null);
+      setProcessingPayment(false);
     } catch (error: any) {
       setPaymentErrorMessage(error?.message || "Erro inesperado ao processar pagamento.");
       setPaymentStatusMessage(null);
-      toast.error("Erro ao processar pagamento: " + error.message);
       setProcessingPayment(false);
     }
   };

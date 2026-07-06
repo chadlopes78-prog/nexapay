@@ -21,6 +21,8 @@ export type PaymentResult =
       success: true;
       saleId: string;
       transactionId: string | null;
+      status: "paid" | "pending";
+      accessLink?: string | null;
     }
   | {
       success: false;
@@ -165,7 +167,7 @@ export const processPayment = createServerFn({ method: "POST" })
         data.productId,
       );
 
-    let productQuery = supabaseAdmin.from("products").select("id, price, status, user_id");
+    let productQuery = supabaseAdmin.from("products").select("id, price, status, user_id, access_link, delivery_link");
 
     if (isUuid) {
       productQuery = productQuery.eq("id", data.productId);
@@ -349,6 +351,8 @@ export const processPayment = createServerFn({ method: "POST" })
         success: true,
         saleId: sale.id,
         transactionId: transactionId ? String(transactionId) : null,
+        status: finalStatus === "paid" ? "paid" : "pending",
+        accessLink: finalStatus === "paid" ? (product.access_link || product.delivery_link || null) : null,
       };
     } catch (err: unknown) {
       console.error("processPayment error", err);
@@ -364,6 +368,8 @@ export const processPayment = createServerFn({ method: "POST" })
         success: true,
         saleId: sale.id,
         transactionId: null,
+        status: "pending",
+        accessLink: null,
       };
     }
   });
