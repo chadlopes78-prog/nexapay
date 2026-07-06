@@ -21,6 +21,8 @@ export type PaymentResult =
       success: true;
       saleId: string;
       transactionId: string | null;
+      status: "paid" | "pending";
+      accessLink?: string | null;
     }
   | {
       success: false;
