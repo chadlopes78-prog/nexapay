@@ -19,14 +19,14 @@ self.addEventListener('push', (event) => {
 
   const eventType = data.event || 'system';
   const icon = EVENT_ICONS[eventType] || '🔔';
-  const title = data.title || (icon + ' PaymentBlack');
+  const title = data.title || (icon + ' NexaPay');
   const options = {
     body: data.body || 'Uma atualização está disponível.',
     icon: '/logo-192.png',
     badge: '/logo-192.png',
     data: { url: data.url || '/dashboard', event: eventType },
     vibrate: eventType === 'sale.approved' ? [200, 100, 200, 100, 200] : [200, 100, 200],
-    tag: 'paymentblack-' + eventType,
+    tag: 'nexapay-' + eventType,
     renotify: true,
     requireInteraction: eventType === 'sale.approved' || eventType === 'sale.failed',
     actions: [

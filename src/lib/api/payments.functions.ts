@@ -136,7 +136,7 @@ async function getAccessToken(clientId: string, clientSecret: string): Promise<s
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      "User-Agent": "Mozilla/5.0 (compatible; PaymentBlackmz/1.0)",
+      "User-Agent": "Mozilla/5.0 (compatible; NexaPay/1.0)",
     },
     body: JSON.stringify({
       grant_type: "client_credentials",
@@ -302,14 +302,14 @@ export const chargeSale = createServerFn({ method: "POST" })
           "Content-Type": "application/json; charset=utf-8",
           Accept: "application/json",
           Authorization: `Bearer ${token}`,
-          "User-Agent": "PagamentosMZ/1.0",
+          "User-Agent": "NexaPay/1.0",
         },
         body: JSON.stringify({
           client_id: creds.e2p_client_id,
           amount: String(amount),
           phone: localPhone,
           reference,
-          merchant_name: "PagamentosMZ",
+          merchant_name: "NexaPay",
           description: "Pagamento de produto digital",
         }),
         signal: controller.signal,

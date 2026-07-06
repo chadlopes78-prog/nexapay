@@ -26,7 +26,7 @@ serve(async (req) => {
 
     const publicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const privateKey = Deno.env.get("VAPID_PRIVATE_KEY");
-    const subject = Deno.env.get("VAPID_SUBJECT") || "https://paymentblack.com";
+    const subject = Deno.env.get("VAPID_SUBJECT") || "https://nexapay.co.mz";
 
     if (publicKey && privateKey) {
       webpush.setVapidDetails(subject, publicKey, privateKey);

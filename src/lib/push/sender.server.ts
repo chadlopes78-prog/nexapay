@@ -7,7 +7,7 @@ const VAPID_PUBLIC_KEY =
 function getVapidDetails() {
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   if (!privateKey) throw new Error("VAPID_PRIVATE_KEY env var not set");
-  webpush.setVapidDetails("mailto:admin@paymentblackmz.com", VAPID_PUBLIC_KEY, privateKey);
+  webpush.setVapidDetails("mailto:admin@nexapay.co.mz", VAPID_PUBLIC_KEY, privateKey);
 }
 
 export type PushEvent =
@@ -28,7 +28,7 @@ const EVENT_TITLES: Record<PushEvent, string> = {
   refund: "↩️ Reembolso",
   new_customer: "👤 Novo Cliente",
   daily_summary: "📊 Resumo Diário",
-  system: "🔔 PaymentBlack",
+  system: "🔔 NexaPay",
 };
 
 export interface PushPayload {
@@ -65,7 +65,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     return;
   }
 
-  const title = payload.title ?? EVENT_TITLES[payload.event] ?? "PaymentBlack";
+  const title = payload.title ?? EVENT_TITLES[payload.event] ?? "NexaPay";
   const notifPayload = JSON.stringify({
     title,
     body: payload.body,

@@ -12,7 +12,7 @@ function Index() {
           <div className="h-9 w-9 bg-black rounded-xl flex items-center justify-center group-hover:rotate-6 transition-all border border-slate-800 shadow-lg">
              <span className="text-white font-black text-lg">P</span>
           </div>
-          <span className="font-black text-3xl tracking-tighter text-slate-900">PaymentBlack</span>
+          <span className="font-black text-3xl tracking-tighter text-slate-900">NexaPay</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link className="text-sm font-medium hover:underline underline-offset-4" to="/auth">
@@ -62,7 +62,7 @@ function Index() {
         </section>
       </main>
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-        <p className="text-xs text-gray-500">© 2026 Paymentblack Mozambique. Todos os direitos reservados.</p>
+        <p className="text-xs text-gray-500">© 2026 NexaPay. Todos os direitos reservados.</p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
           <Link className="text-xs hover:underline underline-offset-4" to="/">
             Termos de Serviço
