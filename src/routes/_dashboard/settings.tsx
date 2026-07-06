@@ -58,7 +58,7 @@ const SECTIONS: {
   { id: "profile", label: "Perfil da Conta", description: "Seus dados pessoais", icon: User },
   { id: "security", label: "Segurança", description: "Senha e acesso", icon: Shield },
   { id: "payouts", label: "Recebimentos", description: "Carteiras e pagamentos", icon: Wallet },
-  { id: "notifications", label: "Notificações", description: "Alertas e eventos", icon: Bell },
+  
   { id: "integrations", label: "Integrações", description: "Serviços externos", icon: Zap },
   { id: "preferences", label: "Preferências", description: "Tema, idioma e região", icon: Settings2 },
   { id: "developer", label: "API e Desenvolvedor", description: "Chaves, webhooks e logs", icon: Code2 },
