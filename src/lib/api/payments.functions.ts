@@ -167,7 +167,7 @@ export const processPayment = createServerFn({ method: "POST" })
         data.productId,
       );
 
-    let productQuery = supabaseAdmin.from("products").select("id, price, status, user_id");
+    let productQuery = supabaseAdmin.from("products").select("id, price, status, user_id, access_link, delivery_link");
 
     if (isUuid) {
       productQuery = productQuery.eq("id", data.productId);
