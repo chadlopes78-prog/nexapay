@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Users, 
-  UserCheck, 
-  UserPlus, 
-  UserX, 
+import {
+  Users,
+  UserCheck,
+  UserPlus,
+  UserX,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -19,7 +20,15 @@ import {
   Mail,
   Filter,
   AlertTriangle,
-  RefreshCcw
+  RefreshCcw,
+  Eye,
+  Package,
+  DollarSign,
+  Activity,
+  ScrollText,
+  ArrowLeft,
+  Loader2,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,9 +48,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -49,386 +82,758 @@ export const Route = createFileRoute("/admin")({
   component: AdminControlCenter,
 });
 
+type StatusFilter = "all" | "pending" | "approved" | "rejected" | "banned" | "suspended";
+type SortKey = "created_at" | "last_login" | "full_name";
+type ConfirmAction = {
+  userId: string;
+  status: string;
+  label: string;
+} | null;
+
+const PAGE_SIZE = 20;
+
 function AdminControlCenter() {
-  const [users, setUsers] = useState<any[] | null>(null);
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    approved: 0,
-    banned: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [authorized, setAuthorized] = useState<null | boolean>(null);
+  const [tab, setTab] = useState<"users" | "audit">("users");
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
-  const navigate = useNavigate();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmAction>(null);
 
-  const PAGE_SIZE = 20;
-  const ADMIN_EMAIL = "chadlopesff@gmail.com";
-
+  // Backend-enforced access check via has_role RPC
   useEffect(() => {
-    checkAdmin();
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [page, search]);
-
-  const checkAdmin = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+    (async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) {
         navigate({ to: "/auth" });
         return;
       }
-
-      // Bypass for primary admin
-      if (session.user.email === ADMIN_EMAIL) {
+      const { data: isSuper, error } = await supabase.rpc("has_role", {
+        _user_id: sess.session.user.id,
+        _role: "super_admin",
+      });
+      if (error || !isSuper) {
+        toast.error("Acesso negado. Área exclusiva do Super Administrador.");
+        setAuthorized(false);
+        navigate({ to: "/dashboard" });
         return;
       }
+      setAuthorized(true);
+    })();
+  }, [navigate]);
 
-      // Fallback: check profile role
-      const { data: profile } = await supabase
+  // -------- Metrics --------
+  const metrics = useQuery({
+    enabled: authorized === true,
+    queryKey: ["admin-metrics"],
+    queryFn: async () => {
+      const now = new Date();
+      const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      const [total, pending, approved, rejected, banned, today, month, products, sales, revenue] =
+        await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).eq("status", "pending"),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).eq("status", "approved"),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).eq("status", "rejected"),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).eq("status", "banned"),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", startToday),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", startMonth),
+          supabase.from("products").select("*", { count: "exact", head: true }),
+          supabase.from("sales").select("*", { count: "exact", head: true }),
+          supabase
+            .from("sales")
+            .select("amount")
+            .in("status", ["approved", "paid", "success"]),
+        ]);
+
+      const totalRevenue = (revenue.data || []).reduce((s, r: any) => s + (Number(r.amount) || 0), 0);
+      const activeUsers = approved.count || 0;
+
+      return {
+        total: total.count || 0,
+        pending: pending.count || 0,
+        approved: approved.count || 0,
+        rejected: rejected.count || 0,
+        banned: banned.count || 0,
+        today: today.count || 0,
+        month: month.count || 0,
+        products: products.count || 0,
+        sales: sales.count || 0,
+        revenue: totalRevenue,
+        activeUsers,
+      };
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  // -------- Users list --------
+  const usersQuery = useQuery({
+    enabled: authorized === true && tab === "users",
+    queryKey: ["admin-users", page, search, statusFilter, sortKey],
+    queryFn: async () => {
+      let q = supabase
         .from("profiles")
-        .select("role")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      if (profile?.role !== 'admin') {
-        navigate({ to: "/dashboard" });
-        toast.error("Acesso negado.");
+        .select("*", { count: "exact" })
+        .order(sortKey, { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (search.trim()) {
+        const s = search.trim();
+        q = q.or(`full_name.ilike.%${s}%,email.ilike.%${s}%`);
       }
-    } catch (error) {
-      console.error("Admin check error:", error);
-      navigate({ to: "/auth" });
-    }
-  };
+      const { data, count, error } = await q;
+      if (error) throw error;
+      return { rows: data || [], total: count || 0 };
+    },
+    staleTime: 10_000,
+  });
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Fetch stats using count for better performance and to avoid loading all data
-      const [totalCount, pendingCount, approvedCount, bannedCount] = await Promise.all([
-        supabase.from("profiles").select("*", { count: 'exact', head: true }),
-        supabase.from("profiles").select("*", { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from("profiles").select("*", { count: 'exact', head: true }).eq('status', 'approved'),
-        supabase.from("profiles").select("*", { count: 'exact', head: true }).eq('status', 'banned'),
-      ]);
-      
-      setStats({
-        total: totalCount.count || 0,
-        pending: pendingCount.count || 0,
-        approved: approvedCount.count || 0,
-        banned: bannedCount.count || 0
-      });
-
-      // Fetch paginated users
-      let query = supabase
-        .from("profiles")
+  // -------- Audit logs --------
+  const audit = useQuery({
+    enabled: authorized === true && tab === "audit",
+    queryKey: ["admin-audit"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_audit_logs")
         .select("*")
         .order("created_at", { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        .limit(100);
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
-      if (search) {
-        query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
-      }
-
-      const { data, error: queryError } = await query;
-      
-      if (queryError) {
-        if (queryError.message.includes("infinite recursion")) {
-          throw new Error("Erro de segurança no banco de dados. Contate o suporte.");
-        }
-        throw queryError;
-      }
-      
-      setUsers(data || []);
-    } catch (err: any) {
-      console.error("Fetch error:", err);
-      setError(err.message || "Erro desconhecido ao carregar usuários");
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateStatus = async (userId: string, status: string) => {
-    try {
+  // -------- Mutation: change status --------
+  const updateStatus = useMutation({
+    mutationFn: async ({ userId, status }: { userId: string; status: string }) => {
+      const { data: sess } = await supabase.auth.getSession();
+      const actor = sess.session?.user;
       const { error } = await supabase
         .from("profiles")
-        .update({ 
-          status,
-          updated_at: new Date().toISOString()
-        })
+        .update({ status, updated_at: new Date().toISOString() })
         .eq("id", userId);
-      
       if (error) throw error;
-      
-      toast.success(`Usuário ${status} com sucesso.`);
-      
-      // Update local state for immediate feedback
-      if (users) {
-        setUsers(users.map(u => u.id === userId ? { ...u, status } : u));
-      }
-      
-      // Recalculate stats locally to avoid extra query
-      fetchUsers(); 
-    } catch (error: any) {
-      toast.error("Erro na operação: " + error.message);
-    }
-  };
+      await supabase.from("admin_audit_logs").insert({
+        actor_id: actor?.id,
+        actor_email: actor?.email,
+        target_user_id: userId,
+        action: `status:${status}`,
+        details: { status },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Status atualizado com sucesso");
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["admin-metrics"] });
+      qc.invalidateQueries({ queryKey: ["admin-audit"] });
+    },
+    onError: (e: any) => toast.error("Erro: " + e.message),
+  });
 
-  const LoadingSkeleton = () => (
-    <div className="space-y-4 p-6">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-center space-x-4">
-          <Skeleton className="h-12 w-12 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full max-w-[250px]" />
-            <Skeleton className="h-4 w-full max-w-[200px]" />
-          </div>
+  if (authorized === null) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-slate-50">
+        <div className="flex items-center gap-2 text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Verificando permissões...
         </div>
-      ))}
-    </div>
-  );
-
-  const ErrorState = ({ message }: { message: string }) => (
-    <div className="p-10 text-center space-y-4">
-      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-600 mb-2">
-        <AlertTriangle className="h-8 w-8" />
       </div>
-      <h3 className="text-xl font-bold text-slate-900">Falha ao carregar dados</h3>
-      <p className="text-slate-500 max-w-md mx-auto">{message}</p>
-      <Button onClick={fetchUsers} variant="outline" className="mt-4">
-        <RefreshCcw className="mr-2 h-4 w-4" />
-        Tentar Novamente
-      </Button>
-    </div>
-  );
+    );
+  }
+  if (authorized === false) return null;
 
-  const EmptyState = () => (
-    <div className="p-20 text-center">
-      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-400 mb-4">
-        <Search className="h-8 w-8" />
-      </div>
-      <h3 className="text-lg font-bold text-slate-900">Nenhum utilizador encontrado</h3>
-      <p className="text-slate-500">Ajuste seus filtros ou tente uma busca diferente.</p>
-    </div>
-  );
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'approved': return <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-emerald-200 font-medium">Aprovado</Badge>;
-      case 'pending': return <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border-amber-200 font-medium">Pendente</Badge>;
-      case 'banned': return <Badge className="bg-red-50 text-red-700 hover:bg-red-50 border-red-200 font-medium">Banido</Badge>;
-      case 'rejected': return <Badge className="bg-slate-50 text-slate-700 hover:bg-slate-50 border-slate-200 font-medium">Rejeitado</Badge>;
-      default: return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  const m = metrics.data;
+  const totalPages = usersQuery.data ? Math.ceil(usersQuery.data.total / PAGE_SIZE) : 0;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] p-4 md:p-10">
-      <div className="max-w-7xl mx-auto space-y-10">
-        
-        {/* Header - Clean Stripe Style */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-primary font-bold text-sm tracking-tight uppercase">
+            <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider">
               <Shield className="h-4 w-4" />
-              Control Center
+              Super Admin · Controle do Sistema
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">
-              Gestão de Acessos
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
+              Painel Administrativo
             </h1>
-            <p className="text-slate-500 font-medium">Controle total sobre a base de usuários da PaymentBlack.</p>
+            <p className="text-sm text-slate-500">
+              Visão geral, gerenciamento de usuários e auditoria da plataforma.
+            </p>
           </div>
-          
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                metrics.refetch();
+                usersQuery.refetch();
+                audit.refetch();
+              }}
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" /> Atualizar
+            </Button>
             <Link to="/dashboard">
-              <Button variant="outline" className="bg-white border-slate-200 text-slate-600 font-bold hover:bg-slate-50 shadow-sm h-11 px-6 rounded-xl transition-all active:scale-95">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                Painel Operacional
+              <Button variant="outline" size="sm">
+                <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Metric Cards - Premium Style */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { label: "Total de Usuários", value: stats.total, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-            { label: "Aguardando Aprovação", value: stats.pending, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-            { label: "Contas Ativas", value: stats.approved, icon: UserCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
-            { label: "Contas Banidas", value: stats.banned, icon: Ban, color: "text-red-600", bg: "bg-red-50" },
-          ].map((stat, i) => (
-            <Card key={i} className="border border-slate-100 shadow-sm bg-white rounded-2xl overflow-hidden transition-all hover:shadow-md">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={cn("p-2.5 rounded-xl", stat.bg)}>
-                    <stat.icon className={cn("h-5 w-5", stat.color)} />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-1">{stat.label}</p>
-                  <p className="text-3xl font-black text-slate-900 tabular-nums leading-none">{stat.value}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Metrics grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <MetricCard label="Total de usuários" value={m?.total} icon={Users} tone="blue" />
+          <MetricCard label="Usuários ativos" value={m?.activeUsers} icon={Activity} tone="emerald" />
+          <MetricCard label="Pendentes" value={m?.pending} icon={Clock} tone="amber" />
+          <MetricCard label="Aprovados" value={m?.approved} icon={UserCheck} tone="emerald" />
+          <MetricCard label="Rejeitados" value={m?.rejected} icon={UserX} tone="slate" />
+          <MetricCard label="Banidos" value={m?.banned} icon={Ban} tone="red" />
+          <MetricCard label="Cadastros hoje" value={m?.today} icon={UserPlus} tone="violet" />
+          <MetricCard label="Cadastros no mês" value={m?.month} icon={UserPlus} tone="indigo" />
+          <MetricCard label="Produtos criados" value={m?.products} icon={Package} tone="sky" />
+          <MetricCard label="Vendas processadas" value={m?.sales} icon={Activity} tone="cyan" />
+          <MetricCard
+            label="Receita da plataforma"
+            value={m ? formatMZN(m.revenue) : undefined}
+            icon={DollarSign}
+            tone="emerald"
+            wide
+          />
         </div>
 
-        {/* Main Table Area */}
-        <Card className="border border-slate-100 shadow-sm bg-white rounded-2xl overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input 
-                placeholder="Pesquisar por nome ou email..." 
-                className="pl-10 h-11 bg-slate-50 border-transparent focus:bg-white focus:ring-primary/20 rounded-xl font-medium transition-all"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="text-slate-500 font-bold hover:bg-slate-50 rounded-lg">
-                <Filter className="mr-2 h-4 w-4" />
-                Filtros
-              </Button>
-            </div>
-          </div>
+        {/* Tabs */}
+        <div className="flex items-center gap-1 border-b border-slate-200">
+          <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={Users}>
+            Usuários
+          </TabButton>
+          <TabButton active={tab === "audit"} onClick={() => setTab("audit")} icon={ScrollText}>
+            Auditoria
+          </TabButton>
+        </div>
 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-slate-50/50">
-                <TableRow className="hover:bg-transparent border-slate-100 h-12">
-                  <TableHead className="font-bold text-slate-500 text-[12px] uppercase tracking-wider pl-6">Utilizador</TableHead>
-                  <TableHead className="font-bold text-slate-500 text-[12px] uppercase tracking-wider">Status</TableHead>
-                  <TableHead className="font-bold text-slate-500 text-[12px] uppercase tracking-wider">Adesão</TableHead>
-                  <TableHead className="font-bold text-slate-500 text-[12px] uppercase tracking-wider">Último Login</TableHead>
-                  <TableHead className="text-right font-bold text-slate-500 text-[12px] uppercase tracking-wider pr-6">Gerir</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="p-0">
-                      <LoadingSkeleton />
-                    </TableCell>
+        {tab === "users" && (
+          <Card className="border-slate-200 shadow-sm bg-white rounded-xl overflow-hidden">
+            {/* Filters */}
+            <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="relative w-full md:max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Pesquisar por nome ou e-mail..."
+                  className="pl-9 h-10"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(0);
+                  }}
+                />
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select
+                  value={statusFilter}
+                  onValueChange={(v: StatusFilter) => {
+                    setStatusFilter(v);
+                    setPage(0);
+                  }}
+                >
+                  <SelectTrigger className="h-10 w-[160px]">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="pending">Pendentes</SelectItem>
+                    <SelectItem value="approved">Aprovados</SelectItem>
+                    <SelectItem value="rejected">Rejeitados</SelectItem>
+                    <SelectItem value="banned">Banidos</SelectItem>
+                    <SelectItem value="suspended">Suspensos</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sortKey} onValueChange={(v: SortKey) => setSortKey(v)}>
+                  <SelectTrigger className="h-10 w-[170px]">
+                    <SelectValue placeholder="Ordenar por" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="created_at">Mais recentes</SelectItem>
+                    <SelectItem value="last_login">Último acesso</SelectItem>
+                    <SelectItem value="full_name">Nome (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50/60">
+                  <TableRow className="hover:bg-transparent border-slate-100">
+                    <TableHead className="pl-6 text-xs uppercase tracking-wider text-slate-500">Usuário</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider text-slate-500">Status</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider text-slate-500">Cadastro</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider text-slate-500">Último acesso</TableHead>
+                    <TableHead className="text-right pr-6 text-xs uppercase tracking-wider text-slate-500">Ações</TableHead>
                   </TableRow>
-                ) : error ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="p-0">
-                      <ErrorState message={error} />
-                    </TableCell>
-                  </TableRow>
-                ) : users === null || users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="p-0">
-                      <EmptyState />
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-slate-50/50 border-slate-100 transition-colors h-20">
-                      <TableCell className="pl-6">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-black shrink-0 border border-slate-200">
-                            {user.full_name?.charAt(0) || "U"}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-slate-900 truncate">{user.full_name || "Sem nome cadastrado"}</span>
-                            <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {user.email || "Sem email cadastrado"}
-                            </span>
-                          </div>
+                </TableHeader>
+                <TableBody>
+                  {usersQuery.isLoading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell colSpan={5} className="py-3">
+                          <Skeleton className="h-10 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : usersQuery.error ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="p-10 text-center">
+                        <div className="inline-flex flex-col items-center gap-2 text-slate-500">
+                          <AlertTriangle className="h-6 w-6 text-red-500" />
+                          <p>Falha ao carregar usuários.</p>
+                          <Button variant="outline" size="sm" onClick={() => usersQuery.refetch()}>
+                            Tentar novamente
+                          </Button>
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(user.status)}</TableCell>
-                      <TableCell className="text-sm text-slate-600 font-medium">
-                        {user.created_at ? new Date(user.created_at).toLocaleDateString('pt-BR') : "-"}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-600 font-medium">
-                        {user.last_login ? new Date(user.last_login).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : "Nunca acessou"}
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100">
-                              <MoreVertical className="h-4 w-4 text-slate-400" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl shadow-xl border-slate-100">
-                            <DropdownMenuLabel className="text-[11px] uppercase tracking-widest text-slate-400 font-black px-2 pb-2">Controle de Acesso</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              disabled={user.status === 'approved'}
-                              className="flex items-center gap-2 py-2.5 rounded-lg text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50 cursor-pointer font-bold"
-                              onClick={() => handleUpdateStatus(user.id, 'approved')}
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                              Aprovar Acesso
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              disabled={user.status === 'rejected'}
-                              className="flex items-center gap-2 py-2.5 rounded-lg text-amber-600 focus:text-amber-700 focus:bg-amber-50 cursor-pointer font-bold"
-                              onClick={() => handleUpdateStatus(user.id, 'rejected')}
-                            >
-                              <XCircle className="h-4 w-4" />
-                              Recusar Adesão
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              disabled={user.status === 'banned'}
-                              className="flex items-center gap-2 py-2.5 rounded-lg text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer font-bold"
-                              onClick={() => handleUpdateStatus(user.id, 'banned')}
-                            >
-                              <Ban className="h-4 w-4" />
-                              Banir Permanentemente
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                    </TableRow>
+                  ) : usersQuery.data?.rows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="p-16 text-center text-slate-500">
+                        Nenhum usuário encontrado com os filtros atuais.
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          
-          <div className="p-6 border-t border-slate-100 flex items-center justify-between bg-white">
-            <p className="text-sm font-bold text-slate-400">
-              {stats.total > 0 ? `Exibindo ${users?.length || 0} de ${stats.total} registros` : "Nenhum registro encontrado"}
-            </p>
-            <div className="flex items-center gap-1.5">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-9 w-9 rounded-lg border-slate-200"
-                disabled={page === 0}
-                onClick={() => setPage(p => p - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="px-3 h-9 flex items-center justify-center bg-slate-50 rounded-lg text-xs font-black text-slate-600">
-                PÁGINA {page + 1}
-              </div>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-9 w-9 rounded-lg border-slate-200"
-                disabled={!users || users.length < PAGE_SIZE}
-                onClick={() => setPage(p => p + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+                  ) : (
+                    usersQuery.data!.rows.map((u: any) => (
+                      <TableRow key={u.id} className="hover:bg-slate-50/50 border-slate-100">
+                        <TableCell className="pl-6 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-full bg-slate-100 grid place-items-center text-slate-500 font-bold">
+                              {(u.full_name || u.email || "?").charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-900 truncate">
+                                {u.full_name || "Sem nome"}
+                              </p>
+                              <p className="text-xs text-slate-500 truncate flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {u.email || "—"}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{statusBadge(u.status)}</TableCell>
+                        <TableCell className="text-sm text-slate-600">{fmtDate(u.created_at)}</TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {u.last_login ? fmtDateTime(u.last_login) : "Nunca"}
+                        </TableCell>
+                        <TableCell className="text-right pr-6">
+                          <div className="inline-flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8"
+                              onClick={() => setSelectedUser(u)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Detalhes
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-52">
+                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  disabled={u.status === "approved"}
+                                  onClick={() =>
+                                    setConfirm({ userId: u.id, status: "approved", label: "aprovar" })
+                                  }
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" /> Aprovar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  disabled={u.status === "rejected"}
+                                  onClick={() =>
+                                    setConfirm({ userId: u.id, status: "rejected", label: "rejeitar" })
+                                  }
+                                >
+                                  <XCircle className="h-4 w-4 mr-2 text-amber-600" /> Rejeitar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  disabled={u.status === "suspended"}
+                                  onClick={() =>
+                                    setConfirm({ userId: u.id, status: "suspended", label: "suspender" })
+                                  }
+                                >
+                                  <Clock className="h-4 w-4 mr-2 text-slate-500" /> Suspender
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  disabled={u.status === "banned"}
+                                  className="text-red-600 focus:text-red-700"
+                                  onClick={() =>
+                                    setConfirm({ userId: u.id, status: "banned", label: "banir" })
+                                  }
+                                >
+                                  <Ban className="h-4 w-4 mr-2" /> Banir
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  disabled={u.status === "approved"}
+                                  onClick={() =>
+                                    setConfirm({ userId: u.id, status: "approved", label: "reativar" })
+                                  }
+                                >
+                                  <RefreshCcw className="h-4 w-4 mr-2" /> Reativar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
-          </div>
-        </Card>
+
+            {/* Pagination */}
+            <div className="p-4 border-t border-slate-100 flex items-center justify-between text-sm">
+              <p className="text-slate-500">
+                {usersQuery.data?.total ?? 0} usuários · página {page + 1}
+                {totalPages > 0 ? ` de ${totalPages}` : ""}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={usersQuery.data ? (page + 1) * PAGE_SIZE >= usersQuery.data.total : true}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {tab === "audit" && (
+          <Card className="border-slate-200 shadow-sm bg-white rounded-xl">
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-900">Registros de Auditoria</h3>
+              <p className="text-xs text-slate-500">Ações administrativas realizadas nos últimos registros.</p>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50/60">
+                  <TableRow>
+                    <TableHead className="pl-6 text-xs uppercase tracking-wider text-slate-500">Quando</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider text-slate-500">Ator</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider text-slate-500">Ação</TableHead>
+                    <TableHead className="text-xs uppercase tracking-wider text-slate-500">Alvo</TableHead>
+                    <TableHead className="pr-6 text-xs uppercase tracking-wider text-slate-500">IP</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {audit.isLoading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell colSpan={5}>
+                          <Skeleton className="h-8 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (audit.data || []).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center p-10 text-slate-500">
+                        Nenhum registro de auditoria ainda.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    audit.data!.map((row: any) => (
+                      <TableRow key={row.id} className="border-slate-100">
+                        <TableCell className="pl-6 text-sm text-slate-600">
+                          {fmtDateTime(row.created_at)}
+                        </TableCell>
+                        <TableCell className="text-sm">{row.actor_email || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {row.action}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500 font-mono">
+                          {row.target_user_id?.slice(0, 8) || "—"}
+                        </TableCell>
+                        <TableCell className="pr-6 text-xs text-slate-500">
+                          {row.ip_address || "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )}
       </div>
+
+      {/* User details side panel */}
+      <UserDetailsSheet
+        user={selectedUser}
+        onClose={() => setSelectedUser(null)}
+      />
+
+      {/* Confirmation dialog */}
+      <AlertDialog open={!!confirm} onOpenChange={(o) => !o && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar ação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja <strong>{confirm?.label}</strong> este usuário? Esta ação será
+              registrada nos logs de auditoria.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirm) {
+                  updateStatus.mutate({ userId: confirm.userId, status: confirm.status });
+                  setConfirm(null);
+                }
+              }}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+/* --------------- Helpers / subcomponents --------------- */
+
+function MetricCard({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  wide,
+}: {
+  label: string;
+  value: number | string | undefined;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: "blue" | "emerald" | "amber" | "red" | "slate" | "violet" | "indigo" | "sky" | "cyan";
+  wide?: boolean;
+}) {
+  const toneMap: Record<string, string> = {
+    blue: "text-blue-600 bg-blue-50",
+    emerald: "text-emerald-600 bg-emerald-50",
+    amber: "text-amber-600 bg-amber-50",
+    red: "text-red-600 bg-red-50",
+    slate: "text-slate-600 bg-slate-100",
+    violet: "text-violet-600 bg-violet-50",
+    indigo: "text-indigo-600 bg-indigo-50",
+    sky: "text-sky-600 bg-sky-50",
+    cyan: "text-cyan-600 bg-cyan-50",
+  };
+  return (
+    <Card
+      className={cn(
+        "border-slate-200 shadow-sm bg-white rounded-xl",
+        wide && "col-span-2 md:col-span-3 lg:col-span-4",
+      )}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className={cn("h-9 w-9 grid place-items-center rounded-lg", toneMap[tone])}>
+            <Icon className="h-4 w-4" />
+          </div>
+        </div>
+        <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mt-3">{label}</p>
+        <p className="text-2xl font-bold text-slate-900 tabular-nums mt-1">
+          {value === undefined ? <Skeleton className="h-7 w-16" /> : value}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  icon: Icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "px-4 py-2.5 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors -mb-px",
+        active
+          ? "border-primary text-primary"
+          : "border-transparent text-slate-500 hover:text-slate-800",
+      )}
+    >
+      <Icon className="h-4 w-4" />
+      {children}
+    </button>
+  );
+}
+
+function statusBadge(status?: string) {
+  const map: Record<string, string> = {
+    approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    pending: "bg-amber-50 text-amber-700 border-amber-200",
+    rejected: "bg-slate-50 text-slate-700 border-slate-200",
+    banned: "bg-red-50 text-red-700 border-red-200",
+    suspended: "bg-orange-50 text-orange-700 border-orange-200",
+  };
+  const label: Record<string, string> = {
+    approved: "Aprovado",
+    pending: "Pendente",
+    rejected: "Rejeitado",
+    banned: "Banido",
+    suspended: "Suspenso",
+  };
+  const key = status || "pending";
+  return (
+    <Badge variant="outline" className={cn("font-medium", map[key] || map.pending)}>
+      {label[key] || key}
+    </Badge>
+  );
+}
+
+function fmtDate(iso?: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("pt-BR");
+}
+function fmtDateTime(iso?: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+function formatMZN(v: number) {
+  return new Intl.NumberFormat("pt-MZ", {
+    style: "currency",
+    currency: "MZN",
+    maximumFractionDigits: 0,
+  }).format(v);
+}
+
+function UserDetailsSheet({ user, onClose }: { user: any | null; onClose: () => void }) {
+  const details = useQuery({
+    enabled: !!user,
+    queryKey: ["admin-user-details", user?.id],
+    queryFn: async () => {
+      const [products, sales, revenue] = await Promise.all([
+        supabase.from("products").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("sales").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase
+          .from("sales")
+          .select("amount")
+          .eq("user_id", user.id)
+          .in("status", ["approved", "paid", "success"]),
+      ]);
+      const total = (revenue.data || []).reduce((s, r: any) => s + (Number(r.amount) || 0), 0);
+      return {
+        productsCount: products.count || 0,
+        salesCount: sales.count || 0,
+        revenue: total,
+      };
+    },
+  });
+
+  return (
+    <Sheet open={!!user} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        {user && (
+          <>
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-slate-100 grid place-items-center text-slate-500 font-bold">
+                  {(user.full_name || user.email || "?").charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate">{user.full_name || "Sem nome"}</p>
+                  <p className="text-xs text-slate-500 font-normal truncate">{user.email}</p>
+                </div>
+              </SheetTitle>
+              <SheetDescription>Detalhes completos do usuário</SheetDescription>
+            </SheetHeader>
+
+            <div className="mt-6 space-y-6">
+              <div className="grid grid-cols-3 gap-3">
+                <MiniStat label="Produtos" value={details.data?.productsCount ?? "…"} icon={Package} />
+                <MiniStat label="Vendas" value={details.data?.salesCount ?? "…"} icon={Activity} />
+                <MiniStat
+                  label="Receita"
+                  value={details.data ? formatMZN(details.data.revenue) : "…"}
+                  icon={DollarSign}
+                />
+              </div>
+
+              <InfoRow label="Status" value={statusBadge(user.status)} />
+              <InfoRow label="ID" value={<span className="font-mono text-xs">{user.id}</span>} />
+              <InfoRow label="E-mail" value={user.email || "—"} />
+              <InfoRow label="Data de cadastro" value={fmtDateTime(user.created_at)} />
+              <InfoRow label="Último acesso" value={user.last_login ? fmtDateTime(user.last_login) : "Nunca"} />
+              <InfoRow label="Função do perfil" value={user.role || "user"} />
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 p-3">
+      <Icon className="h-4 w-4 text-slate-400" />
+      <p className="text-[10px] uppercase tracking-wider text-slate-500 mt-2 font-medium">{label}</p>
+      <p className="text-sm font-bold text-slate-900 mt-0.5 truncate">{value}</p>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-2 border-b border-slate-100">
+      <span className="text-xs uppercase tracking-wider text-slate-500 font-medium">{label}</span>
+      <span className="text-sm text-slate-800 text-right">{value}</span>
     </div>
   );
 }
