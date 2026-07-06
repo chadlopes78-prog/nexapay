@@ -24,6 +24,7 @@ import { Route as DashboardRecoveryRouteImport } from './routes/_dashboard/recov
 import { Route as DashboardProductsRouteImport } from './routes/_dashboard/products'
 import { Route as DashboardPixelRouteImport } from './routes/_dashboard/pixel'
 import { Route as DashboardNotificationsRouteImport } from './routes/_dashboard/notifications'
+import { Route as DashboardIntegrationsRouteImport } from './routes/_dashboard/integrations'
 import { Route as DashboardFilesRouteImport } from './routes/_dashboard/files'
 import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dashboard'
 import { Route as DashboardCustomersRouteImport } from './routes/_dashboard/customers'
@@ -105,6 +106,11 @@ const DashboardNotificationsRoute = DashboardNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardIntegrationsRoute = DashboardIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardFilesRoute = DashboardFilesRouteImport.update({
   id: '/files',
   path: '/files',
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
   '/files': typeof DashboardFilesRoute
+  '/integrations': typeof DashboardIntegrationsRoute
   '/notifications': typeof DashboardNotificationsRoute
   '/pixel': typeof DashboardPixelRoute
   '/products': typeof DashboardProductsRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/customers': typeof DashboardCustomersRoute
   '/dashboard': typeof DashboardDashboardRoute
   '/files': typeof DashboardFilesRoute
+  '/integrations': typeof DashboardIntegrationsRoute
   '/notifications': typeof DashboardNotificationsRoute
   '/pixel': typeof DashboardPixelRoute
   '/products': typeof DashboardProductsRoute
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/_dashboard/customers': typeof DashboardCustomersRoute
   '/_dashboard/dashboard': typeof DashboardDashboardRoute
   '/_dashboard/files': typeof DashboardFilesRoute
+  '/_dashboard/integrations': typeof DashboardIntegrationsRoute
   '/_dashboard/notifications': typeof DashboardNotificationsRoute
   '/_dashboard/pixel': typeof DashboardPixelRoute
   '/_dashboard/products': typeof DashboardProductsRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/files'
+    | '/integrations'
     | '/notifications'
     | '/pixel'
     | '/products'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/files'
+    | '/integrations'
     | '/notifications'
     | '/pixel'
     | '/products'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/_dashboard/customers'
     | '/_dashboard/dashboard'
     | '/_dashboard/files'
+    | '/_dashboard/integrations'
     | '/_dashboard/notifications'
     | '/_dashboard/pixel'
     | '/_dashboard/products'
@@ -397,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardNotificationsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/_dashboard/integrations': {
+      id: '/_dashboard/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof DashboardIntegrationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/_dashboard/files': {
       id: '/_dashboard/files'
       path: '/files'
@@ -446,6 +465,7 @@ interface DashboardRouteChildren {
   DashboardCustomersRoute: typeof DashboardCustomersRoute
   DashboardDashboardRoute: typeof DashboardDashboardRoute
   DashboardFilesRoute: typeof DashboardFilesRoute
+  DashboardIntegrationsRoute: typeof DashboardIntegrationsRoute
   DashboardNotificationsRoute: typeof DashboardNotificationsRoute
   DashboardPixelRoute: typeof DashboardPixelRoute
   DashboardProductsRoute: typeof DashboardProductsRoute
@@ -459,6 +479,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardCustomersRoute: DashboardCustomersRoute,
   DashboardDashboardRoute: DashboardDashboardRoute,
   DashboardFilesRoute: DashboardFilesRoute,
+  DashboardIntegrationsRoute: DashboardIntegrationsRoute,
   DashboardNotificationsRoute: DashboardNotificationsRoute,
   DashboardPixelRoute: DashboardPixelRoute,
   DashboardProductsRoute: DashboardProductsRoute,
