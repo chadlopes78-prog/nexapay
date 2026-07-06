@@ -426,7 +426,7 @@ function CheckoutPage() {
               ) : (
                 <>
                   <Lock className="h-4 w-4" />
-                  Finalizar Compra
+                  {buttonLabel}
                 </>
               )}
             </Button>
