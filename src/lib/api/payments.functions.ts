@@ -30,6 +30,28 @@ export type PaymentResult =
       saleId?: string;
     };
 
+export const getSaleStatus = createServerFn({ method: "GET" })
+  .inputValidator((input) => PaymentSuccessInput.parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: sale } = await supabaseAdmin
+      .from("sales")
+      .select("id, status, payment_reference, products(access_link, delivery_link)")
+      .eq("id", data.saleId)
+      .maybeSingle();
+    if (!sale) return { status: "not_found" as const, accessLink: null, error: null };
+    const raw = String(sale.status ?? "").toLowerCase();
+    const paid = ["paid", "approved", "success", "completed"].includes(raw);
+    const failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
+    const product = sale.products as { access_link?: string | null; delivery_link?: string | null } | null;
+    return {
+      status: paid ? ("paid" as const) : failed ? ("failed" as const) : ("pending" as const),
+      accessLink: paid ? (product?.access_link || product?.delivery_link || null) : null,
+      error: failed ? (sale.payment_reference || "Pagamento cancelado ou recusado.") : null,
+    };
+  });
+
+
 export const getPaymentSuccessData = createServerFn({ method: "GET" })
   .inputValidator((input) => PaymentSuccessInput.parse(input))
   .handler(async ({ data }) => {
