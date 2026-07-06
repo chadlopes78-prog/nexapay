@@ -240,7 +240,7 @@ function DashboardLayout() {
     { name: "Produtos", icon: Package, path: "/products" },
     { name: "Vendas", icon: CreditCard, path: "/sales" },
     { name: "Recuperação de Vendas", icon: MessageCircle, path: "/recovery" },
-    { name: "Pixel Facebook", icon: Target, path: "/pixel" },
+    { name: "Integrações", icon: Zap, path: "/integrations" },
     ...(profile?.role === 'admin' || isAdminEmail(user?.email) ? [{ name: "Controle do Sistema", icon: ShieldCheck, path: "/admin" }] : []),
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
