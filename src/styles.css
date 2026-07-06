@@ -151,7 +151,8 @@
 .dark .text-slate-400 { color: oklch(0.62 0.02 260) !important; }
 .dark .border, .dark .border-b, .dark .border-t, .dark .border-slate-100, .dark .border-slate-200, .dark .border-slate-200\/70, .dark .border-slate-300 { border-color: var(--border) !important; }
 .dark img.grayscale { filter: grayscale(1) invert(0.85); }
-}
+
+
 
 
 @layer base {
