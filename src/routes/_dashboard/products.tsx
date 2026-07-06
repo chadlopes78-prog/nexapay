@@ -467,117 +467,128 @@ function ProductsPage() {
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar produtos..." className="pl-9" />
+          <Input placeholder="Buscar produtos..." className="pl-9 bg-white" />
         </div>
       </div>
 
-      <div className="rounded-md border bg-white overflow-x-auto overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-[150px]">Nome</TableHead>
-              <TableHead className="hidden sm:table-cell">Preço</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden md:table-cell">Vendas</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Carregando produtos...
-                </TableCell>
-              </TableRow>
-            ) : products.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Nenhum produto encontrado.
-                </TableCell>
-              </TableRow>
-            ) : (
-              products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex flex-col">
-                      <span className="truncate max-w-[120px] sm:max-w-none">{product.name}</span>
-                      <span className="text-xs text-muted-foreground block sm:hidden">
-                        {product.price.toLocaleString("pt-MZ")} MT
-                      </span>
-                      <span className="text-xs text-muted-foreground">{product.category}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">{product.price.toLocaleString("pt-MZ")} MT</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={product.status === "active" ? "secondary" : "outline"}
-                      className={cn(
-                        "text-[10px] sm:text-xs",
-                        product.status === "active"
-                          ? "bg-green-100 text-green-700 hover:bg-green-100"
-                          : ""
-                      )}
-                    >
-                      {product.status === "active" ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">0</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1.5 sm:gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="hidden lg:flex items-center gap-2 h-8 px-3 text-xs"
-                        onClick={() => copyCheckoutLink(product.id)}
-                      >
-                        <Copy className="h-3 w-3" /> Link
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-slate-200/70 bg-white p-4 animate-pulse">
+              <div className="h-32 w-full rounded-lg bg-slate-100 mb-4" />
+              <div className="h-4 w-3/4 bg-slate-100 rounded mb-2" />
+              <div className="h-3 w-1/2 bg-slate-100 rounded" />
+            </div>
+          ))}
+        </div>
+      ) : products.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
+          <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500">
+            <Package className="h-6 w-6" />
+          </div>
+          <h3 className="text-sm font-semibold text-slate-900">Nenhum produto ainda</h3>
+          <p className="text-sm text-slate-500 mt-1">Crie seu primeiro produto para começar a vender.</p>
+          <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Novo Produto
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {products.map((product) => (
+            <div
+              key={product.id}
+              className="group rounded-xl border border-slate-200/70 bg-white overflow-hidden hover:border-slate-300 hover:shadow-sm transition-all flex flex-col"
+            >
+              <div className="relative aspect-[16/10] bg-slate-100 overflow-hidden">
+                {product.image_url ? (
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="h-full w-full grid place-items-center text-slate-300">
+                    <Package className="h-10 w-10" />
+                  </div>
+                )}
+                <Badge
+                  className={cn(
+                    "absolute top-2 left-2 text-[10px] font-medium border-0",
+                    product.status === "active"
+                      ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-100"
+                  )}
+                >
+                  {product.status === "active" ? "Ativo" : "Inativo"}
+                </Badge>
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm">
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="lg:hidden h-8 w-8"
-                        onClick={() => copyCheckoutLink(product.id)}
-                        title="Copiar Link"
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => window.open(`/p/${product.id}`, "_blank")}>
+                        <ExternalLink className="mr-2 h-4 w-4" /> Ver checkout
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditProduct(product)}>
+                        <Edit className="mr-2 h-4 w-4" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => copyCheckoutLink(product.id)}>
+                        <Copy className="mr-2 h-4 w-4" /> Copiar link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <QrCode className="mr-2 h-4 w-4" /> QR Code
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() => handleDeleteProduct(product.id)}
                       >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() => window.open(`/p/${product.id}`, "_blank")}
-                          >
-                            <ExternalLink className="mr-2 h-4 w-4" /> Ver Checkout
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEditProduct(product)}>
-                            <Edit className="mr-2 h-4 w-4" /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <QrCode className="mr-2 h-4 w-4" /> QR Code
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDeleteProduct(product.id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                        <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              <div className="p-4 flex-1 flex flex-col">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
+                    {product.category || "Sem categoria"}
+                  </p>
+                  <h3 className="mt-0.5 text-sm font-semibold text-slate-900 truncate">
+                    {product.name}
+                  </h3>
+                  <p className="mt-2 text-lg font-bold text-slate-900">
+                    {product.price.toLocaleString("pt-MZ")} <span className="text-xs font-medium text-slate-500">MT</span>
+                  </p>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-8 text-xs"
+                    onClick={() => handleEditProduct(product)}
+                  >
+                    <Edit className="h-3 w-3 mr-1.5" /> Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-8 text-xs"
+                    onClick={() => copyCheckoutLink(product.id)}
+                  >
+                    <Copy className="h-3 w-3 mr-1.5" /> Link
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
