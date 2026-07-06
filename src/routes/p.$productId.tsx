@@ -58,7 +58,8 @@ declare global {
 function CheckoutPage() {
   const payFn = useServerFn(processPayment);
   const { productId } = useParams({ from: "/p/$productId" });
-  const { product, defaultPixel } = Route.useLoaderData();
+  const { product, checkout, defaultPixel } = Route.useLoaderData();
+  const buttonLabel = (checkout?.button_text?.trim() || "Finalizar Compra");
 
   const pixelId = product?.facebook_pixel_id || defaultPixel?.fb_pixel_id;
 
