@@ -352,41 +352,27 @@ function ProductsPage() {
               <Plus className="h-4 w-4" /> Novo Produto
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-50">
-            <form onSubmit={handleCreateProduct}>
-              <DialogHeader className="px-6 py-5 border-b bg-white sticky top-0 z-10">
-                <DialogTitle className="text-lg font-semibold">Novo produto</DialogTitle>
-                <DialogDescription className="text-sm text-slate-500">
-                  Preencha as seções abaixo para publicar seu produto.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="p-4 sm:p-6">
-                <ProductFormFields
-                  idPrefix="new"
-                  name={name} setName={setName}
-                  description={description} setDescription={setDescription}
-                  price={price} setPrice={setPrice}
-                  category={category} setCategory={setCategory}
-                  supportNumber={supportNumber} setSupportNumber={setSupportNumber}
-                  supportPhone={supportPhone} setSupportPhone={setSupportPhone}
-                  facebookPixelId={facebookPixelId} setFacebookPixelId={setFacebookPixelId}
-                  facebookAccessToken={facebookAccessToken} setFacebookAccessToken={setFacebookAccessToken}
-                  deliveryType={deliveryType} setDeliveryType={setDeliveryType}
-                  deliveryLink={deliveryLink} setDeliveryLink={setDeliveryLink}
-                  accessLink={accessLink} setAccessLink={setAccessLink}
-                  thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
-                  deliveryFile={deliveryFile} setDeliveryFile={setDeliveryFile}
-                  imageFile={imageFile} setImageFile={setImageFile}
-                  imageUrl={imageUrl}
-                  bannerFile={bannerFile} setBannerFile={setBannerFile}
-                  bannerUrl={bannerUrl}
-                />
-              </div>
-              <DialogFooter className="px-6 py-4 border-t bg-white sticky bottom-0 gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                <Button type="submit">Publicar produto</Button>
-              </DialogFooter>
-            </form>
+          <DialogContent className="sm:max-w-2xl w-[95vw] max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-50">
+            <DialogHeader className="px-6 py-4 border-b bg-white">
+              <DialogTitle className="text-lg font-semibold">Criar novo produto</DialogTitle>
+              <DialogDescription className="text-sm text-slate-500">
+                Siga as etapas para publicar seu produto rapidamente.
+              </DialogDescription>
+            </DialogHeader>
+            <NewProductWizard
+              name={name} setName={setName}
+              description={description} setDescription={setDescription}
+              price={price} setPrice={setPrice}
+              category={category} setCategory={setCategory}
+              supportNumber={supportNumber} setSupportNumber={setSupportNumber}
+              supportPhone={supportPhone} setSupportPhone={setSupportPhone}
+              accessLink={accessLink} setAccessLink={setAccessLink}
+              thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
+              imageFile={imageFile} setImageFile={setImageFile}
+              imageUrl={imageUrl}
+              onCancel={() => setIsDialogOpen(false)}
+              onSubmit={() => handleCreateProduct()}
+            />
           </DialogContent>
         </Dialog>
 
