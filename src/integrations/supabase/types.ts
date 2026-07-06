@@ -681,6 +681,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_payment_credentials: {
+        Row: {
+          created_at: string
+          e2p_client_id: string | null
+          e2p_client_secret: string | null
+          updated_at: string
+          user_id: string
+          wallet_emola: string | null
+          wallet_mpesa: string | null
+        }
+        Insert: {
+          created_at?: string
+          e2p_client_id?: string | null
+          e2p_client_secret?: string | null
+          updated_at?: string
+          user_id: string
+          wallet_emola?: string | null
+          wallet_mpesa?: string | null
+        }
+        Update: {
+          created_at?: string
+          e2p_client_id?: string | null
+          e2p_client_secret?: string | null
+          updated_at?: string
+          user_id?: string
+          wallet_emola?: string | null
+          wallet_mpesa?: string | null
+        }
+        Relationships: []
+      }
       webhook_deliveries: {
         Row: {
           attempts: number
