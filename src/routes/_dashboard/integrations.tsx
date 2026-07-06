@@ -3,11 +3,6 @@ import { useMemo, useState } from "react";
 import {
   Search,
   Zap,
-  BarChart3,
-  Tag,
-  Facebook,
-  Music2,
-  Target,
   Webhook,
   Code2,
   CheckCircle2,
