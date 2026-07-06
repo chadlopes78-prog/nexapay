@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ProductFormFields } from "@/components/dashboard/ProductFormFields";
 import { NewProductWizard } from "@/components/dashboard/NewProductWizard";
+import { CheckoutEditor } from "@/components/dashboard/CheckoutEditor";
 
 
 
@@ -417,27 +418,7 @@ function ProductsPage() {
                   />
                 </TabsContent>
                 <TabsContent value="checkout" className="p-4 sm:p-6 mt-0">
-                  <ProductFormFields
-                    idPrefix="edit-c"
-                    section="checkout"
-                    name={name} setName={setName}
-                    description={description} setDescription={setDescription}
-                    price={price} setPrice={setPrice}
-                    category={category} setCategory={setCategory}
-                    supportNumber={supportNumber} setSupportNumber={setSupportNumber}
-                    supportPhone={supportPhone} setSupportPhone={setSupportPhone}
-                    facebookPixelId={facebookPixelId} setFacebookPixelId={setFacebookPixelId}
-                    facebookAccessToken={facebookAccessToken} setFacebookAccessToken={setFacebookAccessToken}
-                    deliveryType={deliveryType} setDeliveryType={setDeliveryType}
-                    deliveryLink={deliveryLink} setDeliveryLink={setDeliveryLink}
-                    accessLink={accessLink} setAccessLink={setAccessLink}
-                    thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
-                    imageFile={imageFile} setImageFile={setImageFile}
-                    imageUrl={imageUrl}
-                    bannerFile={bannerFile} setBannerFile={setBannerFile}
-                    bannerUrl={bannerUrl}
-                    showDeliveryFile={false}
-                  />
+                  {editingProduct?.id && <CheckoutEditor productId={editingProduct.id} />}
                 </TabsContent>
               </Tabs>
               <DialogFooter className="px-6 py-4 border-t bg-white sticky bottom-0 gap-2">
@@ -480,13 +461,13 @@ function ProductsPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           {products.map((product) => (
             <div
               key={product.id}
-              className="group rounded-xl border border-slate-200/70 bg-white overflow-hidden hover:border-slate-300 hover:shadow-sm transition-all flex flex-col"
+              className="group rounded-lg border border-slate-200/70 bg-white overflow-hidden hover:border-slate-300 hover:shadow-sm transition-all flex flex-col"
             >
-              <div className="relative aspect-[16/10] bg-slate-100 overflow-hidden">
+              <div className="relative aspect-square bg-slate-100 overflow-hidden">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
@@ -495,24 +476,24 @@ function ProductsPage() {
                   />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-slate-300">
-                    <Package className="h-10 w-10" />
+                    <Package className="h-6 w-6" />
                   </div>
                 )}
                 <Badge
                   className={cn(
-                    "absolute top-2 left-2 text-[10px] font-medium border-0",
+                    "absolute top-1.5 left-1.5 text-[9px] font-medium border-0 px-1.5 py-0 h-4",
                     product.status === "active"
                       ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-100"
                   )}
                 >
-                  {product.status === "active" ? "Ativo" : "Inativo"}
+                  {product.status === "active" ? "Ativo" : "Off"}
                 </Badge>
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="secondary" size="icon" className="h-6 w-6 shadow-sm">
+                        <MoreHorizontal className="h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -526,9 +507,6 @@ function ProductsPage() {
                       <DropdownMenuItem onClick={() => copyCheckoutLink(product.id)}>
                         <Copy className="mr-2 h-4 w-4" /> Copiar link
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <QrCode className="mr-2 h-4 w-4" /> QR Code
-                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-red-600"
@@ -540,34 +518,30 @@ function ProductsPage() {
                   </DropdownMenu>
                 </div>
               </div>
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
-                    {product.category || "Sem categoria"}
-                  </p>
-                  <h3 className="mt-0.5 text-sm font-semibold text-slate-900 truncate">
-                    {product.name}
-                  </h3>
-                  <p className="mt-2 text-lg font-bold text-slate-900">
-                    {product.price.toLocaleString("pt-MZ")} <span className="text-xs font-medium text-slate-500">MT</span>
-                  </p>
-                </div>
-                <div className="mt-4 flex gap-2">
+              <div className="p-2.5 flex-1 flex flex-col">
+                <h3 className="text-xs font-semibold text-slate-900 truncate leading-tight">
+                  {product.name}
+                </h3>
+                <p className="mt-1 text-sm font-bold text-slate-900">
+                  {product.price.toLocaleString("pt-MZ")} <span className="text-[10px] font-medium text-slate-500">MT</span>
+                </p>
+                <div className="mt-2 flex gap-1">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-8 text-xs"
+                    className="flex-1 h-6 text-[10px] px-1.5"
                     onClick={() => handleEditProduct(product)}
                   >
-                    <Edit className="h-3 w-3 mr-1.5" /> Editar
+                    <Edit className="h-2.5 w-2.5 mr-1" /> Editar
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 h-8 text-xs"
+                    className="h-6 w-6 p-0"
                     onClick={() => copyCheckoutLink(product.id)}
+                    title="Copiar link"
                   >
-                    <Copy className="h-3 w-3 mr-1.5" /> Link
+                    <Copy className="h-2.5 w-2.5" />
                   </Button>
                 </div>
               </div>
