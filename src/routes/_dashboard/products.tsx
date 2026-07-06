@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ProductFormFields } from "@/components/dashboard/ProductFormFields";
 import { NewProductWizard } from "@/components/dashboard/NewProductWizard";
+import { CheckoutEditor } from "@/components/dashboard/CheckoutEditor";
 
 
 
