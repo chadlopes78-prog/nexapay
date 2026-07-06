@@ -484,80 +484,76 @@ function DashboardPage() {
 
 
 
-      <div className="grid grid-cols-1 gap-6">
-        <Card className="border-none shadow-xl bg-white p-6 rounded-3xl">
-          <CardHeader className="px-0 pt-0">
-            <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-900 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" /> Gráfico de Performance
+      <Card className="border border-slate-200/70 shadow-none bg-white rounded-xl">
+        <CardHeader className="px-6 pt-5 pb-3 flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-violet-600" /> Vendas no período
             </CardTitle>
-            <CardDescription className="text-[10px] font-bold uppercase text-slate-400">Conversão diária de vendas (Sucesso vs Falha)</CardDescription>
-          </CardHeader>
-          <CardContent className="px-0 pb-0 pt-8">
-            <Suspense fallback={<div className="h-[350px] w-full rounded-2xl bg-slate-50 animate-pulse" />}>
-              <PerformanceChart data={dashboardData.chartData} />
-            </Suspense>
-          </CardContent>
-        </Card>
-      </div>
+            <CardDescription className="text-xs text-slate-500 mt-1">Aprovadas vs recusadas por dia</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-2">
+          <Suspense fallback={<div className="h-[320px] w-full rounded-lg bg-slate-50 animate-pulse" />}>
+            <PerformanceChart data={dashboardData.chartData} />
+          </Suspense>
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 gap-6">
-        <Card className="border-none shadow-xl bg-white rounded-3xl overflow-hidden ring-1 ring-slate-100 flex flex-col">
-          <CardHeader className="bg-slate-50/50 border-b pb-4">
-            <div>
-              <CardTitle className="text-lg font-black uppercase tracking-tighter flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-primary" /> Atividade Recente
-              </CardTitle>
-              <CardDescription className="text-[10px] font-bold uppercase text-slate-400">
-                Últimas transações do seu checkout.
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-auto max-h-[400px]">
-            {dashboardData?.recentSales && dashboardData.recentSales.length > 0 ? (
-              <div className="divide-y divide-slate-50">
-                {dashboardData.recentSales.map((sale: any) => (
-                  <div key={sale.id} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+      <Card className="border border-slate-200/70 shadow-none bg-white rounded-xl overflow-hidden">
+        <CardHeader className="px-6 pt-5 pb-3 border-b border-slate-100">
+          <CardTitle className="text-base font-semibold text-slate-900">Atividade recente</CardTitle>
+          <CardDescription className="text-xs text-slate-500 mt-1">Últimas transações do seu checkout</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0 max-h-[420px] overflow-auto">
+          {dashboardData?.recentSales && dashboardData.recentSales.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {dashboardData.recentSales.map((sale: any) => {
+                const approved = ["paid", "approved", "success"].includes(sale.status);
+                const failed = ["failed", "error"].includes(sale.status);
+                return (
+                  <div key={sale.id} className="px-6 py-3.5 flex items-center justify-between hover:bg-slate-50/60 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        "h-10 w-10 rounded-xl flex items-center justify-center shadow-sm",
-                        ["paid", "approved", "success"].includes(sale.status) ? "bg-emerald-100 text-emerald-600" :
-                        ["failed", "error"].includes(sale.status) ? "bg-slate-100 text-slate-600" : "bg-blue-100 text-blue-600"
+                        "h-9 w-9 rounded-lg flex items-center justify-center",
+                        approved ? "bg-emerald-50 text-emerald-600" :
+                        failed ? "bg-rose-50 text-rose-600" : "bg-violet-50 text-violet-600"
                       )}>
-                        {["paid", "approved", "success"].includes(sale.status) ? <TrendingUp className="h-5 w-5" /> :
-                         ["failed", "error"].includes(sale.status) ? <TrendingDown className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
+                        {approved ? <TrendingUp className="h-4 w-4" /> :
+                         failed ? <TrendingDown className="h-4 w-4" /> : <CreditCard className="h-4 w-4" />}
                       </div>
                       <div>
-                        <p className="text-xs font-black text-slate-900 uppercase tracking-tighter">
-                          {["paid", "approved", "success"].includes(sale.status) ? "Venda Aprovada" :
-                           ["failed", "error"].includes(sale.status) ? "Pagamento Falhou" : "Novo Pedido"}
+                        <p className="text-sm font-medium text-slate-900">
+                          {approved ? "Venda aprovada" : failed ? "Pagamento recusado" : "Novo pedido"}
                         </p>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase truncate max-w-[200px]">
+                        <p className="text-xs text-slate-500 truncate max-w-[240px]">
                           {sale.product_name || "Produto"} • {sale.customer_name || "Cliente"}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs font-black text-slate-900">
+                      <p className="text-sm font-semibold text-slate-900">
                         {Number(sale.amount).toLocaleString("pt-MZ")} MT
                       </p>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase">
+                      <p className="text-[11px] text-slate-400">
                         {format(parseISO(sale.created_at), "HH:mm", { locale: ptBR })}
                       </p>
                     </div>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-14 text-center px-4">
+              <div className="h-11 w-11 bg-slate-50 rounded-xl flex items-center justify-center mb-3">
+                <ShoppingCart className="h-5 w-5 text-slate-300" />
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-3">
-                  <ShoppingCart className="h-6 w-6 text-slate-300" />
-                </div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma atividade recente</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              <p className="text-sm text-slate-400">Nenhuma atividade recente</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
