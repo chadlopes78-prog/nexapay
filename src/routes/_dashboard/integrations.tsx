@@ -333,7 +333,9 @@ function IntegrationDialog({
           <WebhooksEditor values={values} setValues={setValues} />
         ) : integration.customEditor === "custom_api" ? (
           <CustomApiEditor values={values} setValues={setValues} />
-        ) : (
+        ) : integration.customEditor === "e2payments" ? (
+          <E2PaymentsEditor onSaved={onClose} />
+        ) : null && null || (
           <div className="grid gap-4 py-2">
             {integration.fields?.map((field) => (
               <div key={field.key} className="grid gap-2">
