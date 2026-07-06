@@ -391,141 +391,44 @@ function ProductsPage() {
 
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-50">
             <form onSubmit={handleUpdateProduct}>
-              <DialogHeader>
-                <DialogTitle>Editar Produto</DialogTitle>
-                <DialogDescription>
+              <DialogHeader className="px-6 py-5 border-b bg-white sticky top-0 z-10">
+                <DialogTitle className="text-lg font-semibold">Editar produto</DialogTitle>
+                <DialogDescription className="text-sm text-slate-500">
                   Atualize as informações do seu produto.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-name">Nome do Produto</Label>
-                  <Input
-                    id="edit-name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex: Curso de Marketing"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-image">Imagem do Produto</Label>
-                  <Input id="edit-image" type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
-                  {(imageFile || imageUrl) && (
-                    <img
-                      src={imageFile ? URL.createObjectURL(imageFile) : imageUrl}
-                      alt="Preview"
-                      className="mt-2 h-24 w-24 object-cover rounded border"
-                    />
-                  )}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-banner">Banner do Checkout (opcional)</Label>
-                  <Input id="edit-banner" type="file" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] || null)} />
-                  <p className="text-[10px] text-muted-foreground italic">Aparece no topo do checkout. Deixe em branco para não exibir.</p>
-                  {(bannerFile || bannerUrl) && (
-                    <img
-                      src={bannerFile ? URL.createObjectURL(bannerFile) : bannerUrl}
-                      alt="Preview banner"
-                      className="mt-2 w-full h-auto rounded border"
-                    />
-                  )}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-facebook_pixel_id">Facebook Pixel ID</Label>
-                  <Input id="edit-facebook_pixel_id" value={facebookPixelId} onChange={(e) => setFacebookPixelId(e.target.value)} placeholder="Ex: 123456789" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-facebook_access_token">Facebook Access Token</Label>
-                  <Input id="edit-facebook_access_token" value={facebookAccessToken} onChange={(e) => setFacebookAccessToken(e.target.value)} placeholder="EAAB..." />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-price">Preço (MT)</Label>
-                    <Input
-                      id="edit-price"
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="1000"
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-category">Categoria</Label>
-                    <Input
-                      id="edit-category"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      placeholder="Educação"
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-support_number">Número de Suporte (WhatsApp)</Label>
-                  <Input
-                    id="edit-support_number"
-                    inputMode="tel"
-                    value={supportNumber}
-                    onChange={(e) => setSupportNumber(e.target.value)}
-                    placeholder="Ex: 25884xxxxxxx"
-                    required
-                  />
-                </div>
-                <div className="border-t pt-4">
-                  <Label className="font-semibold mb-2 block text-[#E30613]">Configurações de Acesso (Obrigatório)</Label>
-                  <div className="grid gap-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="edit-access_link">Link de Acesso Principal</Label>
-                        <Input 
-                          id="edit-access_link" 
-                          value={accessLink} 
-                          onChange={(e) => setAccessLink(e.target.value)} 
-                          placeholder="Link do produto, grupo, ou arquivo" 
-                          required 
-                        />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="edit-thank_you_button_text">Texto do Botão (Página de Obrigado)</Label>
-                        <Input
-                          id="edit-thank_you_button_text"
-                          value={thankYouButtonText}
-                          onChange={(e) => setThankYouButtonText(e.target.value)}
-                          placeholder="Ex: Liberar acesso, Levantar valor, Aceder conteúdo"
-                          maxLength={40}
-                        />
-                    </div>
-                    
-                    <div className="grid gap-2 pt-2 border-t border-dashed">
-                        <Label className="text-xs">Entrega Automática (Opcional)</Label>
-                        <select 
-                          value={deliveryType}
-                          onChange={(e) => setDeliveryType(e.target.value)}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                        >
-                            <option value="none">Nenhum adicional</option>
-                            <option value="file">Upload de Arquivo</option>
-                            <option value="link">Link Secundário</option>
-                            <option value="both">Ambos</option>
-                        </select>
-                    </div>
-                    {(deliveryType === 'link' || deliveryType === 'both') && (
-                      <div className="grid gap-2">
-                          <Label htmlFor="edit-delivery_link">Link Adicional</Label>
-                          <Input id="edit-delivery_link" value={deliveryLink} onChange={(e) => setDeliveryLink(e.target.value)} placeholder="https://..." />
-                      </div>
-                    )}
-                  </div>
-                </div>
+              <div className="p-4 sm:p-6">
+                <ProductFormFields
+                  idPrefix="edit"
+                  name={name} setName={setName}
+                  description={description} setDescription={setDescription}
+                  price={price} setPrice={setPrice}
+                  category={category} setCategory={setCategory}
+                  supportNumber={supportNumber} setSupportNumber={setSupportNumber}
+                  supportPhone={supportPhone} setSupportPhone={setSupportPhone}
+                  facebookPixelId={facebookPixelId} setFacebookPixelId={setFacebookPixelId}
+                  facebookAccessToken={facebookAccessToken} setFacebookAccessToken={setFacebookAccessToken}
+                  deliveryType={deliveryType} setDeliveryType={setDeliveryType}
+                  deliveryLink={deliveryLink} setDeliveryLink={setDeliveryLink}
+                  accessLink={accessLink} setAccessLink={setAccessLink}
+                  thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
+                  imageFile={imageFile} setImageFile={setImageFile}
+                  imageUrl={imageUrl}
+                  bannerFile={bannerFile} setBannerFile={setBannerFile}
+                  bannerUrl={bannerUrl}
+                  showDeliveryFile={false}
+                />
               </div>
-              <DialogFooter>
-                <Button type="submit">Salvar Alterações</Button>
+              <DialogFooter className="px-6 py-4 border-t bg-white sticky bottom-0 gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
+                <Button type="submit">Salvar alterações</Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
+
       </div>
 
       <div className="flex items-center gap-4">
