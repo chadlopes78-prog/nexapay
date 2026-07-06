@@ -239,21 +239,12 @@ function DashboardLayout() {
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Produtos", icon: Package, path: "/products" },
     { name: "Vendas", icon: CreditCard, path: "/sales" },
-    { name: "Clientes", icon: Users, path: "/customers" },
-    { 
-      name: "Relatórios", 
-      icon: BarChart3, 
-      path: "/dashboard",
-      subItems: [
-        { name: "Análise de Tráfego", icon: Globe, path: "/reports/traffic" }
-      ]
-    },
     { name: "Recuperação de Vendas", icon: MessageCircle, path: "/recovery" },
     { name: "Pixel Facebook", icon: Target, path: "/pixel" },
-    { name: "Notificações", icon: AlertCircle, path: "/notifications" },
     ...(profile?.role === 'admin' || isAdminEmail(user?.email) ? [{ name: "Controle do Sistema", icon: ShieldCheck, path: "/admin" }] : []),
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
+
 
   const toggleMenu = (name: string) => {
     setExpandedMenus(prev => 
@@ -280,63 +271,23 @@ function DashboardLayout() {
 
       <nav className="flex-1 space-y-1 p-3">
         {menuItems.map((item) => {
-          const isExpanded = expandedMenus.includes(item.name);
-          const hasSubItems = item.subItems && item.subItems.length > 0;
-          const isActive = location.pathname === item.path || (hasSubItems && item.subItems?.some(sub => location.pathname === sub.path));
-
+          const isActive = location.pathname === item.path;
           return (
-            <div key={item.name} className="space-y-1">
-              {hasSubItems ? (
-                <button
-                  onClick={() => toggleMenu(item.name)}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
-                    isActive ? "bg-primary/5 text-primary" : "text-slate-600",
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="h-5 w-5 shrink-0" />
-                    {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
-                  </div>
-                  {(isSidebarOpen || isMobileMenuOpen) && (
-                    <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
-                  )}
-                </button>
-              ) : (
-                <Link
-                  to={item.path}
-                  search={"params" in item ? (item as { params?: Record<string, string> }).params : undefined}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100 active:scale-95",
-                    isActive ? "bg-slate-100 text-slate-900" : "text-slate-600",
-                  )}
-                >
-                  <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-slate-900" : "text-slate-500")} />
-                  {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
-                </Link>
+            <Link
+              key={item.name}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100 active:scale-95",
+                isActive ? "bg-slate-100 text-slate-900" : "text-slate-600",
               )}
-
-              {hasSubItems && isExpanded && (isSidebarOpen || isMobileMenuOpen) && (
-                <div className="ml-4 space-y-1 border-l pl-4">
-                  {item.subItems?.map((subItem) => (
-                    <Link
-                      key={subItem.path}
-                      to={subItem.path}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-100",
-                        location.pathname === subItem.path ? "bg-primary/5 text-primary" : "text-slate-600",
-                      )}
-                    >
-                      <subItem.icon className="h-4 w-4 shrink-0" />
-                      <span>{subItem.name}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+            >
+              <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-slate-900" : "text-slate-500")} />
+              {(isSidebarOpen || isMobileMenuOpen) && <span>{item.name}</span>}
+            </Link>
           );
         })}
       </nav>
+
 
       <div className="p-3">
         <Separator className="mb-3" />
