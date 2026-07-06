@@ -383,58 +383,58 @@ function DashboardPage() {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-12 max-w-[1400px] mx-auto px-4 md:px-0">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-12 max-w-[1400px] mx-auto px-4 md:px-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">Dashboard</h1>
+            <h1 className="text-2xl md:text-[28px] font-semibold tracking-tight text-slate-900">Dashboard</h1>
             {isFetching && <RefreshCcw className="h-4 w-4 animate-spin text-slate-400" />}
           </div>
-          <p className="text-sm text-muted-foreground font-medium uppercase tracking-tighter">Visão geral sincronizada com seu Checkout.</p>
+          <p className="text-sm text-slate-500 mt-1">Acompanhe suas vendas em tempo real.</p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-2">
           <DateRangePicker onRangeChange={handleRangeChange} initialPreset={preset} initialRange={dateRange} />
-          
+
           <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 gap-2 font-black uppercase tracking-tighter text-[10px]">
+              <Button variant="outline" size="sm" className="h-10 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-50 gap-2 text-xs font-medium">
                 <Trash2 className="h-3.5 w-3.5" />
-                Resetar Dados
+                Resetar dados
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="max-w-md rounded-3xl border-none shadow-2xl">
+            <AlertDialogContent className="max-w-md rounded-2xl border border-slate-200 shadow-xl">
               <AlertDialogHeader>
-                <div className="flex items-center gap-3 text-red-600 mb-2">
-                  <div className="p-3 bg-red-100 rounded-2xl">
-                    <AlertTriangle className="h-6 w-6" />
+                <div className="flex items-center gap-3 text-rose-600 mb-2">
+                  <div className="p-2.5 bg-rose-50 rounded-xl">
+                    <AlertTriangle className="h-5 w-5" />
                   </div>
-                  <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter">Limpeza de Dados</AlertDialogTitle>
+                  <AlertDialogTitle className="text-lg font-semibold">Limpar dados</AlertDialogTitle>
                 </div>
-                <AlertDialogDescription className="text-slate-600 font-bold">
-                  Esta ação irá apagar todas as vendas e métricas do período selecionado. <span className="text-red-600">Irreversível.</span>
+                <AlertDialogDescription className="text-slate-600">
+                  Esta ação irá apagar todas as vendas e métricas do período selecionado. <span className="text-rose-600 font-medium">Irreversível.</span>
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              
-              <div className="py-4 space-y-3">
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Digite CONFIRMAR RESET para prosseguir:</p>
-                <Input 
+
+              <div className="py-3 space-y-2">
+                <p className="text-xs text-slate-500">Digite <span className="font-mono font-semibold text-slate-700">CONFIRMAR RESET</span> para prosseguir:</p>
+                <Input
                   value={resetConfirmText}
                   onChange={(e) => setResetConfirmText(e.target.value)}
                   placeholder="CONFIRMAR RESET"
-                  className="h-12 border-2 text-center font-black uppercase tracking-widest focus-visible:ring-red-500 rounded-2xl"
+                  className="h-11 rounded-lg"
                 />
               </div>
 
               <AlertDialogFooter className="gap-2 sm:gap-0">
-                <AlertDialogCancel className="h-12 rounded-2xl font-black uppercase tracking-tighter border-2">Sair</AlertDialogCancel>
+                <AlertDialogCancel className="h-10 rounded-lg">Cancelar</AlertDialogCancel>
                 <Button
                   variant="destructive"
                   disabled={resetConfirmText !== "CONFIRMAR RESET" || resetData.isPending}
                   onClick={() => resetData.mutate()}
-                  className="h-12 rounded-2xl font-black uppercase tracking-tighter px-6"
+                  className="h-10 rounded-lg px-5"
                 >
-                  {resetData.isPending ? "Limpando..." : "Confirmar Reset"}
+                  {resetData.isPending ? "Limpando..." : "Confirmar"}
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -446,24 +446,19 @@ function DashboardPage() {
         {heroKpis.map((kpi) => (
           <Card
             key={kpi.title}
-            className="relative border-none shadow-lg bg-white overflow-hidden rounded-3xl transition-all hover:shadow-2xl hover:-translate-y-0.5"
+            className="border border-slate-200/70 shadow-none bg-white rounded-xl hover:border-slate-300 transition-colors"
           >
-            <div className={cn("absolute inset-x-0 top-0 h-1.5", kpi.accent)} />
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  {kpi.title}
-                </span>
-                <div className={cn("p-2 rounded-xl bg-slate-50", kpi.tone)}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-500">{kpi.title}</span>
+                <div className={cn("p-2 rounded-lg", kpi.bg, kpi.tone)}>
                   <kpi.icon className="h-4 w-4" />
                 </div>
               </div>
-              <div className={cn("mt-4 text-4xl md:text-5xl font-black tracking-tighter", kpi.tone)}>
+              <div className="mt-4 text-3xl font-semibold text-slate-900 tracking-tight">
                 {kpi.value}
               </div>
-              <p className="text-[10px] text-slate-500 font-bold mt-2 uppercase tracking-tighter">
-                {kpi.description}
-              </p>
+              <p className="text-xs text-slate-500 mt-1">{kpi.description}</p>
             </CardContent>
           </Card>
         ))}
@@ -471,19 +466,22 @@ function DashboardPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {metricCards.map((metric) => (
-          <Card key={metric.title} className="border-none shadow-sm bg-white overflow-hidden rounded-2xl transition-all hover:shadow-md hover:-translate-y-0.5 group">
-            <div className={cn("h-0.5 w-full transition-all group-hover:h-1", metric.color)} />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-4">
-              <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 leading-tight">{metric.title}</span>
-              <metric.icon className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-900 transition-colors shrink-0" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="text-xl font-black text-slate-900 tracking-tighter truncate">{metric.value}</div>
-              <p className="text-[9px] text-slate-500 font-bold mt-1 uppercase tracking-tighter line-clamp-1">{metric.description}</p>
+          <Card key={metric.title} className="border border-slate-200/70 shadow-none bg-white rounded-xl hover:border-slate-300 transition-colors">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-medium text-slate-500 leading-tight">{metric.title}</span>
+                <div className={cn("p-1.5 rounded-md", metric.bg, metric.tone)}>
+                  <metric.icon className="h-3.5 w-3.5" />
+                </div>
+              </div>
+              <div className="text-lg font-semibold text-slate-900 tracking-tight truncate">{metric.value}</div>
+              <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{metric.description}</p>
             </CardContent>
           </Card>
         ))}
       </div>
+
+
 
 
       <div className="grid grid-cols-1 gap-6">
