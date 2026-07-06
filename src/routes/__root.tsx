@@ -79,11 +79,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" },
       { title: "NexaPay | Pagamentos Digitais em Moçambique" },
       { name: "description", content: "NexaPay — a plataforma de checkout e pagamentos mais rápida de Moçambique. Aceite M-Pesa e e-Mola em minutos." },
 
       { name: "author", content: "NexaPay" },
+      // App-like feel on mobile (iOS + Android)
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "NexaPay" },
+      { name: "theme-color", content: "#0F172A" },
+      { name: "format-detection", content: "telephone=no" },
+
       { property: "og:title", content: "NexaPay | Pagamentos Digitais em Moçambique" },
       { property: "og:description", content: "NexaPay — a plataforma de checkout e pagamentos mais rápida de Moçambique. Aceite M-Pesa e e-Mola em minutos." },
       { property: "og:site_name", content: "NexaPay" },
@@ -94,6 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@NexaPay" },
       { name: "twitter:title", content: "NexaPay | Pagamentos Digitais em Moçambique" },
       { name: "twitter:description", content: "NexaPay — a plataforma de checkout e pagamentos mais rápida de Moçambique. Aceite M-Pesa e e-Mola em minutos." },
+
     ],
     links: [
       { rel: "preconnect", href: "https://thgruqixqfrxfckjlphb.supabase.co" },
