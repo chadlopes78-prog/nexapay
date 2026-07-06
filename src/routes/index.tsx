@@ -10,7 +10,7 @@ function Index() {
       <header className="px-4 lg:px-6 h-16 flex items-center border-b">
         <Link className="flex items-center justify-center gap-2 group" to="/">
           <div className="h-9 w-9 bg-black rounded-xl flex items-center justify-center group-hover:rotate-6 transition-all border border-slate-800 shadow-lg">
-             <span className="text-white font-black text-lg">P</span>
+             <span className="text-white font-black text-lg">N</span>
           </div>
           <span className="font-black text-3xl tracking-tighter text-slate-900">NexaPay</span>
         </Link>

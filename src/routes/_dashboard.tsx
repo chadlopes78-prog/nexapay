@@ -259,7 +259,7 @@ function DashboardLayout() {
       <div className="flex h-16 items-center px-6">
         <Link to="/dashboard" className="flex items-center gap-2 overflow-hidden">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black border border-slate-800 shadow-lg">
-            <span className="text-lg font-black text-white">P</span>
+            <span className="text-lg font-black text-white">N</span>
           </div>
           {(isSidebarOpen || isMobileMenuOpen) && (
             <span className="text-lg font-bold tracking-tight truncate">NexaPay</span>
@@ -317,7 +317,7 @@ function DashboardLayout() {
       <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
         <Link to="/dashboard" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-black border border-slate-800 shadow-sm">
-            <span className="text-lg font-black text-white">P</span>
+            <span className="text-lg font-black text-white">N</span>
           </div>
           <span className="text-lg font-bold tracking-tight">NexaPay</span>
         </Link>
