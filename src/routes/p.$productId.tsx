@@ -260,7 +260,7 @@ function CheckoutPage() {
   }
 
   const accent = paymentMethod === "mpesa" ? "#E30613" : "#F97316";
-  const [email, setEmail] = useState("");
+  
 
   return (
     <div className="min-h-screen bg-white">
