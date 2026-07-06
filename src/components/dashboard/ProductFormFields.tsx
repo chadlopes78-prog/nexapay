@@ -82,9 +82,15 @@ function Section({
 
 export function ProductFormFields(props: ProductFormFieldsProps) {
   const p = props.idPrefix ?? "pf";
+  const section = props.section ?? "all";
+  const showProduct = section === "all" || section === "product";
+  const showCheckout = section === "all" || section === "checkout";
 
   return (
     <div className="grid gap-4">
+      {showProduct && (
+      <>
+
       <Section icon={Info} title="Informações do produto" description="Nome, descrição e categoria">
         <div className="grid gap-2">
           <Label htmlFor={`${p}-name`}>Nome do produto</Label>
