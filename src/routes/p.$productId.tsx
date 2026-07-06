@@ -82,6 +82,15 @@ function CheckoutPage() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (!processingPayment) return;
+    setPinSecondsLeft(120);
+    const t = setInterval(() => {
+      setPinSecondsLeft((p) => (p > 0 ? p - 1 : 0));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [processingPayment]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
