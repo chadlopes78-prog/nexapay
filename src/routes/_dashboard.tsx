@@ -239,21 +239,12 @@ function DashboardLayout() {
     { name: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { name: "Produtos", icon: Package, path: "/products" },
     { name: "Vendas", icon: CreditCard, path: "/sales" },
-    { name: "Clientes", icon: Users, path: "/customers" },
-    { 
-      name: "Relatórios", 
-      icon: BarChart3, 
-      path: "/dashboard",
-      subItems: [
-        { name: "Análise de Tráfego", icon: Globe, path: "/reports/traffic" }
-      ]
-    },
     { name: "Recuperação de Vendas", icon: MessageCircle, path: "/recovery" },
     { name: "Pixel Facebook", icon: Target, path: "/pixel" },
-    { name: "Notificações", icon: AlertCircle, path: "/notifications" },
     ...(profile?.role === 'admin' || isAdminEmail(user?.email) ? [{ name: "Controle do Sistema", icon: ShieldCheck, path: "/admin" }] : []),
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];
+
 
   const toggleMenu = (name: string) => {
     setExpandedMenus(prev => 
