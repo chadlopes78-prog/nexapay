@@ -351,6 +351,8 @@ export const processPayment = createServerFn({ method: "POST" })
         success: true,
         saleId: sale.id,
         transactionId: transactionId ? String(transactionId) : null,
+        status: finalStatus === "paid" ? "paid" : "pending",
+        accessLink: finalStatus === "paid" ? (product.access_link || product.delivery_link || null) : null,
       };
     } catch (err: unknown) {
       console.error("processPayment error", err);
@@ -366,6 +368,8 @@ export const processPayment = createServerFn({ method: "POST" })
         success: true,
         saleId: sale.id,
         transactionId: null,
+        status: "pending",
+        accessLink: null,
       };
     }
   });
