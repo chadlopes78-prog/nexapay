@@ -208,160 +208,200 @@ function CheckoutPage() {
   }
 
   const accent = paymentMethod === "mpesa" ? "#E30613" : "#F97316";
+  const [email, setEmail] = useState("");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      <div className="mx-auto max-w-[440px] px-3 py-3 sm:py-5">
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-200/60 overflow-hidden">
-          {/* Header: product + price */}
-          <div className="p-4 flex gap-3 items-center border-b border-slate-100">
-            <div className="h-14 w-14 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 ring-1 ring-slate-200/60">
-              {product.image_url ? (
-                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="eager" decoding="async" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-300">
-                  <Package className="h-6 w-6" />
+    <div className="min-h-screen bg-white">
+      {/* Top urgency bar */}
+      <div className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white">
+        <div className="mx-auto max-w-6xl px-4 py-2.5 flex items-center justify-center gap-2 text-sm font-medium">
+          <Clock className="h-4 w-4" />
+          <span>Oferta especial termina em:</span>
+          <span className="font-mono font-bold tabular-nums bg-black/20 px-2 py-0.5 rounded">
+            {formatTime(timeLeft)}
+          </span>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 py-6 lg:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
+          {/* LEFT: Product summary */}
+          <div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex gap-4 items-center pb-4 border-b border-slate-100">
+                <div className="h-20 w-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 ring-1 ring-slate-200">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center text-slate-300">
+                      <Package className="h-8 w-8" />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-sm font-semibold text-slate-900 leading-tight truncate">{product.name}</h1>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums">
-                  {product.price.toLocaleString("pt-MZ")}
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-base font-bold text-slate-900 uppercase tracking-tight leading-tight">
+                    {product.name}
+                  </h1>
+                  <div className="mt-1 text-2xl font-extrabold text-emerald-500 tracking-tight">
+                    Mt {product.price.toLocaleString("pt-MZ")} MZN
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 space-y-2 text-sm">
+                <div className="flex justify-between text-slate-600">
+                  <span>Subtotal:</span>
+                  <span className="text-slate-900 font-medium">Mt {product.price.toLocaleString("pt-MZ")} MZN</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Taxas:</span>
+                  <span className="text-emerald-500 font-semibold">Grátis</span>
+                </div>
+                <div className="pt-3 mt-2 border-t border-slate-100 flex justify-between items-center">
+                  <span className="font-bold text-slate-900">Total:</span>
+                  <span className="text-lg font-extrabold text-emerald-500">
+                    Mt {product.price.toLocaleString("pt-MZ")} MZN
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-500 border-t border-slate-100 pt-4">
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                  Compra 100% segura
                 </span>
-                <span className="text-xs font-semibold text-slate-500">MT</span>
+                <span className="text-slate-300">|</span>
+                <span className="flex items-center gap-1">
+                  <Lock className="h-3.5 w-3.5 text-emerald-500" />
+                  Entrega imediata
+                </span>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-0.5">
-              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 uppercase">
-                <Clock className="h-3 w-3" />
-                Expira em
-              </div>
-              <div className="text-sm font-black tabular-nums text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">
-                {formatTime(timeLeft)}
-              </div>
+
+            <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-center justify-center gap-2 text-sm text-slate-700">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span>
+                <b className="text-emerald-600">+4999</b> pessoas já compraram este produto!
+              </span>
             </div>
+
+            {product.checkout_banner_url && (
+              <img src={product.checkout_banner_url} alt="Oferta" className="mt-4 w-full rounded-xl border border-slate-200" loading="lazy" />
+            )}
           </div>
 
-          {/* Optional banner */}
-          {product.checkout_banner_url && (
-            <div className="px-4 pt-3">
-              <img
-                src={product.checkout_banner_url}
-                alt="Oferta"
-                className="w-full h-auto rounded-xl object-cover border border-slate-100"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-          )}
-
-          <form onSubmit={handlePayment} className="p-4 space-y-3">
-            {/* Buyer info */}
-            <div className="space-y-2">
+          {/* RIGHT: Form */}
+          <form onSubmit={handlePayment} className="space-y-5">
+            <div>
+              <label className="text-sm font-bold text-slate-900 mb-1.5 block">
+                Nome completo <span className="text-red-500">*</span>
+              </label>
               <Input
-                placeholder="Nome completo"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="h-12 border-slate-200 rounded-xl bg-slate-50/50 text-sm font-medium placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:bg-white"
+                placeholder="Nome completo"
+                className="h-12 rounded-xl border-slate-200 bg-white text-sm"
               />
+            </div>
 
+            <div>
+              <label className="text-sm font-bold text-slate-900 mb-1.5 block">
+                E-mail <span className="text-red-500">*</span>
+              </label>
+              <Input
+                required
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                className="h-12 rounded-xl border-slate-200 bg-white text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="#25D366">
+                  <path d="M12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413A11.815 11.815 0 0012.05 0"/>
+                </svg>
+                WhatsApp (opcional)
+              </label>
               <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
-                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="#25D366">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                  </svg>
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-slate-200 pr-2">
+                  <img src={mozFlag.url} alt="MZ" className="h-3.5 w-5 object-cover rounded-sm" />
                   <span className="text-xs font-semibold text-slate-500">+258</span>
                 </div>
                 <Input
-                  placeholder="WhatsApp (84xxxxxxx)"
                   inputMode="tel"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
-                  className="h-12 pl-[72px] border-slate-200 rounded-xl bg-slate-50/50 text-sm font-medium placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:bg-white"
+                  placeholder="84 000 000 0"
+                  className="h-12 pl-[78px] rounded-xl border-slate-200 bg-white text-sm"
                 />
               </div>
             </div>
 
-            {/* Method selector */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => { setPaymentMethod("mpesa"); setPhone(""); }}
-                className={cn(
-                  "relative flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all bg-white",
-                  paymentMethod === "mpesa"
-                    ? "border-[#E30613] shadow-[0_0_0_3px_rgba(227,6,19,0.08)]"
-                    : "border-slate-200 hover:border-slate-300",
-                )}
-              >
-                <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0">
-                  <img src="/mpesa-logo.jpg" className="h-full w-full object-cover" alt="M-Pesa" loading="lazy" />
-                </div>
-                <span className="text-sm font-bold text-slate-900">M-Pesa</span>
-                {paymentMethod === "mpesa" && (
-                  <CheckCircle2 className="absolute top-1.5 right-1.5 h-3.5 w-3.5 text-[#E30613] fill-white" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setPaymentMethod("emola"); setPhone(""); }}
-                className={cn(
-                  "relative flex items-center gap-2 p-2.5 rounded-xl border-2 transition-all bg-white",
-                  paymentMethod === "emola"
-                    ? "border-orange-500 shadow-[0_0_0_3px_rgba(249,115,22,0.1)]"
-                    : "border-slate-200 hover:border-slate-300",
-                )}
-              >
-                <div className="h-9 w-9 rounded-lg overflow-hidden flex-shrink-0">
-                  <img src="/emola-logo.jpg" className="h-full w-full object-cover" alt="e-Mola" loading="lazy" />
-                </div>
-                <span className="text-sm font-bold text-slate-900">e-Mola</span>
-                {paymentMethod === "emola" && (
-                  <CheckCircle2 className="absolute top-1.5 right-1.5 h-3.5 w-3.5 text-orange-500 fill-white" />
-                )}
-              </button>
-            </div>
-
-            {/* Payment number */}
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
-                <img src={mozFlag.url} alt="MZ" className="h-3.5 w-5 object-cover rounded-sm" />
-                <span className="text-xs font-semibold text-slate-500">+258</span>
+            <div>
+              <label className="text-sm font-bold text-slate-900 mb-2 block">
+                Selecione o método de pagamento <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setPaymentMethod("mpesa"); setPhone(""); }}
+                  className={cn(
+                    "relative flex items-center gap-2 p-3 rounded-xl border-2 transition-all bg-white",
+                    paymentMethod === "mpesa" ? "border-[#E30613] shadow-[0_0_0_3px_rgba(227,6,19,0.08)]" : "border-slate-200 hover:border-slate-300",
+                  )}
+                >
+                  <img src="/mpesa-logo.jpg" className="h-8 w-8 rounded-md object-cover" alt="M-Pesa" />
+                  <span className="text-sm font-bold text-slate-900">M-Pesa</span>
+                  {paymentMethod === "mpesa" && <CheckCircle2 className="absolute top-1.5 right-1.5 h-4 w-4 text-[#E30613] fill-white" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setPaymentMethod("emola"); setPhone(""); }}
+                  className={cn(
+                    "relative flex items-center gap-2 p-3 rounded-xl border-2 transition-all bg-white",
+                    paymentMethod === "emola" ? "border-orange-500 shadow-[0_0_0_3px_rgba(249,115,22,0.1)]" : "border-slate-200 hover:border-slate-300",
+                  )}
+                >
+                  <img src="/emola-logo.jpg" className="h-8 w-8 rounded-md object-cover" alt="e-Mola" />
+                  <span className="text-sm font-bold text-slate-900">e-Mola</span>
+                  {paymentMethod === "emola" && <CheckCircle2 className="absolute top-1.5 right-1.5 h-4 w-4 text-orange-500 fill-white" />}
+                </button>
               </div>
-              <Input
-                placeholder={paymentMethod === "mpesa" ? "Número M-Pesa (84/85)" : "Número e-Mola (86/87)"}
-                required
-                inputMode="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="h-12 pl-[72px] border-slate-200 rounded-xl bg-slate-50/50 text-sm font-medium placeholder:text-slate-400 focus-visible:ring-2 focus-visible:bg-white"
-                style={{ ['--tw-ring-color' as any]: accent }}
-              />
+
+              <div className="mt-3 relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-slate-200 pr-2">
+                  <img src={mozFlag.url} alt="MZ" className="h-3.5 w-5 object-cover rounded-sm" />
+                  <span className="text-xs font-semibold text-slate-500">+258</span>
+                </div>
+                <Input
+                  placeholder={paymentMethod === "mpesa" ? "Número M-Pesa (84/85)" : "Número e-Mola (86/87)"}
+                  required
+                  inputMode="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="h-12 pl-[78px] rounded-xl border-slate-200 bg-white text-sm"
+                />
+              </div>
             </div>
 
-            {/* Status / error */}
             {(paymentStatusMessage || paymentErrorMessage) && (
-              <div
-                className={cn(
-                  "rounded-xl border p-3 text-xs font-medium",
-                  paymentErrorMessage
-                    ? "border-red-200 bg-red-50 text-red-700"
-                    : "border-emerald-200 bg-emerald-50 text-emerald-700",
-                )}
-              >
+              <div className={cn(
+                "rounded-xl border p-3 text-sm font-medium flex items-center gap-2",
+                paymentErrorMessage ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700",
+              )}>
+                <ShieldAlert className="h-4 w-4 flex-shrink-0" />
                 {paymentErrorMessage || paymentStatusMessage}
               </div>
             )}
 
-            {/* CTA */}
             <Button
               type="submit"
               disabled={processingPayment}
-              className="w-full h-14 text-base font-black text-white rounded-xl shadow-lg disabled:opacity-70 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-1"
+              className="w-full h-14 text-base font-bold rounded-xl text-white shadow-lg disabled:opacity-70 transition-all active:scale-[0.99] flex items-center justify-center gap-2"
               style={{
                 background: `linear-gradient(180deg, ${accent} 0%, ${paymentMethod === "mpesa" ? "#B30410" : "#EA580C"} 100%)`,
                 boxShadow: `0 10px 25px -5px ${accent}50`,
@@ -375,27 +415,27 @@ function CheckoutPage() {
               ) : (
                 <>
                   <Lock className="h-4 w-4" />
-                  Pagar {product.price.toLocaleString("pt-MZ")} MT
-                  <ArrowRight className="h-4 w-4" />
+                  Finalizar Compra
                 </>
               )}
             </Button>
 
-            {/* Trust strip */}
-            <div className="flex items-center justify-center gap-4 pt-2">
-              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                <ShieldCheck className="h-3 w-3" />
-                Seguro
-              </div>
-              <div className="h-3 w-px bg-slate-200" />
-              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                <Lock className="h-3 w-3" />
-                Criptografado
-              </div>
-              <div className="h-3 w-px bg-slate-200" />
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                PagamentosMZ
-              </div>
+            <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                Compra 100% segura
+              </span>
+              <span className="text-slate-300">|</span>
+              <span className="flex items-center gap-1">
+                <Lock className="h-3.5 w-3.5 text-emerald-500" />
+                Entrega imediata
+              </span>
+            </div>
+
+            <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5 text-xs text-slate-600 text-center">
+              Ao clicar em <b>"Finalizar Compra"</b>, você concorda com os{" "}
+              <a href="#" className="text-blue-600 underline">Termos de Uso</a> e{" "}
+              <a href="#" className="text-blue-600 underline">Política de Privacidade</a>.
             </div>
           </form>
         </div>
