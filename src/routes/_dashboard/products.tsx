@@ -44,6 +44,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { ProductFormFields } from "@/components/dashboard/ProductFormFields";
+
 
 export const Route = createFileRoute("/_dashboard/products")({
   component: ProductsPage,
