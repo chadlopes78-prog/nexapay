@@ -553,6 +553,34 @@ function DashboardPage() {
         </CardContent>
       </Card>
 
+      <Card className="border border-slate-200/70 shadow-none bg-white rounded-xl">
+        <CardHeader className="px-6 pt-5 pb-3">
+          <CardTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-emerald-600" /> Receita ao longo do tempo
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500 mt-1">Soma de vendas aprovadas por dia</CardDescription>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-2">
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueSeries}>
+                <defs>
+                  <linearGradient id="gRevDash" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="day" stroke="#94a3b8" fontSize={11} />
+                <YAxis stroke="#94a3b8" fontSize={11} />
+                <RTooltip />
+                <Area type="monotone" dataKey="receita" stroke="#10b981" fill="url(#gRevDash)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border border-slate-200/70 shadow-none bg-white rounded-xl overflow-hidden">
         <CardHeader className="px-6 pt-5 pb-3 border-b border-slate-100">
           <CardTitle className="text-base font-semibold text-slate-900">Atividade recente</CardTitle>
