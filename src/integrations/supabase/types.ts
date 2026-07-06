@@ -81,12 +81,29 @@ export type Database = {
           guarantee_text: string | null
           id: string
           logo_url: string | null
+          order_bump_description: string | null
+          order_bump_enabled: boolean
+          order_bump_image_url: string | null
+          order_bump_price: number | null
+          order_bump_title: string | null
           primary_color: string | null
           product_id: string
+          social_proof_count: number
+          social_proof_enabled: boolean
+          social_proof_message: string | null
           subtitle: string | null
           testimonials: Json | null
+          timer_color: string
+          timer_enabled: boolean
+          timer_message: string | null
+          timer_minutes: number
           title: string | null
           updated_at: string
+          upsell_description: string | null
+          upsell_discount_percent: number | null
+          upsell_enabled: boolean
+          upsell_product_id: string | null
+          upsell_title: string | null
           video_url: string | null
         }
         Insert: {
@@ -98,12 +115,29 @@ export type Database = {
           guarantee_text?: string | null
           id?: string
           logo_url?: string | null
+          order_bump_description?: string | null
+          order_bump_enabled?: boolean
+          order_bump_image_url?: string | null
+          order_bump_price?: number | null
+          order_bump_title?: string | null
           primary_color?: string | null
           product_id: string
+          social_proof_count?: number
+          social_proof_enabled?: boolean
+          social_proof_message?: string | null
           subtitle?: string | null
           testimonials?: Json | null
+          timer_color?: string
+          timer_enabled?: boolean
+          timer_message?: string | null
+          timer_minutes?: number
           title?: string | null
           updated_at?: string
+          upsell_description?: string | null
+          upsell_discount_percent?: number | null
+          upsell_enabled?: boolean
+          upsell_product_id?: string | null
+          upsell_title?: string | null
           video_url?: string | null
         }
         Update: {
@@ -115,12 +149,29 @@ export type Database = {
           guarantee_text?: string | null
           id?: string
           logo_url?: string | null
+          order_bump_description?: string | null
+          order_bump_enabled?: boolean
+          order_bump_image_url?: string | null
+          order_bump_price?: number | null
+          order_bump_title?: string | null
           primary_color?: string | null
           product_id?: string
+          social_proof_count?: number
+          social_proof_enabled?: boolean
+          social_proof_message?: string | null
           subtitle?: string | null
           testimonials?: Json | null
+          timer_color?: string
+          timer_enabled?: boolean
+          timer_message?: string | null
+          timer_minutes?: number
           title?: string | null
           updated_at?: string
+          upsell_description?: string | null
+          upsell_discount_percent?: number | null
+          upsell_enabled?: boolean
+          upsell_product_id?: string | null
+          upsell_title?: string | null
           video_url?: string | null
         }
         Relationships: [
@@ -128,6 +179,13 @@ export type Database = {
             foreignKeyName: "checkouts_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkouts_upsell_product_id_fkey"
+            columns: ["upsell_product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
