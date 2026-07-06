@@ -417,27 +417,7 @@ function ProductsPage() {
                   />
                 </TabsContent>
                 <TabsContent value="checkout" className="p-4 sm:p-6 mt-0">
-                  <ProductFormFields
-                    idPrefix="edit-c"
-                    section="checkout"
-                    name={name} setName={setName}
-                    description={description} setDescription={setDescription}
-                    price={price} setPrice={setPrice}
-                    category={category} setCategory={setCategory}
-                    supportNumber={supportNumber} setSupportNumber={setSupportNumber}
-                    supportPhone={supportPhone} setSupportPhone={setSupportPhone}
-                    facebookPixelId={facebookPixelId} setFacebookPixelId={setFacebookPixelId}
-                    facebookAccessToken={facebookAccessToken} setFacebookAccessToken={setFacebookAccessToken}
-                    deliveryType={deliveryType} setDeliveryType={setDeliveryType}
-                    deliveryLink={deliveryLink} setDeliveryLink={setDeliveryLink}
-                    accessLink={accessLink} setAccessLink={setAccessLink}
-                    thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
-                    imageFile={imageFile} setImageFile={setImageFile}
-                    imageUrl={imageUrl}
-                    bannerFile={bannerFile} setBannerFile={setBannerFile}
-                    bannerUrl={bannerUrl}
-                    showDeliveryFile={false}
-                  />
+                  {editingProduct?.id && <CheckoutEditor productId={editingProduct.id} />}
                 </TabsContent>
               </Tabs>
               <DialogFooter className="px-6 py-4 border-t bg-white sticky bottom-0 gap-2">
