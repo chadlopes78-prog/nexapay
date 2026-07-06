@@ -63,7 +63,7 @@ function DashboardLayoutWrapper() {
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
           <p className="text-sm font-black text-slate-400 uppercase tracking-widest animate-pulse">
-            Carregando PaymentBlack...
+            Carregando NexaPay...
           </p>
         </div>
       </div>
@@ -262,7 +262,7 @@ function DashboardLayout() {
             <span className="text-lg font-black text-white">P</span>
           </div>
           {(isSidebarOpen || isMobileMenuOpen) && (
-            <span className="text-lg font-bold tracking-tight truncate">Paymentblack</span>
+            <span className="text-lg font-bold tracking-tight truncate">NexaPay</span>
           )}
         </Link>
       </div>
@@ -319,7 +319,7 @@ function DashboardLayout() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-black border border-slate-800 shadow-sm">
             <span className="text-lg font-black text-white">P</span>
           </div>
-          <span className="text-lg font-bold tracking-tight">Paymentblack</span>
+          <span className="text-lg font-bold tracking-tight">NexaPay</span>
         </Link>
         <Button
           variant="ghost"

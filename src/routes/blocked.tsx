@@ -44,7 +44,7 @@ function BlockedPage() {
           <Button 
             variant="default" 
             className="w-full bg-slate-900 hover:bg-slate-800"
-            onClick={() => window.open('mailto:suporte@paymentblack.com')}
+            onClick={() => window.open('mailto:suporte@nexapay.co.mz')}
           >
             <MessageSquare className="mr-2 h-4 w-4" />
             Contatar Suporte

@@ -35,7 +35,7 @@ export const Route = createFileRoute("/p/$productId")({
     const image = product.image_url || "";
     return {
       meta: [
-        { title: `${product.name} | PagamentosMZ` },
+        { title: `${product.name} | NexaPay` },
         { name: "description", content: product.description || "Checkout seguro via M-Pesa e e-Mola" },
         { property: "og:title", content: product.name },
         { property: "og:image", content: image },

@@ -1,6 +1,6 @@
 {
-  "name": "Paymentblack Mozambique",
-  "short_name": "Paymentblack",
+  "name": "NexaPay",
+  "short_name": "NexaPay",
   "description": "Plataforma de pagamentos e checkout inteligente",
   "start_url": "/dashboard",
   "display": "standalone",
@@ -40,7 +40,7 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Paymentblack Dashboard"
+      "label": "NexaPay Dashboard"
     }
   ]
 }

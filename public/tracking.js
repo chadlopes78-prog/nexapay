@@ -7,7 +7,7 @@
   const trackingId = urlParams.get('id');
 
   if (!trackingId) {
-    console.error('PaymentBlack Tracking: Missing tracking ID');
+    console.error('NexaPay Tracking: Missing tracking ID');
     return;
   }
 
