@@ -102,19 +102,34 @@ function normalizeMozambicanPhone(value: string) {
   return digits;
 }
 
-let cachedToken: { value: string; expiresAt: number } | null = null;
+type UserCreds = {
+  e2p_client_id: string;
+  e2p_client_secret: string;
+  wallet_mpesa: string | null;
+  wallet_emola: string | null;
+};
 
-async function getAccessToken(): Promise<string> {
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) {
-    return cachedToken.value;
-  }
+async function loadUserCreds(userId: string): Promise<UserCreds | null> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("user_payment_credentials")
+    .select("e2p_client_id, e2p_client_secret, wallet_mpesa, wallet_emola")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data?.e2p_client_id || !data?.e2p_client_secret) return null;
+  return {
+    e2p_client_id: data.e2p_client_id,
+    e2p_client_secret: data.e2p_client_secret,
+    wallet_mpesa: data.wallet_mpesa,
+    wallet_emola: data.wallet_emola,
+  };
+}
 
-  const clientId = process.env.E2PAYMENT_CLIENT_ID;
-  const clientSecret = process.env.E2PAYMENT_CLIENT_SECRET;
+const tokenCache = new Map<string, { value: string; expiresAt: number }>();
 
-  if (!clientId || !clientSecret) {
-    throw new Error("Credenciais e2payment não configuradas no servidor.");
-  }
+async function getAccessToken(clientId: string, clientSecret: string): Promise<string> {
+  const cached = tokenCache.get(clientId);
+  if (cached && cached.expiresAt > Date.now() + 30_000) return cached.value;
 
   const res = await fetch(`${E2PAY_BASE_URL}/oauth/token`, {
     method: "POST",
@@ -132,11 +147,7 @@ async function getAccessToken(): Promise<string> {
 
   const text = await res.text();
   let json: Record<string, unknown> | null = null;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    /* noop */
-  }
+  try { json = text ? JSON.parse(text) : null; } catch { /* noop */ }
 
   if (!res.ok || !json?.access_token) {
     console.error("e2payment token error", { status: res.status, body: text?.slice(0, 500) });
@@ -144,11 +155,9 @@ async function getAccessToken(): Promise<string> {
   }
 
   const expiresInMs = (Number(json.expires_in) || 3600) * 1000;
-  cachedToken = {
-    value: String(json.access_token),
-    expiresAt: Date.now() + expiresInMs,
-  };
-  return cachedToken.value;
+  const value = String(json.access_token);
+  tokenCache.set(clientId, { value, expiresAt: Date.now() + expiresInMs });
+  return value;
 }
 
 const InitiateInput = PaymentInput;
@@ -176,14 +185,6 @@ export const initiateSale = createServerFn({ method: "POST" })
     if (v.error) return { success: false, error: v.error };
     const msisdn = v.msisdn!;
 
-    const walletId =
-      data.method === "mpesa"
-        ? process.env.E2PAYMENT_WALLET_MPESA
-        : process.env.E2PAYMENT_WALLET_EMOLA;
-    if (!walletId) {
-      return { success: false, error: `Carteira ${data.method.toUpperCase()} não configurada.` };
-    }
-
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const isUuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -200,6 +201,16 @@ export const initiateSale = createServerFn({ method: "POST" })
     if (product.status && product.status !== "active") {
       return { success: false, error: "Produto indisponível para compra." };
     }
+
+    const creds = await loadUserCreds(product.user_id);
+    if (!creds) {
+      return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
+    }
+    const walletId = data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
+    if (!walletId) {
+      return { success: false, error: `Carteira ${data.method.toUpperCase()} não configurada pelo vendedor.` };
+    }
+
     const amount = Number(product.price);
     if (!Number.isFinite(amount) || amount <= 0 || amount > 500_000) {
       return { success: false, error: "Valor do produto inválido." };
@@ -247,7 +258,7 @@ export const chargeSale = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sale, error: saleErr } = await supabaseAdmin
       .from("sales")
-      .select("id, status, amount, payment_method, customer_phone, payment_reference, products(access_link, delivery_link)")
+      .select("id, status, amount, payment_method, customer_phone, payment_reference, user_id, products(access_link, delivery_link)")
       .eq("id", data.saleId)
       .maybeSingle();
     if (saleErr || !sale) return { success: false, error: "Venda não encontrada." };
@@ -256,9 +267,13 @@ export const chargeSale = createServerFn({ method: "POST" })
       return { success: true, saleId: sale.id, transactionId: null, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
     }
 
+    if (!sale.user_id) return { success: false, saleId: sale.id, error: "Venda sem vendedor associado." };
+    const creds = await loadUserCreds(sale.user_id);
+    if (!creds) {
+      return { success: false, saleId: sale.id, error: "Vendedor sem integração de pagamento configurada." };
+    }
     const method = sale.payment_method as "mpesa" | "emola";
-    const walletId =
-      method === "mpesa" ? process.env.E2PAYMENT_WALLET_MPESA : process.env.E2PAYMENT_WALLET_EMOLA;
+    const walletId = method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
     if (!walletId) return { success: false, saleId: sale.id, error: "Carteira não configurada." };
 
     const {
@@ -273,8 +288,7 @@ export const chargeSale = createServerFn({ method: "POST" })
     const amount = Number(sale.amount);
 
     try {
-      const token = await getAccessToken();
-      const clientId = process.env.E2PAYMENT_CLIENT_ID!;
+      const token = await getAccessToken(creds.e2p_client_id, creds.e2p_client_secret);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 90_000);
       const endpoint =
@@ -291,7 +305,7 @@ export const chargeSale = createServerFn({ method: "POST" })
           "User-Agent": "PagamentosMZ/1.0",
         },
         body: JSON.stringify({
-          client_id: clientId,
+          client_id: creds.e2p_client_id,
           amount: String(amount),
           phone: localPhone,
           reference,
@@ -337,4 +351,3 @@ export const processPayment = createServerFn({ method: "POST" })
     if (!init.success) return init;
     return await (chargeSale as unknown as (args: { data: { saleId: string } }) => Promise<PaymentResult>)({ data: { saleId: init.saleId } });
   });
-
