@@ -302,32 +302,62 @@ function SecuritySection() {
 }
 
 function PayoutsSection() {
+  const { data: revenue } = useQuery({
+    queryKey: ["payouts-revenue"],
+    queryFn: async () => {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) return { mpesa: 0, emola: 0, total: 0 };
+      const { data } = await supabase
+        .from("sales")
+        .select("amount, payment_method, status")
+        .eq("user_id", uid)
+        .in("status", ["approved", "paid", "success"]);
+      let mpesa = 0, emola = 0;
+      for (const s of data || []) {
+        const m = (s.payment_method || "").toLowerCase();
+        const amt = Number(s.amount) || 0;
+        if (m.includes("mpesa") || m.includes("m-pesa")) mpesa += amt;
+        else if (m.includes("emola") || m.includes("e-mola")) emola += amt;
+      }
+      return { mpesa, emola, total: mpesa + emola };
+    },
+    staleTime: 30_000,
+  });
+
+  const fmt = (v: number) =>
+    new Intl.NumberFormat("pt-MZ", { style: "currency", currency: "MZN", maximumFractionDigits: 2 }).format(v);
+
   return (
-    <Card className="border-slate-200/70 shadow-none rounded-xl">
-      <CardHeader>
-        <SectionHeader icon={Wallet} title="Recebimentos" description="Carteiras e integrações de pagamento" />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-start justify-between gap-4 p-4 rounded-lg border border-slate-200 bg-slate-50/50">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-slate-900">E2Payments</span>
-              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Conectado
-              </Badge>
+    <div className="space-y-6">
+      <Card className="border-slate-200/70 shadow-none rounded-xl">
+        <CardHeader>
+          <SectionHeader icon={Wallet} title="Faturamento por método" description="Total recebido por carteira de pagamento" />
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50">
+              <p className="text-xs text-slate-500 font-medium">M-Pesa</p>
+              <p className="text-xl font-bold text-slate-900 mt-1">{fmt(revenue?.mpesa ?? 0)}</p>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Provedor ativo para M-Pesa e e-Mola. Configurado via variáveis do sistema.
-            </p>
+            <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50">
+              <p className="text-xs text-slate-500 font-medium">e-Mola</p>
+              <p className="text-xl font-bold text-slate-900 mt-1">{fmt(revenue?.emola ?? 0)}</p>
+            </div>
+            <div className="rounded-lg border border-emerald-200 p-4 bg-emerald-50/50">
+              <p className="text-xs text-emerald-700 font-medium">Total</p>
+              <p className="text-xl font-bold text-emerald-900 mt-1">{fmt(revenue?.total ?? 0)}</p>
+            </div>
           </div>
-          <Button variant="outline" size="sm" disabled>Testar conexão</Button>
-        </div>
-        <SoonRow title="Conta de recebimento" description="Selecione a carteira padrão para créditos das vendas." />
-        <SoonRow title="Processamento por documento" description="Aplique regras específicas por CPF/BI ou tipo de documento." />
-      </CardContent>
-    </Card>
+          <p className="text-xs text-slate-500 mt-4">
+            Configure suas credenciais de recebimento em <Link to="/integrations" className="text-primary underline">Integrações → e2payments</Link>.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
+
 
 function NotificationsSection() {
   return (

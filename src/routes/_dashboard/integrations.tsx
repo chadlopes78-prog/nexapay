@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Search,
   Zap,
+  Wallet,
   Webhook,
   Code2,
   CheckCircle2,
@@ -37,6 +40,7 @@ export const Route = createFileRoute("/_dashboard/integrations")({
 type IntegrationId =
   | "utmify"
   | "webhooks"
+  | "e2payments"
   | "custom_api";
 
 interface FieldDef {
@@ -55,7 +59,7 @@ interface IntegrationDef {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   fields?: FieldDef[];
-  customEditor?: "webhooks" | "custom_api";
+  customEditor?: "webhooks" | "custom_api" | "e2payments";
 }
 
 const INTEGRATIONS: IntegrationDef[] = [
@@ -88,9 +92,17 @@ const INTEGRATIONS: IntegrationDef[] = [
     customEditor: "webhooks",
   },
   {
+    id: "e2payments",
+    name: "e2Payments",
+    description: "Configure suas credenciais M-Pesa e e-Mola para receber pagamentos.",
+    icon: Wallet,
+    color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    customEditor: "e2payments",
+  },
+  {
     id: "custom_api",
     name: "API Personalizada",
-    description: "Integre com sua própria API interna.",
+    description: "Conecte outras APIs próprias via endpoints e headers.",
     icon: Code2,
     color: "text-slate-700 bg-slate-100 border-slate-200",
     customEditor: "custom_api",
@@ -323,6 +335,8 @@ function IntegrationDialog({
           <WebhooksEditor values={values} setValues={setValues} />
         ) : integration.customEditor === "custom_api" ? (
           <CustomApiEditor values={values} setValues={setValues} />
+        ) : integration.customEditor === "e2payments" ? (
+          <E2PaymentsEditor onSaved={onClose} />
         ) : (
           <div className="grid gap-4 py-2">
             {integration.fields?.map((field) => (
@@ -539,6 +553,119 @@ function CustomApiEditor({
           className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm font-mono"
         />
       </div>
+    </div>
+  );
+}
+
+function E2PaymentsEditor({ onSaved }: { onSaved: () => void }) {
+  const qc = useQueryClient();
+  const [values, setValues] = useState({
+    e2p_client_id: "",
+    e2p_client_secret: "",
+    wallet_mpesa: "",
+    wallet_emola: "",
+  });
+  const [reveal, setReveal] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["user_payment_credentials"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data } = await supabase
+        .from("user_payment_credentials")
+        .select("*")
+        .eq("user_id", u.user.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (data) {
+      setValues({
+        e2p_client_id: data.e2p_client_id || "",
+        e2p_client_secret: data.e2p_client_secret || "",
+        wallet_mpesa: data.wallet_mpesa || "",
+        wallet_emola: data.wallet_emola || "",
+      });
+    }
+  }, [data]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const { error } = await supabase
+        .from("user_payment_credentials")
+        .upsert({ user_id: u.user.id, ...values }, { onConflict: "user_id" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["user_payment_credentials"] });
+      toast.success("Credenciais e2Payments salvas");
+      onSaved();
+    },
+    onError: (e: any) => toast.error(e.message || "Erro ao salvar"),
+  });
+
+  if (isLoading) return <div className="py-6 text-center text-sm text-slate-500">Carregando...</div>;
+
+  return (
+    <div className="grid gap-4 py-2">
+      <div className="grid gap-2">
+        <Label>Client ID</Label>
+        <Input
+          value={values.e2p_client_id}
+          onChange={(e) => setValues({ ...values, e2p_client_id: e.target.value })}
+          placeholder="Seu Client ID e2Payments"
+        />
+      </div>
+      <div className="grid gap-2">
+        <Label>Client Secret</Label>
+        <div className="relative">
+          <Input
+            type={reveal ? "text" : "password"}
+            value={values.e2p_client_secret}
+            onChange={(e) => setValues({ ...values, e2p_client_secret: e.target.value })}
+            placeholder="•••••••"
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setReveal(!reveal)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            {reveal ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid gap-2">
+          <Label>Carteira M-Pesa</Label>
+          <Input
+            value={values.wallet_mpesa}
+            onChange={(e) => setValues({ ...values, wallet_mpesa: e.target.value })}
+            placeholder="ID da carteira M-Pesa"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label>Carteira e-Mola</Label>
+          <Input
+            value={values.wallet_emola}
+            onChange={(e) => setValues({ ...values, wallet_emola: e.target.value })}
+            placeholder="ID da carteira e-Mola"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end pt-2">
+        <Button onClick={() => save.mutate()} disabled={save.isPending}>
+          {save.isPending ? "Salvando..." : "Salvar credenciais"}
+        </Button>
+      </div>
+      <p className="text-xs text-slate-500">
+        Suas credenciais são armazenadas de forma segura e apenas você tem acesso.
+      </p>
     </div>
   );
 }
