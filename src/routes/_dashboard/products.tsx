@@ -391,36 +391,68 @@ function ProductsPage() {
 
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-50">
+          <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[92vh] overflow-y-auto p-0 gap-0 bg-slate-50">
             <form onSubmit={handleUpdateProduct}>
-              <DialogHeader className="px-6 py-5 border-b bg-white sticky top-0 z-10">
+              <DialogHeader className="px-6 py-5 border-b bg-white sticky top-0 z-20">
                 <DialogTitle className="text-lg font-semibold">Editar produto</DialogTitle>
                 <DialogDescription className="text-sm text-slate-500">
-                  Atualize as informações do seu produto.
+                  {editingProduct?.name || "Atualize as informações do seu produto."}
                 </DialogDescription>
               </DialogHeader>
-              <div className="p-4 sm:p-6">
-                <ProductFormFields
-                  idPrefix="edit"
-                  name={name} setName={setName}
-                  description={description} setDescription={setDescription}
-                  price={price} setPrice={setPrice}
-                  category={category} setCategory={setCategory}
-                  supportNumber={supportNumber} setSupportNumber={setSupportNumber}
-                  supportPhone={supportPhone} setSupportPhone={setSupportPhone}
-                  facebookPixelId={facebookPixelId} setFacebookPixelId={setFacebookPixelId}
-                  facebookAccessToken={facebookAccessToken} setFacebookAccessToken={setFacebookAccessToken}
-                  deliveryType={deliveryType} setDeliveryType={setDeliveryType}
-                  deliveryLink={deliveryLink} setDeliveryLink={setDeliveryLink}
-                  accessLink={accessLink} setAccessLink={setAccessLink}
-                  thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
-                  imageFile={imageFile} setImageFile={setImageFile}
-                  imageUrl={imageUrl}
-                  bannerFile={bannerFile} setBannerFile={setBannerFile}
-                  bannerUrl={bannerUrl}
-                  showDeliveryFile={false}
-                />
-              </div>
+              <Tabs defaultValue="product" className="w-full">
+                <div className="bg-white border-b sticky top-[85px] z-10">
+                  <TabsList className="mx-4 sm:mx-6 my-2 grid w-fit grid-cols-2 bg-slate-100">
+                    <TabsTrigger value="product" className="px-6">Produto</TabsTrigger>
+                    <TabsTrigger value="checkout" className="px-6">Checkout</TabsTrigger>
+                  </TabsList>
+                </div>
+                <TabsContent value="product" className="p-4 sm:p-6 mt-0">
+                  <ProductFormFields
+                    idPrefix="edit-p"
+                    section="product"
+                    name={name} setName={setName}
+                    description={description} setDescription={setDescription}
+                    price={price} setPrice={setPrice}
+                    category={category} setCategory={setCategory}
+                    supportNumber={supportNumber} setSupportNumber={setSupportNumber}
+                    supportPhone={supportPhone} setSupportPhone={setSupportPhone}
+                    facebookPixelId={facebookPixelId} setFacebookPixelId={setFacebookPixelId}
+                    facebookAccessToken={facebookAccessToken} setFacebookAccessToken={setFacebookAccessToken}
+                    deliveryType={deliveryType} setDeliveryType={setDeliveryType}
+                    deliveryLink={deliveryLink} setDeliveryLink={setDeliveryLink}
+                    accessLink={accessLink} setAccessLink={setAccessLink}
+                    thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
+                    imageFile={imageFile} setImageFile={setImageFile}
+                    imageUrl={imageUrl}
+                    bannerFile={bannerFile} setBannerFile={setBannerFile}
+                    bannerUrl={bannerUrl}
+                    showDeliveryFile={false}
+                  />
+                </TabsContent>
+                <TabsContent value="checkout" className="p-4 sm:p-6 mt-0">
+                  <ProductFormFields
+                    idPrefix="edit-c"
+                    section="checkout"
+                    name={name} setName={setName}
+                    description={description} setDescription={setDescription}
+                    price={price} setPrice={setPrice}
+                    category={category} setCategory={setCategory}
+                    supportNumber={supportNumber} setSupportNumber={setSupportNumber}
+                    supportPhone={supportPhone} setSupportPhone={setSupportPhone}
+                    facebookPixelId={facebookPixelId} setFacebookPixelId={setFacebookPixelId}
+                    facebookAccessToken={facebookAccessToken} setFacebookAccessToken={setFacebookAccessToken}
+                    deliveryType={deliveryType} setDeliveryType={setDeliveryType}
+                    deliveryLink={deliveryLink} setDeliveryLink={setDeliveryLink}
+                    accessLink={accessLink} setAccessLink={setAccessLink}
+                    thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
+                    imageFile={imageFile} setImageFile={setImageFile}
+                    imageUrl={imageUrl}
+                    bannerFile={bannerFile} setBannerFile={setBannerFile}
+                    bannerUrl={bannerUrl}
+                    showDeliveryFile={false}
+                  />
+                </TabsContent>
+              </Tabs>
               <DialogFooter className="px-6 py-4 border-t bg-white sticky bottom-0 gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
                 <Button type="submit">Salvar alterações</Button>
@@ -428,6 +460,7 @@ function ProductsPage() {
             </form>
           </DialogContent>
         </Dialog>
+
 
       </div>
 
