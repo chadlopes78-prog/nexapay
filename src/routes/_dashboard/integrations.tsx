@@ -36,11 +36,6 @@ export const Route = createFileRoute("/_dashboard/integrations")({
 
 type IntegrationId =
   | "utmify"
-  | "ga4"
-  | "gtm"
-  | "meta_capi"
-  | "tiktok_pixel"
-  | "google_ads"
   | "webhooks"
   | "custom_api";
 
