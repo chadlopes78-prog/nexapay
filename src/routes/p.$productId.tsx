@@ -301,14 +301,6 @@ function CheckoutPage() {
               </div>
 
               <div className="pt-4 space-y-2 text-sm">
-                <div className="flex justify-between text-slate-600">
-                  <span>Subtotal:</span>
-                  <span className="text-slate-900 font-medium">Mt {product.price.toLocaleString("pt-MZ")} MZN</span>
-                </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>Taxas:</span>
-                  <span className="text-emerald-500 font-semibold">Grátis</span>
-                </div>
                 <div className="pt-3 mt-2 border-t border-slate-100 flex justify-between items-center">
                   <span className="font-bold text-slate-900">Total:</span>
                   <span className="text-lg font-extrabold text-emerald-500">
@@ -317,17 +309,6 @@ function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-500 border-t border-slate-100 pt-4">
-                <span className="flex items-center gap-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                  Compra 100% segura
-                </span>
-                <span className="text-slate-300">|</span>
-                <span className="flex items-center gap-1">
-                  <Lock className="h-3.5 w-3.5 text-emerald-500" />
-                  Entrega imediata
-                </span>
-              </div>
             </div>
 
             <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-center justify-center gap-2 text-sm text-slate-700">
@@ -461,17 +442,8 @@ function CheckoutPage() {
               )}
             </Button>
 
-            <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
-              <span className="flex items-center gap-1">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                Compra 100% segura
-              </span>
-              <span className="text-slate-300">|</span>
-              <span className="flex items-center gap-1">
-                <Lock className="h-3.5 w-3.5 text-emerald-500" />
-                Entrega imediata
-              </span>
-            </div>
+
+
 
             <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5 text-xs text-slate-600 text-center">
               Ao clicar em <b>"{buttonLabel}"</b>, você concorda com os{" "}
