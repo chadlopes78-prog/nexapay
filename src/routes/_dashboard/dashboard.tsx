@@ -33,9 +33,26 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 // Lazy load chart (Recharts ~220KB)
 const PerformanceChart = lazy(() => import("@/components/dashboard/PerformanceChart"));
+
+function normalizeSaleStatus(s: string | null | undefined) {
+  const v = (s || "").toLowerCase();
+  if (["approved", "paid", "success"].includes(v)) return "approved";
+  if (["failed", "error"].includes(v)) return "failed";
+  if (["cancelled", "canceled"].includes(v)) return "cancelled";
+  return "pending";
+}
 
 export const Route = createFileRoute("/_dashboard/dashboard")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -180,6 +197,42 @@ function DashboardPage() {
     staleTime: 1000 * 10, // 10 seconds for more "realtime" feel
     retry: 1,
   });
+
+  // Sales in range for the revenue AreaChart (same as Desempenho do Checkout)
+  const { data: rangeSales } = useQuery({
+    queryKey: ["dashboard-range-sales", dateRange.from.toISOString(), dateRange.to.toISOString()],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("sales")
+        .select("amount, status, created_at")
+        .eq("user_id", user.id)
+        .gte("created_at", dateRange.from.toISOString())
+        .lte("created_at", dateRange.to.toISOString());
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 1000 * 10,
+  });
+
+  const revenueSeries = useMemo(() => {
+    const map = new Map<string, { day: string; receita: number; aprovadas: number; falhas: number }>();
+    (rangeSales || []).forEach((s: any) => {
+      const d = new Date(s.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      if (!map.has(key)) map.set(key, { day: key.slice(5), receita: 0, aprovadas: 0, falhas: 0 });
+      const row = map.get(key)!;
+      const st = normalizeSaleStatus(s.status);
+      if (st === "approved") {
+        row.receita += Number(s.amount || 0);
+        row.aprovadas += 1;
+      }
+      if (st === "failed" || st === "cancelled") row.falhas += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => a.day.localeCompare(b.day));
+  }, [rangeSales]);
+
 
   const resetData = useMutation({
     mutationFn: async () => {
@@ -497,6 +550,34 @@ function DashboardPage() {
           <Suspense fallback={<div className="h-[320px] w-full rounded-lg bg-slate-50 animate-pulse" />}>
             <PerformanceChart data={dashboardData.chartData} />
           </Suspense>
+        </CardContent>
+      </Card>
+
+      <Card className="border border-slate-200/70 shadow-none bg-white rounded-xl">
+        <CardHeader className="px-6 pt-5 pb-3">
+          <CardTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-emerald-600" /> Receita ao longo do tempo
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500 mt-1">Soma de vendas aprovadas por dia</CardDescription>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-2">
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueSeries}>
+                <defs>
+                  <linearGradient id="gRevDash" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="day" stroke="#94a3b8" fontSize={11} />
+                <YAxis stroke="#94a3b8" fontSize={11} />
+                <RTooltip />
+                <Area type="monotone" dataKey="receita" stroke="#10b981" fill="url(#gRevDash)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
 
