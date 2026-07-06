@@ -185,9 +185,30 @@ function CheckoutPage() {
       setProcessingPayment(false);
     };
 
+    const startPolling = (saleId: string) => {
+      let attempts = 0;
+      const maxAttempts = 120; // ~2 min @ 1s
+      const tick = async () => {
+        if (settled) return;
+        if (attempts >= maxAttempts) {
+          finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
+          return;
+        }
+        attempts++;
+        try {
+          const s = await statusFn({ data: { saleId } });
+          if (settled) return;
+          if (s.status === "paid") return finishPaid(s.accessLink, saleId);
+          if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
+        } catch { /* transient */ }
+        setTimeout(tick, 1000);
+      };
+      setTimeout(tick, 800);
+    };
+
     try {
-      // Kick off gateway call
-      const payPromise = payFn({
+      // 1) Create sale fast, get saleId
+      const init = (await initFn({
         data: {
           productId,
           method: paymentMethod,
@@ -196,52 +217,24 @@ function CheckoutPage() {
           contactPhone: contactPhone || undefined,
           trafficPageTrackingId: trafficPageId,
         },
-      }) as Promise<PaymentResult>;
+      })) as PaymentResult;
 
-      // Handle direct gateway response (may be first or last)
-      payPromise
-        .then((result) => {
+      if (!init.success) return finishFailed(init.error || "Não foi possível iniciar o pagamento.");
+
+      const saleId = init.saleId;
+
+      // 2) Start polling immediately — webhook may confirm before charge returns
+      startPolling(saleId);
+
+      // 3) Fire the gateway charge in parallel (do not await)
+      chargeFn({ data: { saleId } })
+        .then((r: PaymentResult) => {
           if (settled) return;
-          if (!result.success) {
-            finishFailed(result.error || "Pagamento cancelado ou recusado.");
-            return;
-          }
-          if (result.status === "paid") {
-            finishPaid(result.accessLink ?? null, result.saleId);
-            return;
-          }
-          // pending → poll continues
-          if (result.saleId) startPolling(result.saleId);
+          if (!r.success) return finishFailed(r.error || "Pagamento cancelado ou recusado.");
+          if (r.status === "paid") return finishPaid(r.accessLink ?? null, saleId);
+          // pending → keep polling
         })
-        .catch((error) => {
-          finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
-        });
-
-      // Poll DB status (webhook path — usually beats sync response)
-      const startPolling = (saleId: string) => {
-        let attempts = 0;
-        const maxAttempts = 90; // ~90s @ 1s
-        const tick = async () => {
-          if (settled || attempts >= maxAttempts) {
-            if (!settled) finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
-            return;
-          }
-          attempts++;
-          try {
-            const s = await statusFn({ data: { saleId } });
-            if (settled) return;
-            if (s.status === "paid") return finishPaid(s.accessLink, saleId);
-            if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
-          } catch {
-            /* ignore transient */
-          }
-          setTimeout(tick, 1000);
-        };
-        setTimeout(tick, 1000);
-      };
-
-      // We need a saleId to poll — wait briefly for payPromise to give one, or infer from webhook by phone
-      // Simplest: poll starts once payPromise resolves with a saleId (see above).
+        .catch(() => { /* poller handles timeout */ });
     } catch (error: any) {
       finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
     }
