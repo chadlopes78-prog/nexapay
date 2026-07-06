@@ -43,7 +43,7 @@ type SectionId =
   | "profile"
   | "security"
   | "payouts"
-  | "notifications"
+  
   | "integrations"
   | "preferences"
   | "developer"
