@@ -272,71 +272,77 @@ function DashboardPage() {
 
     const heroKpis = [
       {
-        title: "Valor Recebido",
+        title: "Valor líquido",
         value: fmtMT(received),
-        description: "Dinheiro real em caixa",
-        icon: CreditCard,
-        accent: "bg-emerald-500",
+        description: "Recebido no período",
+        icon: DollarSign,
         tone: "text-emerald-600",
+        bg: "bg-emerald-50",
       },
       {
-        title: "Taxa de Conversão",
+        title: "Taxa de conversão",
         value: `${conversionRate.toFixed(1)}%`,
         description: `${success} de ${total} tentativas`,
         icon: TrendingUp,
-        accent: "bg-blue-600",
-        tone: "text-blue-600",
+        tone: "text-violet-600",
+        bg: "bg-violet-50",
       },
       {
-        title: "Ticket Médio",
+        title: "Ticket médio",
         value: fmtMT(avgTicket),
         description: "Por venda aprovada",
-        icon: DollarSign,
-        accent: "bg-slate-900",
-        tone: "text-slate-900",
+        icon: CreditCard,
+        tone: "text-slate-700",
+        bg: "bg-slate-100",
       },
     ];
 
     const metricCards = [
       {
-        title: "Total de Transações",
+        title: "Transações",
         value: stats.total_transactions,
-        description: "Volume total de pedidos",
+        description: "Volume total",
         icon: ShoppingCart,
-        color: "bg-slate-900",
+        tone: "text-slate-600",
+        bg: "bg-slate-100",
       },
       {
-        title: "Vendas com Sucesso",
+        title: "Aprovadas",
         value: stats.success_count,
         description: "Pagamentos confirmados",
         icon: TrendingUp,
-        color: "bg-emerald-500",
+        tone: "text-emerald-600",
+        bg: "bg-emerald-50",
       },
       {
-        title: "Vendas com Falha",
+        title: "Recusadas",
         value: stats.failed_count,
         description: "Pagamentos não concluídos",
         icon: TrendingDown,
-        color: "bg-rose-500",
+        tone: "text-rose-600",
+        bg: "bg-rose-50",
       },
       {
-        title: "Valor Total",
+        title: "Valor bruto",
         value: fmtMT(Number(stats.total_value)),
-        description: "Soma de todas as tentativas",
+        description: "Soma de tentativas",
         icon: DollarSign,
-        color: "bg-blue-600",
+        tone: "text-violet-600",
+        bg: "bg-violet-50",
       },
       {
-        title: "Valor Perdido",
+        title: "Valor perdido",
         value: fmtMT(Number(stats.lost_value)),
         description: "Oportunidades perdidas",
         icon: AlertCircle,
-        color: "bg-rose-600",
+        tone: "text-amber-600",
+        bg: "bg-amber-50",
       },
     ];
 
     return { heroKpis, metricCards };
   }, [dashboardData]);
+
 
   if (isLoading) return (
     <div className="space-y-6 pb-12 max-w-[1400px] mx-auto px-4 md:px-0 animate-in fade-in duration-300">
