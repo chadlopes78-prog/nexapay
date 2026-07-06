@@ -1,7 +1,7 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { processPayment, type PaymentResult } from "@/lib/api/payments.functions";
+import { initiateSale, chargeSale, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,9 @@ declare global {
 }
 
 function CheckoutPage() {
-  const payFn = useServerFn(processPayment);
+  const initFn = useServerFn(initiateSale);
+  const chargeFn = useServerFn(chargeSale);
+  const statusFn = useServerFn(getSaleStatus);
   const { productId } = useParams({ from: "/p/$productId" });
   const { product, checkout, defaultPixel } = Route.useLoaderData();
   const buttonLabel = (checkout?.button_text?.trim() || "Finalizar Compra");
@@ -168,8 +170,45 @@ function CheckoutPage() {
     setPaymentStatusMessage(`Pedido enviado para ${paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}. Confirme no seu telefone.`);
     trackEvent('InitiateCheckout');
 
+    let settled = false;
+    const finishPaid = (link: string | null, saleId: string) => {
+      if (settled) return;
+      settled = true;
+      trackEvent('Purchase');
+      window.location.replace(link || `/payment-success?productId=${productId}&saleId=${saleId}`);
+    };
+    const finishFailed = (msg: string) => {
+      if (settled) return;
+      settled = true;
+      setPaymentErrorMessage(msg);
+      setPaymentStatusMessage(null);
+      setProcessingPayment(false);
+    };
+
+    const startPolling = (saleId: string) => {
+      let attempts = 0;
+      const maxAttempts = 120; // ~2 min @ 1s
+      const tick = async () => {
+        if (settled) return;
+        if (attempts >= maxAttempts) {
+          finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
+          return;
+        }
+        attempts++;
+        try {
+          const s = await statusFn({ data: { saleId } });
+          if (settled) return;
+          if (s.status === "paid") return finishPaid(s.accessLink, saleId);
+          if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
+        } catch { /* transient */ }
+        setTimeout(tick, 1000);
+      };
+      setTimeout(tick, 800);
+    };
+
     try {
-      const result = (await payFn({
+      // 1) Create sale fast, get saleId
+      const init = (await initFn({
         data: {
           productId,
           method: paymentMethod,
@@ -180,32 +219,24 @@ function CheckoutPage() {
         },
       })) as PaymentResult;
 
-      if (!result.success) {
-        setPaymentErrorMessage(result.error || "Pagamento cancelado ou recusado.");
-        setPaymentStatusMessage(null);
-        setProcessingPayment(false);
-        return;
-      }
+      if (!init.success) return finishFailed(init.error || "Não foi possível iniciar o pagamento.");
 
-      if (result.status === "paid") {
-        trackEvent('Purchase');
-        const link = result.accessLink;
-        if (link) {
-          window.location.replace(link);
-        } else {
-          window.location.replace(`/payment-success?productId=${productId}&saleId=${result.saleId}`);
-        }
-        return;
-      }
+      const saleId = init.saleId;
 
-      // status pending → tratou como não confirmado (cancelado/timeout)
-      setPaymentErrorMessage("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
-      setPaymentStatusMessage(null);
-      setProcessingPayment(false);
+      // 2) Start polling immediately — webhook may confirm before charge returns
+      startPolling(saleId);
+
+      // 3) Fire the gateway charge in parallel (do not await)
+      chargeFn({ data: { saleId } })
+        .then((r: PaymentResult) => {
+          if (settled) return;
+          if (!r.success) return finishFailed(r.error || "Pagamento cancelado ou recusado.");
+          if (r.status === "paid") return finishPaid(r.accessLink ?? null, saleId);
+          // pending → keep polling
+        })
+        .catch(() => { /* poller handles timeout */ });
     } catch (error: any) {
-      setPaymentErrorMessage(error?.message || "Erro inesperado ao processar pagamento.");
-      setPaymentStatusMessage(null);
-      setProcessingPayment(false);
+      finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
     }
   };
 
