@@ -127,7 +127,7 @@ function SettingsPage() {
           {active === "profile" && <ProfileSection />}
           {active === "security" && <SecuritySection />}
           {active === "payouts" && <PayoutsSection />}
-          {active === "notifications" && <NotificationsSection />}
+          
           {active === "integrations" && <IntegrationsSection />}
           {active === "preferences" && <PreferencesSection />}
           {active === "developer" && <DeveloperSection />}
