@@ -37,6 +37,7 @@ export const Route = createFileRoute("/_dashboard/integrations")({
 type IntegrationId =
   | "utmify"
   | "webhooks"
+  | "e2payments"
   | "custom_api";
 
 interface FieldDef {
