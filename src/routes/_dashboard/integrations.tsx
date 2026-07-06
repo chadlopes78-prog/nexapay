@@ -3,11 +3,6 @@ import { useMemo, useState } from "react";
 import {
   Search,
   Zap,
-  BarChart3,
-  Tag,
-  Facebook,
-  Music2,
-  Target,
   Webhook,
   Code2,
   CheckCircle2,
@@ -41,11 +36,6 @@ export const Route = createFileRoute("/_dashboard/integrations")({
 
 type IntegrationId =
   | "utmify"
-  | "ga4"
-  | "gtm"
-  | "meta_capi"
-  | "tiktok_pixel"
-  | "google_ads"
   | "webhooks"
   | "custom_api";
 
@@ -87,61 +77,6 @@ const INTEGRATIONS: IntegrationDef[] = [
           { value: "test", label: "Teste" },
         ],
       },
-    ],
-  },
-  {
-    id: "ga4",
-    name: "Google Analytics 4",
-    description: "Envio de eventos e conversões para o GA4.",
-    icon: BarChart3,
-    color: "text-orange-600 bg-orange-50 border-orange-100",
-    fields: [
-      { key: "measurement_id", label: "Measurement ID", placeholder: "G-XXXXXXXXXX" },
-      { key: "api_secret", label: "API Secret", placeholder: "•••••••", secret: true },
-    ],
-  },
-  {
-    id: "gtm",
-    name: "Google Tag Manager",
-    description: "Gerencie tags e disparos via GTM.",
-    icon: Tag,
-    color: "text-blue-600 bg-blue-50 border-blue-100",
-    fields: [
-      { key: "container_id", label: "Container ID", placeholder: "GTM-XXXXXXX" },
-    ],
-  },
-  {
-    id: "meta_capi",
-    name: "Meta Conversions API",
-    description: "Envio server-side de eventos para o Facebook/Instagram.",
-    icon: Facebook,
-    color: "text-sky-600 bg-sky-50 border-sky-100",
-    fields: [
-      { key: "pixel_id", label: "Pixel ID", placeholder: "123456789" },
-      { key: "access_token", label: "Access Token", placeholder: "EAAB...", secret: true },
-      { key: "test_event_code", label: "Test Event Code (opcional)", placeholder: "TEST1234" },
-    ],
-  },
-  {
-    id: "tiktok_pixel",
-    name: "TikTok Pixel",
-    description: "Rastreamento de eventos e conversões no TikTok Ads.",
-    icon: Music2,
-    color: "text-rose-600 bg-rose-50 border-rose-100",
-    fields: [
-      { key: "pixel_id", label: "Pixel ID", placeholder: "CXXXXXXXXXXXXXXXXXX" },
-      { key: "access_token", label: "Access Token", placeholder: "•••••••", secret: true },
-    ],
-  },
-  {
-    id: "google_ads",
-    name: "Google Ads Conversion",
-    description: "Rastreamento de conversões do Google Ads.",
-    icon: Target,
-    color: "text-emerald-600 bg-emerald-50 border-emerald-100",
-    fields: [
-      { key: "conversion_id", label: "Conversion ID", placeholder: "AW-XXXXXXXXX" },
-      { key: "conversion_label", label: "Conversion Label", placeholder: "abcDEF123" },
     ],
   },
   {
