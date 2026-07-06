@@ -132,8 +132,8 @@ function ProductsPage() {
     fetchProducts();
   }, []);
 
-  const handleCreateProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateProduct = async (e?: React.FormEvent) => {
+    e?.preventDefault?.();
     const {
       data: { user },
     } = await supabase.auth.getUser();
