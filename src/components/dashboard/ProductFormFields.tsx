@@ -14,6 +14,7 @@ import {
 
 export interface ProductFormFieldsProps {
   idPrefix?: string;
+  section?: "all" | "product" | "checkout";
   name: string;
   setName: (v: string) => void;
   description?: string;
@@ -48,6 +49,7 @@ export interface ProductFormFieldsProps {
   bannerUrl: string;
   showDeliveryFile?: boolean;
 }
+
 
 function Section({
   icon: Icon,
