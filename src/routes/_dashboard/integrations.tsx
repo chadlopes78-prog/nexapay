@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import {
   Search,
   Zap,
+  Wallet,
   Webhook,
   Code2,
   CheckCircle2,
