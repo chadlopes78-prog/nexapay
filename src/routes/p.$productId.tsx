@@ -58,12 +58,14 @@ declare global {
 function CheckoutPage() {
   const payFn = useServerFn(processPayment);
   const { productId } = useParams({ from: "/p/$productId" });
-  const { product, defaultPixel } = Route.useLoaderData();
+  const { product, checkout, defaultPixel } = Route.useLoaderData();
+  const buttonLabel = (checkout?.button_text?.trim() || "Finalizar Compra");
 
   const pixelId = product?.facebook_pixel_id || defaultPixel?.fb_pixel_id;
 
   const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [pinSecondsLeft, setPinSecondsLeft] = useState(120);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
 
@@ -79,6 +81,15 @@ function CheckoutPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!processingPayment) return;
+    setPinSecondsLeft(120);
+    const t = setInterval(() => {
+      setPinSecondsLeft((p) => (p > 0 ? p - 1 : 0));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [processingPayment]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -415,7 +426,7 @@ function CheckoutPage() {
               ) : (
                 <>
                   <Lock className="h-4 w-4" />
-                  Finalizar Compra
+                  {buttonLabel}
                 </>
               )}
             </Button>
@@ -433,13 +444,78 @@ function CheckoutPage() {
             </div>
 
             <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5 text-xs text-slate-600 text-center">
-              Ao clicar em <b>"Finalizar Compra"</b>, você concorda com os{" "}
+              Ao clicar em <b>"{buttonLabel}"</b>, você concorda com os{" "}
               <a href="#" className="text-blue-600 underline">Termos de Uso</a> e{" "}
               <a href="#" className="text-blue-600 underline">Política de Privacidade</a>.
             </div>
           </form>
         </div>
       </div>
+
+      {processingPayment && (
+        <div className="fixed inset-0 z-50 backdrop-blur-md bg-slate-900/60 flex items-center justify-center px-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden">
+            <div
+              className="px-6 py-5 text-white flex items-center gap-3"
+              style={{ background: `linear-gradient(135deg, ${accent} 0%, ${paymentMethod === "mpesa" ? "#B30410" : "#EA580C"} 100%)` }}
+            >
+              <img
+                src={paymentMethod === "mpesa" ? "/mpesa-logo.jpg" : "/emola-logo.jpg"}
+                alt=""
+                className="h-10 w-10 rounded-lg object-cover ring-2 ring-white/40"
+              />
+              <div className="flex-1">
+                <div className="text-xs font-medium opacity-80">Pagamento via</div>
+                <div className="text-lg font-extrabold leading-tight">
+                  {paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}
+                </div>
+              </div>
+              <div className="h-9 w-9 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            </div>
+
+            <div className="p-6 space-y-5 text-center">
+              <div className="mx-auto h-16 w-16 rounded-full flex items-center justify-center" style={{ background: `${accent}15` }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" className="h-8 w-8">
+                  <rect x="5" y="2" width="14" height="20" rx="2.5" />
+                  <line x1="12" y1="18" x2="12" y2="18" />
+                </svg>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-extrabold text-slate-900">
+                  Confirme no seu telefone
+                </h3>
+                <p className="text-sm text-slate-600 mt-2 leading-relaxed">
+                  Um pop-up foi enviado para <b className="text-slate-900">+258 {phone}</b>.
+                  Insira o seu <b>PIN</b> para concluir o pagamento de{" "}
+                  <b style={{ color: accent }}>Mt {product.price.toLocaleString("pt-MZ")}</b>.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border-2 border-dashed p-4" style={{ borderColor: `${accent}40`, background: `${accent}08` }}>
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  Tempo restante
+                </div>
+                <div className="mt-1 text-4xl font-mono font-extrabold tabular-nums" style={{ color: accent }}>
+                  {String(Math.floor(pinSecondsLeft / 60)).padStart(2, "0")}:
+                  {String(pinSecondsLeft % 60).padStart(2, "0")}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 font-medium flex items-start gap-2 text-left">
+                <ShieldAlert className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>
+                  <b>Não feche esta aba.</b> Assim que confirmar o PIN no telefone, o acesso será liberado automaticamente.
+                </span>
+              </div>
+
+              {paymentErrorMessage && (
+                <div className="text-sm font-medium text-red-600">{paymentErrorMessage}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
