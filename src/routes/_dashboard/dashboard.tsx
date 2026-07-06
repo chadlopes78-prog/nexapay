@@ -33,9 +33,26 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip as RTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 // Lazy load chart (Recharts ~220KB)
 const PerformanceChart = lazy(() => import("@/components/dashboard/PerformanceChart"));
+
+function normalizeSaleStatus(s: string | null | undefined) {
+  const v = (s || "").toLowerCase();
+  if (["approved", "paid", "success"].includes(v)) return "approved";
+  if (["failed", "error"].includes(v)) return "failed";
+  if (["cancelled", "canceled"].includes(v)) return "cancelled";
+  return "pending";
+}
 
 export const Route = createFileRoute("/_dashboard/dashboard")({
   validateSearch: (search: Record<string, unknown>) => {
