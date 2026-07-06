@@ -260,7 +260,7 @@ function CheckoutPage() {
   }
 
   const accent = paymentMethod === "mpesa" ? "#E30613" : "#F97316";
-  const [email, setEmail] = useState("");
+  
 
   return (
     <div className="min-h-screen bg-white">
@@ -357,19 +357,8 @@ function CheckoutPage() {
               />
             </div>
 
-            <div>
-              <label className="text-sm font-bold text-slate-900 mb-1.5 block">
-                E-mail <span className="text-red-500">*</span>
-              </label>
-              <Input
-                required
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                className="h-12 rounded-xl border-slate-200 bg-white text-sm"
-              />
-            </div>
+
+
 
             <div>
               <label className="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
