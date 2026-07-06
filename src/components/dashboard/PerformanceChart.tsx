@@ -4,10 +4,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   Legend,
-  Cell,
 } from "recharts";
 import { memo } from "react";
 
@@ -21,89 +20,77 @@ function PerformanceChartImpl({ data }: { data: ChartDatum[] }) {
   const hasData = data.some((d) => d.sucesso > 0 || d.falha > 0);
 
   return (
-    <div className="h-[350px] w-full relative">
+    <div className="h-[320px] w-full relative">
       {!hasData && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">
-            Sem dados no período selecionado
-          </p>
+          <p className="text-xs text-slate-400">Sem dados no período selecionado</p>
         </div>
       )}
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <AreaChart data={data} margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
           <defs>
-            <linearGradient id="grad-sucesso" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
-              <stop offset="100%" stopColor="#10b981" stopOpacity={0.75} />
+            <linearGradient id="area-sucesso" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#22c55e" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
             </linearGradient>
-            <linearGradient id="grad-falha" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#64748b" stopOpacity={1} />
-              <stop offset="100%" stopColor="#64748b" stopOpacity={0.6} />
+            <linearGradient id="area-falha" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f7" />
           <XAxis
             dataKey="name"
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }}
+            tick={{ fontSize: 11, fill: "#94a3b8" }}
+            dy={8}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
             allowDecimals={false}
-            tick={{ fontSize: 10, fontWeight: 700, fill: "#94a3b8" }}
+            tick={{ fontSize: 11, fill: "#94a3b8" }}
           />
           <Tooltip
-            cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
+            cursor={{ stroke: "#e2e8f0", strokeWidth: 1 }}
             contentStyle={{
-              borderRadius: "14px",
+              borderRadius: "10px",
               border: "1px solid #e2e8f0",
-              boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.08)",
-              padding: "10px 14px",
-              fontSize: "11px",
+              boxShadow: "0 8px 24px -8px rgb(0 0 0 / 0.12)",
+              padding: "8px 12px",
+              fontSize: "12px",
             }}
-            itemStyle={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase" }}
-            labelStyle={{ fontWeight: 800, color: "#0f172a", marginBottom: 4 }}
+            labelStyle={{ fontWeight: 600, color: "#0f172a", marginBottom: 4 }}
           />
           <Legend
             verticalAlign="top"
             align="right"
             iconType="circle"
             iconSize={8}
-            wrapperStyle={{
-              fontSize: "10px",
-              fontWeight: 800,
-              textTransform: "uppercase",
-              paddingBottom: "20px",
-              color: "#475569",
-            }}
+            wrapperStyle={{ fontSize: "12px", paddingBottom: "12px", color: "#475569" }}
           />
-          <Bar
+          <Area
+            type="monotone"
             dataKey="sucesso"
-            fill="url(#grad-sucesso)"
-            radius={[6, 6, 0, 0]}
+            stroke="#22c55e"
+            strokeWidth={2.5}
+            fill="url(#area-sucesso)"
             name="Aprovadas"
-            maxBarSize={28}
             isAnimationActive={false}
-          >
-            {data.map((_, i) => (
-              <Cell key={`s-${i}`} />
-            ))}
-          </Bar>
-          <Bar
+            activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
+          />
+          <Area
+            type="monotone"
             dataKey="falha"
-            fill="url(#grad-falha)"
-            radius={[6, 6, 0, 0]}
-            name="Falhas"
-            maxBarSize={28}
+            stroke="#f43f5e"
+            strokeWidth={2.5}
+            fill="url(#area-falha)"
+            name="Recusadas"
             isAnimationActive={false}
-          >
-            {data.map((_, i) => (
-              <Cell key={`f-${i}`} />
-            ))}
-          </Bar>
-        </BarChart>
+            activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
+          />
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
