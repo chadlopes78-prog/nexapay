@@ -274,6 +274,7 @@ export const chargeSale = createServerFn({ method: "POST" })
     const method = sale.payment_method as "mpesa" | "emola";
     const walletId = method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
     if (!walletId) return { success: false, saleId: sale.id, error: "Carteira não configurada." };
+    const walletIdStr: string = walletId;
 
     const {
       confirmSalePayment,
