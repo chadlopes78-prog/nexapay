@@ -110,5 +110,20 @@ export const testWebhook = createServerFn({ method: "POST" })
 
 
     await deliverOnce(ins.id);
-    return { deliveryId: ins.id };
+    const { data: delivered, error: deliveredErr } = await supabaseAdmin
+      .from("webhook_deliveries")
+      .select("status, response_code, response_body, error")
+      .eq("id", ins.id)
+      .single();
+
+    if (deliveredErr || !delivered) {
+      throw new Error(deliveredErr?.message || "Falha ao confirmar teste");
+    }
+
+    if (delivered.status !== "success") {
+      const details = delivered.response_body || delivered.error || "Sem resposta do endpoint";
+      throw new Error(`Endpoint respondeu HTTP ${delivered.response_code ?? "sem código"}: ${details}`);
+    }
+
+    return { deliveryId: ins.id, responseCode: delivered.response_code };
   });
