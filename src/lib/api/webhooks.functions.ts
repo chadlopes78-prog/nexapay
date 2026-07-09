@@ -79,28 +79,32 @@ export const testWebhook = createServerFn({ method: "POST" })
     // blocks repeated tests. `pushcut_source` marker unlocks the Pushcut path
     // in deliverOnce (otherwise it 208-blocks non-payment sources).
     const testOrderId = crypto.randomUUID();
+    const nowIso = new Date().toISOString();
     const { data: ins, error: insErr } = await supabaseAdmin
       .from("webhook_deliveries")
       .insert({
         webhook_id: hook.id,
         user_id: context.userId,
-        event: "sale.approved",
+        event: "webhook.test",
         payload: {
           test: true,
+          event: "webhook.test",
+          status: "success",
           sale_id: testOrderId,
+          transaction_id: `TEST-${Date.now()}`,
           product_name: "Produto de Teste",
           customer_name: "Cliente Teste",
           customer_phone: "258840000000",
           amount: 100,
           payment_method: "mpesa",
-          status: "paid",
           payment_status: "paid",
           pushcut_source: "payment_webhook",
-          created_at: new Date().toISOString(),
+          created_at: nowIso,
         },
       })
       .select("id")
       .single();
+
     if (insErr || !ins) throw new Error(insErr?.message || "Falha ao enfileirar teste");
 
 
