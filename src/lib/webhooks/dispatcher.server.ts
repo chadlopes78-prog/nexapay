@@ -168,7 +168,8 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
     }
 
     const result = await postJsonWithTimeout(endpoint.url, {
-      event: isTestEvent ? "webhook_test" : "sale_approved",
+      event: "sale.approved",
+      type: isTestEvent ? "webhook.test" : "sale.approved",
       orderId,
       sent_at: new Date().toISOString(),
       data: payload,

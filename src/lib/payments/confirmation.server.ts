@@ -231,15 +231,15 @@ export async function confirmSalePayment(options: {
     }
     const currentSale = await fetchSaleById(saleId);
     if (currentSale?.status === "paid") {
-      void dispatchApprovedSideEffects(currentSale, rawPayload, triggerPushcut).catch((err) => {
+      await dispatchApprovedSideEffects(currentSale, rawPayload, triggerPushcut).catch((err) => {
         console.error("[payments] approved side-effects retry failed", err);
       });
     }
     return { sale: currentSale, becamePaid: false };
   }
 
-  // Fire-and-forget: never block the payment response (redirect must be instant).
-  void dispatchApprovedSideEffects(updated, rawPayload, triggerPushcut).catch((err) => {
+  // Guarantee webhook delivery is registered before returning the paid result.
+  await dispatchApprovedSideEffects(updated, rawPayload, triggerPushcut).catch((err) => {
     console.error("[payments] approved side-effects failed", err);
   });
 

@@ -75,8 +75,9 @@ export const testWebhook = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { deliverOnce } = await import("@/lib/webhooks/dispatcher.server");
 
-    // Use a fresh UUID so repeated tests are never deduplicated. The
-    // `webhook.test` event is delivered immediately and does not depend on products.
+    // Use a fresh UUID so repeated tests are never deduplicated. Pushcut only
+    // accepts the sale-approved delivery path, while the payload still marks
+    // this as a webhook.test event for logs and diagnostics.
     const testOrderId = crypto.randomUUID();
     const nowIso = new Date().toISOString();
     const { data: ins, error: insErr } = await supabaseAdmin
@@ -84,7 +85,7 @@ export const testWebhook = createServerFn({ method: "POST" })
       .insert({
         webhook_id: hook.id,
         user_id: context.userId,
-        event: "webhook.test",
+        event: "sale.approved",
         payload: {
           test: true,
           event: "webhook.test",
