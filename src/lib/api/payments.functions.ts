@@ -263,6 +263,8 @@ export const chargeSale = createServerFn({ method: "POST" })
       .maybeSingle();
     if (saleErr || !sale) return { success: false, error: "Venda não encontrada." };
     if (["paid", "approved"].includes(String(sale.status).toLowerCase())) {
+      const { confirmSalePayment } = await import("@/lib/payments/confirmation.server");
+      await confirmSalePayment({ saleId: sale.id, triggerPushcut: true });
       const p = sale.products as { access_link?: string | null; delivery_link?: string | null } | null;
       return { success: true, saleId: sale.id, transactionId: null, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
     }
