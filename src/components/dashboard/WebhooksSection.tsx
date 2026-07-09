@@ -259,21 +259,14 @@ function EndpointDialog({ initial, products, onSave }: DialogProps) {
   const [isPushcut, setIsPushcut] = useState(initial?.is_pushcut ?? false);
   const [active, setActive] = useState(initial?.active ?? true);
   const [events, setEvents] = useState<string[]>(initial?.events ?? ["sale.approved"]);
-  const [scope, setScope] = useState<"all" | "specific">(
-    initial && initial.product_ids?.length ? "specific" : "all"
-  );
-  const [productIds, setProductIds] = useState<string[]>(initial?.product_ids ?? []);
   const [saving, setSaving] = useState(false);
 
   const toggleEvent = (id: WebhookEventId) =>
     setEvents((prev) => prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]);
 
-  const toggleProduct = (id: string) =>
-    setProductIds((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
-
   const urlError = url && !isValidHttpUrl(url) ? "URL inválida (use https://...)" : null;
-  const canSave = name.trim() && isValidHttpUrl(url) && events.length > 0
-    && (scope === "all" || productIds.length > 0);
+  const canSave = name.trim() && isValidHttpUrl(url) && events.length > 0;
+
 
   return (
     <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0 gap-0">
