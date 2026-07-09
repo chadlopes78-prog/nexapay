@@ -358,10 +358,7 @@ async function dispatchApprovedSideEffects(
     .eq("user_id", userId)
     .eq("active", true);
 
-    .from("webhook_endpoints")
-    .select("id, events, active, product_ids, is_pushcut")
-    .eq("user_id", userId)
-    .eq("active", true);
+
 
   let inserted = 0;
   for (const ep of endpoints ?? []) {
