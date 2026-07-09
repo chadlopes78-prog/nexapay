@@ -75,6 +75,10 @@ export const testWebhook = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { deliverOnce } = await import("@/lib/webhooks/dispatcher.server");
 
+    // Use a fresh UUID so Pushcut dedupe (pushcut_logs.order_id UNIQUE) never
+    // blocks repeated tests. `pushcut_source` marker unlocks the Pushcut path
+    // in deliverOnce (otherwise it 208-blocks non-payment sources).
+    const testOrderId = crypto.randomUUID();
     const { data: ins, error: insErr } = await supabaseAdmin
       .from("webhook_deliveries")
       .insert({
@@ -83,19 +87,22 @@ export const testWebhook = createServerFn({ method: "POST" })
         event: "sale.approved",
         payload: {
           test: true,
-          sale_id: "test-" + Math.random().toString(36).slice(2, 10),
+          sale_id: testOrderId,
           product_name: "Produto de Teste",
           customer_name: "Cliente Teste",
           customer_phone: "258840000000",
           amount: 100,
           payment_method: "mpesa",
           status: "paid",
+          payment_status: "paid",
+          pushcut_source: "payment_webhook",
           created_at: new Date().toISOString(),
         },
       })
       .select("id")
       .single();
     if (insErr || !ins) throw new Error(insErr?.message || "Falha ao enfileirar teste");
+
 
     await deliverOnce(ins.id);
     return { deliveryId: ins.id };
