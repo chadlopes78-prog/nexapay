@@ -85,7 +85,7 @@ export const testWebhook = createServerFn({ method: "POST" })
       .insert({
         webhook_id: hook.id,
         user_id: context.userId,
-        event: "sale.approved",
+        event: "webhook.test",
         payload: {
           test: true,
           event: "webhook.test",

@@ -406,7 +406,7 @@ async function dispatchApprovedSideEffects(
     // Fire-and-forget: do not block the payment response on webhook delivery.
     // pg_cron drains remaining pending rows every minute; stuck "processing"
     // rows are auto-reset after 30s at the top of this function.
-    void processPendingForUser(userId).catch((err) =>
+    await processPendingForUser(userId).catch((err) =>
       console.error("[webhooks] background deliver failed", err),
     );
   }
