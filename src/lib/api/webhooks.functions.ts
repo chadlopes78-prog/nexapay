@@ -85,10 +85,11 @@ export const testWebhook = createServerFn({ method: "POST" })
       .insert({
         webhook_id: hook.id,
         user_id: context.userId,
-        event: "webhook.test",
+        event: "sale.approved",
         payload: {
           test: true,
           event: "webhook.test",
+
           status: "success",
           sale_id: testOrderId,
           transaction_id: `TEST-${Date.now()}`,
