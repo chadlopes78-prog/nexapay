@@ -205,7 +205,8 @@ function CheckoutPage() {
         } catch { /* transient */ }
         setTimeout(tick, 1000);
       };
-      setTimeout(tick, 800);
+      // Primeira consulta IMEDIATA — sem atraso artificial.
+      void tick();
     };
 
     try {
