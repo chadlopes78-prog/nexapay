@@ -409,7 +409,7 @@ async function dispatchApprovedSideEffects(
         : (sale.payment_method ?? "").toString().toUpperCase() || "PAGAMENTO";
     await sendPushToUser(userId, {
       event: "sale.approved",
-      body: `${amountStr} MT via ${method}`,
+      body: `R$ ${(amountNum * Number(process.env.MZN_TO_BRL_RATE || "0.085")).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} via ${method}`,
       url: "/transactions",
       metadata: { saleId: sale.id },
     });
