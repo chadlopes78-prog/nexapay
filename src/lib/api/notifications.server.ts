@@ -29,8 +29,14 @@ export async function triggerSaleApprovedNotification(saleId: string) {
     const products = sale.products as { name?: string | null } | null;
     const userId = sale.user_id;
     const productName = products?.name || "Produto";
-    const amount = sale.amount || 0;
-    const paymentMethod = (sale.payment_method || "Checkout").toUpperCase();
+    const amountNum = Number(sale.amount || 0);
+    const amountStr = amountNum.toLocaleString("pt-MZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const rawMethod = (sale.payment_method || "").toString().toLowerCase();
+    const paymentMethod = rawMethod.includes("emola")
+      ? "EMOLA"
+      : rawMethod.includes("mpesa") || rawMethod.includes("m-pesa")
+        ? "MPESA"
+        : (sale.payment_method || "PAGAMENTO").toString().toUpperCase();
 
     if (!userId) {
       console.error("[Notification] No user_id found for sale:", saleId);
