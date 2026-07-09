@@ -345,7 +345,7 @@ function EndpointDialog({ initial, products, onSave }: DialogProps) {
                 id: initial?.id, name: name.trim(), url: url.trim(),
                 secret: secret.trim() || null,
                 events,
-                product_ids: scope === "all" ? [] : productIds,
+                product_ids: [],
                 is_pushcut: isPushcut, active,
               });
             } catch (e: any) {
