@@ -75,9 +75,8 @@ export const testWebhook = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { deliverOnce } = await import("@/lib/webhooks/dispatcher.server");
 
-    // Use a fresh UUID so Pushcut dedupe (pushcut_logs.order_id UNIQUE) never
-    // blocks repeated tests. `pushcut_source` marker unlocks the Pushcut path
-    // in deliverOnce (otherwise it 208-blocks non-payment sources).
+    // Use a fresh UUID so repeated tests are never deduplicated. The
+    // `webhook.test` event is delivered immediately and does not depend on products.
     const testOrderId = crypto.randomUUID();
     const nowIso = new Date().toISOString();
     const { data: ins, error: insErr } = await supabaseAdmin
