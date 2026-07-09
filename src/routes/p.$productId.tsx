@@ -84,6 +84,8 @@ function CheckoutPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Contador puramente visual (feedback ao usuário).
+  // NÃO controla nem atrasa a chamada à API de pagamento.
   useEffect(() => {
     if (!processingPayment) return;
     setPinSecondsLeft(10);
@@ -203,7 +205,8 @@ function CheckoutPage() {
         } catch { /* transient */ }
         setTimeout(tick, 1000);
       };
-      setTimeout(tick, 800);
+      // Primeira consulta IMEDIATA — sem atraso artificial.
+      void tick();
     };
 
     try {
