@@ -51,9 +51,9 @@ export async function triggerSaleApprovedNotification(saleId: string) {
       return;
     }
 
-    // Use the specific message requested by the user
-    const title = "💰 Venda aprovada!";
-    const body = `Recebeste pagamento de ${amount} MT via ${paymentMethod} no produto ${productName}`;
+    const title = "Venda Aprovada ✅";
+    const body = `${amountStr} MT via ${paymentMethod}`;
+    void productName;
 
     console.log(`[Notification] Sending push to user ${userId}: ${body}`);
 
