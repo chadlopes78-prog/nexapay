@@ -396,11 +396,20 @@ async function dispatchApprovedSideEffects(
   // Native Web Push notification — always fires regardless of Pushcut config
   try {
     const { sendPushToUser } = await import("@/lib/push/sender.server");
-    const amountStr = sale.amount != null ? `${Number(sale.amount).toLocaleString("pt-MZ")} MT` : "";
-    const productName = (sale.products as { name?: string | null } | null)?.name ?? "produto";
+    const amountNum = sale.amount != null ? Number(sale.amount) : 0;
+    const amountStr = amountNum.toLocaleString("pt-MZ", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const rawMethod = (sale.payment_method ?? "").toString().toLowerCase();
+    const method = rawMethod.includes("emola")
+      ? "EMOLA"
+      : rawMethod.includes("mpesa") || rawMethod.includes("m-pesa")
+        ? "MPESA"
+        : (sale.payment_method ?? "").toString().toUpperCase() || "PAGAMENTO";
     await sendPushToUser(userId, {
       event: "sale.approved",
-      body: `${amountStr ? amountStr + " — " : ""}${productName}${sale.customer_name ? " · " + sale.customer_name : ""}`,
+      body: `${amountStr} MT via ${method}`,
       url: "/transactions",
       metadata: { saleId: sale.id },
     });
