@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -265,11 +265,18 @@ function EndpointDialog({ initial, products, onSave }: DialogProps) {
   const [events, setEvents] = useState<string[]>(initial?.events ?? ["sale.approved"]);
   const [saving, setSaving] = useState(false);
 
+  // Auto-detectar Pushcut ao colar URL
+  useEffect(() => {
+    if (url.includes("api.pushcut.io") && !isPushcut) setIsPushcut(true);
+  }, [url]);
+
   const toggleEvent = (id: WebhookEventId) =>
     setEvents((prev) => prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]);
 
-  const urlError = url && !isValidHttpUrl(url) ? "URL inválida (use https://...)" : null;
-  const canSave = name.trim() && isValidHttpUrl(url) && events.length > 0;
+  const urlError = url && !isValidHttpUrl(url.trim()) ? "URL inválida (use https://...)" : null;
+  const canSave = name.trim() && isValidHttpUrl(url.trim()) && events.length > 0;
+
+
 
 
   return (
