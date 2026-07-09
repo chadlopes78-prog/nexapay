@@ -37,6 +37,7 @@ interface Delivery {
   status: string;
   attempts: number;
   response_code: number | null;
+  response_body: string | null;
   error: string | null;
   payload: any;
   created_at: string;
@@ -80,7 +81,7 @@ export function WebhooksSection() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("webhook_deliveries")
-        .select("id, webhook_id, event, status, attempts, response_code, error, payload, created_at")
+        .select("id, webhook_id, event, status, attempts, response_code, response_body, error, payload, created_at")
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
@@ -220,6 +221,9 @@ export function WebhooksSection() {
                   )}
                   {d.attempts > 1 && <span className="text-amber-600">×{d.attempts}</span>}
                   {d.error && <span className="text-destructive truncate max-w-full">{d.error}</span>}
+                  {d.response_body && d.status !== "success" && (
+                    <span className="text-muted-foreground truncate max-w-full">{d.response_body}</span>
+                  )}
                 </div>
               );
             })}
