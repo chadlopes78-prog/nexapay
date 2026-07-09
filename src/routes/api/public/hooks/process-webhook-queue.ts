@@ -12,7 +12,7 @@ export const Route = createFileRoute("/api/public/hooks/process-webhook-queue")(
           .from("webhook_deliveries")
           .update({ status: "pending" })
           .eq("status", "processing")
-          .lt("updated_at", new Date(Date.now() - 5 * 60_000).toISOString());
+          .lt("updated_at", new Date(Date.now() - 30_000).toISOString());
 
         const { data, error } = await supabaseAdmin
           .from("webhook_deliveries")

@@ -231,14 +231,15 @@ export async function confirmSalePayment(options: {
     }
     const currentSale = await fetchSaleById(saleId);
     if (currentSale?.status === "paid") {
-      await dispatchApprovedSideEffects(currentSale, rawPayload, triggerPushcut).catch((err) => {
+      void dispatchApprovedSideEffects(currentSale, rawPayload, triggerPushcut).catch((err) => {
         console.error("[payments] approved side-effects retry failed", err);
       });
     }
     return { sale: currentSale, becamePaid: false };
   }
 
-  await dispatchApprovedSideEffects(updated, rawPayload, triggerPushcut).catch((err) => {
+  // Fire-and-forget: never block the payment response (redirect must be instant).
+  void dispatchApprovedSideEffects(updated, rawPayload, triggerPushcut).catch((err) => {
     console.error("[payments] approved side-effects failed", err);
   });
 
@@ -345,11 +346,20 @@ async function dispatchApprovedSideEffects(
   // Dedupe key `${saleId}` (no event prefix) guarantees that even if this code
   // runs twice for the same sale, the unique index blocks duplicates.
   const PRIORITY = ["sale.approved", "payment.received", "product.delivered"] as const;
+  // Reset any stuck "processing" rows > 30s so retries can happen fast.
+  await supabaseAdmin
+    .from("webhook_deliveries")
+    .update({ status: "pending" })
+    .eq("user_id", userId)
+    .eq("status", "processing")
+    .lt("updated_at", new Date(Date.now() - 30_000).toISOString());
   const { data: endpoints } = await supabaseAdmin
     .from("webhook_endpoints")
     .select("id, events, active, product_ids, is_pushcut")
     .eq("user_id", userId)
     .eq("active", true);
+
+
 
   let inserted = 0;
   for (const ep of endpoints ?? []) {
@@ -392,7 +402,14 @@ async function dispatchApprovedSideEffects(
     }
     inserted++;
   }
-  if (inserted > 0) await processPendingForUser(userId);
+  if (inserted > 0) {
+    // Fire-and-forget: do not block the payment response on webhook delivery.
+    // pg_cron drains remaining pending rows every minute; stuck "processing"
+    // rows are auto-reset after 30s at the top of this function.
+    void processPendingForUser(userId).catch((err) =>
+      console.error("[webhooks] background deliver failed", err),
+    );
+  }
   // Native Web Push notification — always fires regardless of Pushcut config
   try {
     const { sendPushToUser } = await import("@/lib/push/sender.server");
