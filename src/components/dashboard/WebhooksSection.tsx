@@ -259,21 +259,14 @@ function EndpointDialog({ initial, products, onSave }: DialogProps) {
   const [isPushcut, setIsPushcut] = useState(initial?.is_pushcut ?? false);
   const [active, setActive] = useState(initial?.active ?? true);
   const [events, setEvents] = useState<string[]>(initial?.events ?? ["sale.approved"]);
-  const [scope, setScope] = useState<"all" | "specific">(
-    initial && initial.product_ids?.length ? "specific" : "all"
-  );
-  const [productIds, setProductIds] = useState<string[]>(initial?.product_ids ?? []);
   const [saving, setSaving] = useState(false);
 
   const toggleEvent = (id: WebhookEventId) =>
     setEvents((prev) => prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]);
 
-  const toggleProduct = (id: string) =>
-    setProductIds((prev) => prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]);
-
   const urlError = url && !isValidHttpUrl(url) ? "URL inválida (use https://...)" : null;
-  const canSave = name.trim() && isValidHttpUrl(url) && events.length > 0
-    && (scope === "all" || productIds.length > 0);
+  const canSave = name.trim() && isValidHttpUrl(url) && events.length > 0;
+
 
   return (
     <DialogContent className="max-w-lg max-h-[90vh] flex flex-col p-0 gap-0">
@@ -316,29 +309,13 @@ function EndpointDialog({ initial, products, onSave }: DialogProps) {
             <Switch checked={active} onCheckedChange={setActive} />
           </div>
 
-          <div className="space-y-2">
-            <Label>Produtos</Label>
-            <div className="flex gap-2 flex-wrap">
-              <Button type="button" size="sm" variant={scope === "all" ? "default" : "outline"}
-                onClick={() => setScope("all")}>Todos os produtos</Button>
-              <Button type="button" size="sm" variant={scope === "specific" ? "default" : "outline"}
-                onClick={() => setScope("specific")}>Produtos específicos</Button>
-            </div>
-            {scope === "specific" && (
-              <div className="rounded border p-2 space-y-1">
-                {products.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic p-2">Nenhum produto cadastrado.</p>
-                )}
-                {products.map((p) => (
-                  <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer p-1">
-                    <Checkbox checked={productIds.includes(p.id)}
-                      onCheckedChange={() => toggleProduct(p.id)} />
-                    <span>{p.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+          <div className="rounded border p-3 bg-muted/30">
+            <p className="text-xs text-muted-foreground">
+              ✨ Este webhook receberá eventos de <strong>todos os produtos</strong> da sua conta
+              — atuais e futuros. Não é necessário vincular manualmente.
+            </p>
           </div>
+
 
           <div className="space-y-2">
             <Label>Eventos</Label>
@@ -368,7 +345,7 @@ function EndpointDialog({ initial, products, onSave }: DialogProps) {
                 id: initial?.id, name: name.trim(), url: url.trim(),
                 secret: secret.trim() || null,
                 events,
-                product_ids: scope === "all" ? [] : productIds,
+                product_ids: [],
                 is_pushcut: isPushcut, active,
               });
             } catch (e: any) {
