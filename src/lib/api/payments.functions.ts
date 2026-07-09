@@ -325,7 +325,7 @@ export const chargeSale = createServerFn({ method: "POST" })
       const p = sale.products as { access_link?: string | null; delivery_link?: string | null } | null;
 
       if (finalStatus === "paid") {
-        await confirmSalePayment({ saleId: sale.id, transactionId, reference, rawPayload: json });
+        await confirmSalePayment({ saleId: sale.id, transactionId, reference, rawPayload: json, triggerPushcut: true });
         return { success: true, saleId: sale.id, transactionId, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
       }
       if (finalStatus === "failed" || finalStatus === "expired") {
