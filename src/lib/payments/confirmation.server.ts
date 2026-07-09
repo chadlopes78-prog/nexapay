@@ -345,7 +345,19 @@ async function dispatchApprovedSideEffects(
   // Dedupe key `${saleId}` (no event prefix) guarantees that even if this code
   // runs twice for the same sale, the unique index blocks duplicates.
   const PRIORITY = ["sale.approved", "payment.received", "product.delivered"] as const;
+  // Reset any stuck "processing" rows > 30s so retries can happen fast.
+  await supabaseAdmin
+    .from("webhook_deliveries")
+    .update({ status: "pending" })
+    .eq("user_id", userId)
+    .eq("status", "processing")
+    .lt("updated_at", new Date(Date.now() - 30_000).toISOString());
   const { data: endpoints } = await supabaseAdmin
+    .from("webhook_endpoints")
+    .select("id, events, active, product_ids, is_pushcut")
+    .eq("user_id", userId)
+    .eq("active", true);
+
     .from("webhook_endpoints")
     .select("id, events, active, product_ids, is_pushcut")
     .eq("user_id", userId)
