@@ -243,7 +243,14 @@ async function updateDeliveryAfterAttempt(
     return;
   }
 
-  if (attempt >= MAX_ATTEMPTS) {
+  const isPermanentClientError =
+    result.responseCode !== null &&
+    result.responseCode >= 400 &&
+    result.responseCode < 500 &&
+    result.responseCode !== 408 &&
+    result.responseCode !== 429;
+
+  if (attempt >= MAX_ATTEMPTS || isPermanentClientError) {
     await supabaseAdmin
       .from("webhook_deliveries")
       .update({
