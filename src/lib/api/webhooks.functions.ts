@@ -75,9 +75,8 @@ export const testWebhook = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { deliverOnce } = await import("@/lib/webhooks/dispatcher.server");
 
-    // Use a fresh UUID so Pushcut dedupe (pushcut_logs.order_id UNIQUE) never
-    // blocks repeated tests. `pushcut_source` marker unlocks the Pushcut path
-    // in deliverOnce (otherwise it 208-blocks non-payment sources).
+    // Use a fresh UUID so repeated tests are never deduplicated. The
+    // `webhook.test` event is delivered immediately and does not depend on products.
     const testOrderId = crypto.randomUUID();
     const nowIso = new Date().toISOString();
     const { data: ins, error: insErr } = await supabaseAdmin
@@ -85,7 +84,7 @@ export const testWebhook = createServerFn({ method: "POST" })
       .insert({
         webhook_id: hook.id,
         user_id: context.userId,
-        event: "sale.approved",
+        event: "webhook.test",
         payload: {
           test: true,
           event: "webhook.test",
@@ -110,5 +109,20 @@ export const testWebhook = createServerFn({ method: "POST" })
 
 
     await deliverOnce(ins.id);
-    return { deliveryId: ins.id };
+    const { data: delivered, error: deliveredErr } = await supabaseAdmin
+      .from("webhook_deliveries")
+      .select("status, response_code, response_body, error")
+      .eq("id", ins.id)
+      .single();
+
+    if (deliveredErr || !delivered) {
+      throw new Error(deliveredErr?.message || "Falha ao confirmar teste");
+    }
+
+    if (delivered.status !== "success") {
+      const details = delivered.response_body || delivered.error || "Sem resposta do endpoint";
+      throw new Error(`Endpoint respondeu HTTP ${delivered.response_code ?? "sem código"}: ${details}`);
+    }
+
+    return { deliveryId: ins.id, responseCode: delivered.response_code };
   });

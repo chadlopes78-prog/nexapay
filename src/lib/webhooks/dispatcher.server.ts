@@ -15,6 +15,13 @@ type WebhookEndpointRef = {
   active: boolean;
 };
 
+type DeliveryHttpResult = {
+  success: boolean;
+  responseCode: number | null;
+  responseBody: string | null;
+  errorMsg: string | null;
+};
+
 interface EnqueueOptions {
   userId: string;
   event: WebhookEventId;
@@ -116,10 +123,11 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
   const payload = delivery.payload as Record<string, unknown>;
 
   if (endpoint.is_pushcut) {
-    const { readPushcutOrderId, sendPushcutOnce } = await import("@/lib/pushcut/reliability.server");
     const orderId = readPushcutOrderId(payload);
     const paymentStatus = String(payload.payment_status ?? payload.status ?? "").toLowerCase().trim();
     const webhookOnlySource = payload.pushcut_source === "payment_webhook";
+    const isTestEvent = payload.test === true || payload.event === "webhook.test" || delivery.event === "webhook.test";
+    const isApprovedPayment = delivery.event === "sale.approved" && paymentStatus === "paid" && webhookOnlySource;
 
     console.log("[webhooks] pushcut webhook received", {
       deliveryId,
@@ -127,6 +135,7 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
       paymentStatus,
       eventType: delivery.event,
       webhookOnlySource,
+      isTestEvent,
     });
 
     if (!orderId) {
@@ -137,12 +146,13 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
       return;
     }
 
-    if (!webhookOnlySource) {
-      console.log("[pushcut] blocked: not payment webhook source", {
+    if (!isTestEvent && !isApprovedPayment) {
+      console.log("[pushcut] blocked: invalid source/event/status", {
         deliveryId,
         orderId,
         eventType: delivery.event,
         paymentStatus,
+        webhookOnlySource,
       });
       await supabaseAdmin
         .from("webhook_deliveries")
@@ -157,26 +167,14 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
       return;
     }
 
-    const result = await sendPushcutOnce({
+    const result = await postJsonWithTimeout(endpoint.url, {
+      event: isTestEvent ? "webhook_test" : "sale_approved",
       orderId,
-      userId: delivery.user_id,
-      webhookId: delivery.webhook_id,
-      url: endpoint.url,
-      eventType: delivery.event,
-      paymentStatus,
-      source: "webhook_deliveries",
+      sent_at: new Date().toISOString(),
+      data: payload,
     });
 
-    await supabaseAdmin
-      .from("webhook_deliveries")
-      .update({
-        status: "success",
-        attempts: attempt,
-        response_code: result.sent ? 200 : 208,
-        response_body: JSON.stringify(result).slice(0, 2000),
-        error: null,
-      })
-      .eq("id", deliveryId);
+    await updateDeliveryAfterAttempt(deliveryId, attempt, result);
     return;
   }
 
@@ -188,6 +186,20 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
   }
   headers["X-Webhook-Event"] = delivery.event;
 
+  const result = await postJsonWithTimeout(endpoint.url, body, headers);
+  await updateDeliveryAfterAttempt(deliveryId, attempt, result);
+}
+
+function readPushcutOrderId(payload: Record<string, unknown>): string | null {
+  const value = payload.orderId ?? payload.order_id ?? payload.sale_id ?? payload.saleId;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+async function postJsonWithTimeout(
+  url: string,
+  body: Record<string, unknown>,
+  headers: Record<string, string> = { "Content-Type": "application/json" },
+): Promise<DeliveryHttpResult> {
   let responseCode: number | null = null;
   let responseBody: string | null = null;
   let errorMsg: string | null = null;
@@ -195,7 +207,7 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15_000);
-    const res = await fetch(endpoint.url, {
+    const res = await fetch(url, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
@@ -209,15 +221,22 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
   }
 
   const success = !errorMsg && responseCode !== null && responseCode >= 200 && responseCode < 300;
+  return { success, responseCode, responseBody, errorMsg };
+}
 
-  if (success) {
+async function updateDeliveryAfterAttempt(
+  deliveryId: string,
+  attempt: number,
+  result: DeliveryHttpResult,
+): Promise<void> {
+  if (result.success) {
     await supabaseAdmin
       .from("webhook_deliveries")
       .update({
         status: "success",
         attempts: attempt,
-        response_code: responseCode,
-        response_body: responseBody,
+        response_code: result.responseCode,
+        response_body: result.responseBody,
         error: null,
       })
       .eq("id", deliveryId);
@@ -230,9 +249,9 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
       .update({
         status: "failed",
         attempts: attempt,
-        response_code: responseCode,
-        response_body: responseBody,
-        error: errorMsg,
+        response_code: result.responseCode,
+        response_body: result.responseBody,
+        error: result.errorMsg,
       })
       .eq("id", deliveryId);
     return;
@@ -245,9 +264,9 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
     .update({
       status: "pending",
       attempts: attempt,
-      response_code: responseCode,
-      response_body: responseBody,
-      error: errorMsg,
+      response_code: result.responseCode,
+      response_body: result.responseBody,
+      error: result.errorMsg,
       next_attempt_at: nextAt,
     })
     .eq("id", deliveryId);
