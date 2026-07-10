@@ -172,6 +172,24 @@ function IntegrationsPage() {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<IntegrationDef | null>(null);
 
+  // Sync Pushcut connected/enabled from backend on mount
+  const getPushcut = useServerFn(getPushcutIntegration);
+  const deletePushcut = useServerFn(deletePushcutIntegration);
+  const { data: pushcutRow } = useQuery({
+    queryKey: ["pushcut-integration"],
+    queryFn: () => getPushcut(),
+  });
+  useEffect(() => {
+    setConfig((prev) => ({
+      ...prev,
+      pushcut: {
+        connected: !!pushcutRow,
+        enabled: !!pushcutRow?.active,
+        config: pushcutRow ? { url: pushcutRow.url } : {},
+      },
+    }));
+  }, [pushcutRow]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return INTEGRATIONS;
@@ -190,11 +208,20 @@ function IntegrationsPage() {
     persist({ ...config, [id]: { ...current, ...patch } });
   };
 
-  const disconnect = (id: IntegrationId) => {
+  const disconnect = async (id: IntegrationId) => {
     if (!confirm("Desconectar esta integração?")) return;
+    if (id === "pushcut") {
+      try {
+        await deletePushcut();
+      } catch (e: any) {
+        toast.error(e.message || "Erro ao remover Pushcut");
+        return;
+      }
+    }
     persist({ ...config, [id]: { connected: false, enabled: false, config: {} } });
     toast.success("Integração desconectada");
   };
+
 
   return (
     <div className="space-y-8">
