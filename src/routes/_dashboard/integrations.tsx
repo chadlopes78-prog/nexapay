@@ -379,6 +379,11 @@ function IntegrationDialog({
 
   const Icon = integration.icon;
 
+  if (integration.customEditor === "pushcut") {
+    return <PushcutDialog onClose={onClose} onSaved={() => onSave({ connected: true, enabled: true, config: {} })} />;
+  }
+
+
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
