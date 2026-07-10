@@ -52,7 +52,21 @@ export async function triggerSaleApprovedNotification(saleId: string) {
     }
 
     const title = "Venda Aprovada✅";
-    const mznToBrl = Number(process.env.MZN_TO_BRL_RATE || "0.085");
+    // Buscar cotação MZN→BRL ao vivo (fallback para env ou 0.085)
+    let mznToBrl = Number(process.env.MZN_TO_BRL_RATE || "0.085");
+    try {
+      const fxCtrl = new AbortController();
+      const fxTimer = setTimeout(() => fxCtrl.abort(), 2500);
+      const fxRes = await fetch("https://open.er-api.com/v6/latest/MZN", { signal: fxCtrl.signal });
+      clearTimeout(fxTimer);
+      if (fxRes.ok) {
+        const fxJson = (await fxRes.json()) as { rates?: { BRL?: number } };
+        const live = Number(fxJson?.rates?.BRL);
+        if (Number.isFinite(live) && live > 0) mznToBrl = live;
+      }
+    } catch (e) {
+      console.warn("[Notification] FX lookup failed, using fallback rate:", e);
+    }
     const brlValue = (amountNum * mznToBrl).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     void amountStr;
     const body = `${brlValue} R$ via ${paymentMethod}`;
