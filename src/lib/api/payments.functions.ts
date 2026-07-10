@@ -447,6 +447,7 @@ export const startPayment = createServerFn({ method: "POST" })
           payment_method: data.method,
           status: "pending",
           traffic_page_id: (trafficRes.data as { id?: string } | null)?.id ?? null,
+          idempotency_key: data.idempotencyKey ?? null,
         })
         .select("id")
         .single(),
