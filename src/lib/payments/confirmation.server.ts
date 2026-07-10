@@ -433,8 +433,29 @@ async function dispatchApprovedSideEffects(
   } catch (e) {
     console.error("[push][sale.approved] error (suppressed)", e);
   }
+
+  // Native Pushcut integration — independent of the Webhooks system.
+  try {
+    const { PushcutService } = await import("@/lib/pushcut/service.server");
+    await PushcutService.sendEvent({
+      userId,
+      event: "sale_approved",
+      dedupeKey: `pushcut:sale_approved:${sale.id}`,
+      data: {
+        product_name: productName,
+        amount: sale.amount,
+        payment_method: sale.payment_method,
+        customer_name: sale.customer_name,
+        approved_at: new Date().toISOString(),
+      },
+    });
+  } catch (e) {
+    console.error("[pushcut][sale.approved] error (suppressed)", e);
+  }
+
   // Silence unused warning for helper kept for non-approved flows.
   void enqueueWebhookEvent;
+
 
   if (sale.traffic_page_id) {
     await supabaseAdmin.from("traffic_events").insert({
