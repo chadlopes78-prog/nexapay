@@ -429,6 +429,8 @@ export const startPayment = createServerFn({ method: "POST" })
     if (product.status && product.status !== "active") {
       return { success: false, error: "Produto indisponível para compra." };
     }
+    mark("product");
+
 
     const creds = await loadUserCreds(product.user_id);
     if (!creds) return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
