@@ -737,3 +737,253 @@ function E2PaymentsEditor({ onSaved }: { onSaved: () => void }) {
     </div>
   );
 }
+
+// ============================================================================
+// Pushcut (iPhone) — dedicated dialog, independent from webhooks
+// ============================================================================
+
+const PUSHCUT_EVENTS: { key: string; label: string }[] = [
+  { key: "sale_approved", label: "Venda aprovada" },
+  { key: "sale_refused", label: "Venda recusada" },
+  { key: "payment_pending", label: "Pagamento pendente" },
+  { key: "payment_processing", label: "Pagamento em processamento" },
+  { key: "refund", label: "Reembolso" },
+  { key: "checkout_abandoned", label: "Abandono de checkout" },
+  { key: "daily_summary", label: "Resumo diário" },
+];
+
+function PushcutDialog({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const qc = useQueryClient();
+  const getFn = useServerFn(getPushcutIntegration);
+  const saveFn = useServerFn(savePushcutIntegration);
+  const delFn = useServerFn(deletePushcutIntegration);
+  const testFn = useServerFn(testPushcutIntegration);
+
+  const { data: row, isLoading } = useQuery({
+    queryKey: ["pushcut-integration"],
+    queryFn: () => getFn(),
+  });
+
+  const [url, setUrl] = useState("");
+  const [active, setActive] = useState(true);
+  const [events, setEvents] = useState<Record<string, boolean>>(
+    Object.fromEntries(PUSHCUT_EVENTS.map((e) => [e.key, true])),
+  );
+  const [summaryTime, setSummaryTime] = useState("20:00");
+  const [editing, setEditing] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    if (row) {
+      setUrl(row.url);
+      setActive(!!row.active);
+      setEvents({
+        ...Object.fromEntries(PUSHCUT_EVENTS.map((e) => [e.key, true])),
+        ...((row.events as Record<string, boolean>) ?? {}),
+      });
+      setSummaryTime(row.daily_summary_time ?? "20:00");
+    } else {
+      setEditing(true);
+    }
+  }, [row]);
+
+  const isValid = (() => {
+    try {
+      const u = new URL(url.trim());
+      return u.protocol === "https:" || u.protocol === "http:";
+    } catch {
+      return false;
+    }
+  })();
+
+  const save = useMutation({
+    mutationFn: async () => {
+      await saveFn({
+        data: {
+          url: url.trim(),
+          active,
+          events,
+          daily_summary_time: summaryTime,
+        },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pushcut-integration"] });
+      toast.success("Pushcut configurado com sucesso");
+      setEditing(false);
+      onSaved();
+    },
+    onError: (e: any) => toast.error(e.message || "Erro ao salvar"),
+  });
+
+  const remove = useMutation({
+    mutationFn: async () => {
+      await delFn();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pushcut-integration"] });
+      toast.success("Pushcut removido");
+      onClose();
+    },
+    onError: (e: any) => toast.error(e.message || "Erro ao remover"),
+  });
+
+  const handleTest = async () => {
+    if (!row) {
+      toast.error("Salve a URL antes de testar.");
+      return;
+    }
+    setTesting(true);
+    try {
+      const res: any = await testFn();
+      toast.success(`Notificação enviada com sucesso (HTTP ${res?.status ?? 200})`);
+    } catch (e: any) {
+      toast.error(`Falha no teste: ${e.message || "erro desconhecido"}`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const connected = !!row;
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-lg border text-rose-600 bg-rose-50 border-rose-100">
+              <Bell className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="flex items-center gap-2">
+                Pushcut (iPhone)
+                {connected ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Conectado
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-slate-300" /> Desconectado
+                  </span>
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                Receba notificações instantâneas no seu iPhone via URL do Pushcut.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="py-6 text-center text-sm text-slate-500">Carregando...</div>
+        ) : (
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label>URL do Pushcut</Label>
+              <Input
+                value={url}
+                disabled={connected && !editing}
+                placeholder="https://api.pushcut.io/.../notifications/..."
+                onChange={(e) => setUrl(e.target.value)}
+              />
+              {!isValid && url && (
+                <p className="text-xs text-red-600">URL inválida (use https://...)</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between rounded border p-3">
+              <div>
+                <Label className="font-semibold">Ativo</Label>
+                <p className="text-xs text-slate-500">
+                  Quando desativado, nenhum evento envia notificação.
+                </p>
+              </div>
+              <Switch checked={active} onCheckedChange={setActive} disabled={connected && !editing} />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Eventos</Label>
+              <div className="grid grid-cols-1 gap-1.5 rounded border p-3">
+                {PUSHCUT_EVENTS.map((ev) => (
+                  <label key={ev.key} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={!!events[ev.key]}
+                      disabled={connected && !editing}
+                      onCheckedChange={(v) =>
+                        setEvents((prev) => ({ ...prev, [ev.key]: !!v }))
+                      }
+                    />
+                    <span>{ev.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {events.daily_summary && (
+              <div className="grid gap-2">
+                <Label>Horário do Resumo Diário</Label>
+                <Input
+                  type="time"
+                  value={summaryTime}
+                  disabled={connected && !editing}
+                  onChange={(e) => setSummaryTime(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:justify-between">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleTest}
+              disabled={testing || !connected}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {testing ? "Testando..." : "Testar"}
+            </Button>
+            {connected && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => {
+                  if (confirm("Remover a integração Pushcut?")) remove.mutate();
+                }}
+                disabled={remove.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Remover
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Fechar
+            </Button>
+            {connected && !editing ? (
+              <Button type="button" onClick={() => setEditing(true)}>
+                <Settings2 className="h-4 w-4 mr-2" /> Editar
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => save.mutate()}
+                disabled={!isValid || save.isPending}
+              >
+                {save.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            )}
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
