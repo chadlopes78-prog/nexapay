@@ -436,6 +436,8 @@ export const startPayment = createServerFn({ method: "POST" })
     if (!creds) return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
     const walletId = data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
     if (!walletId) return { success: false, error: `Carteira ${data.method.toUpperCase()} não configurada.` };
+    mark("creds");
+
 
     const amount = Number(product.price);
     if (!Number.isFinite(amount) || amount <= 0 || amount > 500_000) {
