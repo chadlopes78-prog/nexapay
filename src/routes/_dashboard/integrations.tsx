@@ -104,14 +104,6 @@ const INTEGRATIONS: IntegrationDef[] = [
   },
 
   {
-    id: "e2payments",
-    name: "e2Payments",
-    description: "Configure suas credenciais M-Pesa e e-Mola para receber pagamentos.",
-    icon: Wallet,
-    color: "text-emerald-600 bg-emerald-50 border-emerald-100",
-    customEditor: "e2payments",
-  },
-  {
     id: "custom_api",
     name: "API Personalizada",
     description: "Conecte outras APIs próprias via endpoints e headers.",
