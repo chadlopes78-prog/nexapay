@@ -279,7 +279,21 @@ function IntegrationsPage() {
                   <Switch
                     checked={state.enabled}
                     disabled={!state.connected}
-                    onCheckedChange={(v) => update(integration.id, { enabled: v })}
+                    onCheckedChange={async (v) => {
+                      update(integration.id, { enabled: v });
+                      if (integration.id === "pushcut" && pushcutRow) {
+                        try {
+                          await useServerFnCall(savePushcutIntegration, {
+                            url: pushcutRow.url,
+                            active: v,
+                            events: pushcutRow.events as any,
+                            daily_summary_time: pushcutRow.daily_summary_time,
+                          });
+                        } catch (e: any) {
+                          toast.error(e.message || "Erro");
+                        }
+                      }
+                    }}
                   />
                   <span className="text-xs text-slate-500">
                     {state.enabled ? "Ativado" : "Desativado"}
