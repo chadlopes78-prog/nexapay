@@ -112,11 +112,13 @@ function AdminControlCenter() {
         navigate({ to: "/auth" });
         return;
       }
-      const { data: isSuper, error } = await supabase.rpc("has_role", {
-        _user_id: sess.session.user.id,
-        _role: "super_admin",
-      });
-      if (error || !isSuper) {
+      const { data: roles, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", sess.session.user.id)
+        .eq("role", "super_admin")
+        .limit(1);
+      if (error || !roles?.length) {
         toast.error("Acesso negado. Área exclusiva do Super Administrador.");
         setAuthorized(false);
         navigate({ to: "/dashboard" });
