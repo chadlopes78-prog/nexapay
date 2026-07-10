@@ -361,9 +361,13 @@ export const processPayment = createServerFn({ method: "POST" })
 export const startPayment = createServerFn({ method: "POST" })
   .inputValidator(InitiateInput)
   .handler(async ({ data }): Promise<PaymentResult> => {
+    const t0 = Date.now();
+    const mark = (label: string) => console.info(`[startPayment] ${label} +${Date.now() - t0}ms`);
     const v = await validateAndLoad(data);
     if (v.error) return { success: false, error: v.error };
     const msisdn = v.msisdn!;
+    mark("validate");
+
 
     // Parallelize both server-only module imports up-front (each import()
     // on the Worker can add 50-200ms on cold path).
