@@ -353,3 +353,148 @@ export const processPayment = createServerFn({ method: "POST" })
     if (!init.success) return init;
     return await (chargeSale as unknown as (args: { data: { saleId: string } }) => Promise<PaymentResult>)({ data: { saleId: init.saleId } });
   });
+
+// Merged fast-path: create sale + trigger gateway in a SINGLE request.
+// Eliminates one client→server round-trip so the STK/PIN popup on the
+// customer's phone fires as fast as possible.
+export const startPayment = createServerFn({ method: "POST" })
+  .inputValidator(InitiateInput)
+  .handler(async ({ data }): Promise<PaymentResult> => {
+    const v = await validateAndLoad(data);
+    if (v.error) return { success: false, error: v.error };
+    const msisdn = v.msisdn!;
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        data.productId,
+      );
+    let productQuery = supabaseAdmin
+      .from("products")
+      .select("id, price, status, user_id, access_link, delivery_link");
+    productQuery = isUuid
+      ? productQuery.eq("id", data.productId)
+      : productQuery.eq("custom_url", data.productId);
+
+    const [productRes, trafficRes] = await Promise.all([
+      productQuery.single(),
+      data.trafficPageTrackingId
+        ? supabaseAdmin
+            .from("traffic_pages")
+            .select("id")
+            .eq("tracking_id", data.trafficPageTrackingId)
+            .maybeSingle()
+        : Promise.resolve({ data: null as { id?: string } | null }),
+    ]);
+    const product = productRes.data;
+    if (productRes.error || !product) return { success: false, error: "Produto não encontrado." };
+    if (product.status && product.status !== "active") {
+      return { success: false, error: "Produto indisponível para compra." };
+    }
+
+    const creds = await loadUserCreds(product.user_id);
+    if (!creds) return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
+    const walletId = data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
+    if (!walletId) return { success: false, error: `Carteira ${data.method.toUpperCase()} não configurada.` };
+
+    const amount = Number(product.price);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 500_000) {
+      return { success: false, error: "Valor do produto inválido." };
+    }
+    const customerName = data.contactPhone
+      ? `${data.customerName.trim()} (contacto: ${data.contactPhone.trim()})`
+      : data.customerName.trim();
+
+    const {
+      paymentReferenceForSale,
+      confirmSalePayment,
+      markSaleTerminalFailure,
+      normalizeGatewayStatus,
+      readGatewayTransactionId,
+    } = await import("@/lib/payments/confirmation.server");
+
+    // Insert sale + preload OAuth token in parallel
+    const [saleRes, tokenResult] = await Promise.all([
+      supabaseAdmin
+        .from("sales")
+        .insert({
+          product_id: product.id,
+          user_id: product.user_id,
+          customer_name: customerName.slice(0, 100),
+          customer_phone: msisdn,
+          amount,
+          payment_method: data.method,
+          status: "pending",
+          traffic_page_id: (trafficRes.data as { id?: string } | null)?.id ?? null,
+        })
+        .select("id")
+        .single(),
+      getAccessToken(creds.e2p_client_id, creds.e2p_client_secret).catch((e) => e as Error),
+    ]);
+    if (saleRes.error || !saleRes.data) return { success: false, error: "Não foi possível registar a venda." };
+    const saleId = saleRes.data.id;
+    if (tokenResult instanceof Error) {
+      return { success: false, saleId, error: "Falha ao autenticar com a gateway. Tenta novamente." };
+    }
+    const token = tokenResult;
+    const reference = paymentReferenceForSale(saleId);
+    // Fire-and-forget reference update — doesn't block the gateway call
+    void supabaseAdmin.from("sales").update({ payment_reference: reference }).eq("id", saleId);
+
+    const localPhone = msisdn.slice(3);
+    const endpoint =
+      data.method === "mpesa"
+        ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
+        : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90_000);
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+          "User-Agent": "NexaPay/1.0",
+        },
+        body: JSON.stringify({
+          client_id: creds.e2p_client_id,
+          amount: String(amount),
+          phone: localPhone,
+          reference,
+          merchant_name: "NexaPay",
+          description: "Pagamento de produto digital",
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const text = await res.text();
+      let json: Record<string, unknown> | null = null;
+      try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+      console.info("e2payment response", { status: res.status, method: data.method, reference, body: text?.slice(0, 400) });
+
+      const transactionId = readGatewayTransactionId(json);
+      const finalStatus = normalizeGatewayStatus(json, res.ok);
+      const accessLink = product.access_link || product.delivery_link || null;
+
+      if (finalStatus === "paid") {
+        await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
+        return { success: true, saleId, transactionId, status: "paid", accessLink };
+      }
+      if (finalStatus === "failed" || finalStatus === "expired") {
+        const message = String(
+          (json?.message as string) || (json?.error as string) || (json?.detail as string) ||
+          (finalStatus === "expired" ? "Pagamento expirado." : "Pagamento cancelado ou recusado."),
+        );
+        await markSaleTerminalFailure({ saleId, status: finalStatus, transactionId, reference, reason: message });
+        return { success: false, saleId, error: message };
+      }
+      return { success: true, saleId, transactionId, status: "pending", accessLink: null };
+    } catch (err) {
+      clearTimeout(timeoutId);
+      console.error("startPayment gateway error", err);
+      // Return pending so client keeps polling — webhook may still confirm
+      return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
+    }
+  });
