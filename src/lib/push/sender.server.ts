@@ -27,7 +27,7 @@ const EVENT_TITLES: Record<PushEvent, string> = {
   "checkout.abandoned": "🛒 Carrinho Abandonado",
   refund: "↩️ Reembolso",
   new_customer: "👤 Novo Cliente",
-  daily_summary: "📊 Resumo Diário",
+  daily_summary: "Resumo Diário 📊",
   system: "🔔 NexaPay",
 };
 
