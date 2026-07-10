@@ -365,10 +365,21 @@ export const startPayment = createServerFn({ method: "POST" })
     if (v.error) return { success: false, error: v.error };
     const msisdn = v.msisdn!;
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Parallelize both server-only module imports up-front (each import()
+    // on the Worker can add 50-200ms on cold path).
+    const [{ supabaseAdmin }, confirmationMod] = await Promise.all([
+      import("@/integrations/supabase/client.server"),
+      import("@/lib/payments/confirmation.server"),
+    ]);
+    const {
+      paymentReferenceForSale,
+      confirmSalePayment,
+      markSaleTerminalFailure,
+      normalizeGatewayStatus,
+      readGatewayTransactionId,
+    } = confirmationMod;
 
-    // Idempotency short-circuit: if a sale already exists for this key,
-    // return its current state instead of creating a duplicate charge.
+    // Idempotency short-circuit
     if (data.idempotencyKey) {
       const { data: existing } = await supabaseAdmin
         .from("sales")
@@ -426,14 +437,6 @@ export const startPayment = createServerFn({ method: "POST" })
       ? `${data.customerName.trim()} (contacto: ${data.contactPhone.trim()})`
       : data.customerName.trim();
 
-    const {
-      paymentReferenceForSale,
-      confirmSalePayment,
-      markSaleTerminalFailure,
-      normalizeGatewayStatus,
-      readGatewayTransactionId,
-    } = await import("@/lib/payments/confirmation.server");
-
     // Insert sale + preload OAuth token in parallel
     const [saleRes, tokenResult] = await Promise.all([
       supabaseAdmin
@@ -454,7 +457,6 @@ export const startPayment = createServerFn({ method: "POST" })
       getAccessToken(creds.e2p_client_id, creds.e2p_client_secret).catch((e) => e as Error),
     ]);
     if (saleRes.error || !saleRes.data) {
-      // Race on idempotency_key unique index → re-fetch and short-circuit.
       if (data.idempotencyKey && String(saleRes.error?.code) === "23505") {
         const { data: existing } = await supabaseAdmin
           .from("sales")
@@ -476,7 +478,6 @@ export const startPayment = createServerFn({ method: "POST" })
     }
     const token = tokenResult;
     const reference = paymentReferenceForSale(saleId);
-    // Fire-and-forget reference update — doesn't block the gateway call
     void supabaseAdmin.from("sales").update({ payment_reference: reference }).eq("id", saleId);
 
     const localPhone = msisdn.slice(3);
@@ -486,53 +487,83 @@ export const startPayment = createServerFn({ method: "POST" })
         : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 90_000);
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-          "User-Agent": "NexaPay/1.0",
-        },
-        body: JSON.stringify({
-          client_id: creds.e2p_client_id,
-          amount: String(amount),
-          phone: localPhone,
-          reference,
-          merchant_name: "NexaPay",
-          description: "Pagamento de produto digital",
-        }),
-        signal: controller.signal,
+    // Hard cap the underlying fetch, but we won't wait that long before responding.
+    const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+    // Fire the gateway request. We race it against a short timer so the
+    // client gets a `pending` response as soon as the STK/PIN popup would
+    // realistically be on its way — the actual gateway result is processed
+    // in the background and reflected in the DB for the poller/webhook.
+    const gatewayPromise = fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "NexaPay/1.0",
+      },
+      body: JSON.stringify({
+        client_id: creds.e2p_client_id,
+        amount: String(amount),
+        phone: localPhone,
+        reference,
+        merchant_name: "NexaPay",
+        description: "Pagamento de produto digital",
+      }),
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        const text = await res.text();
+        let json: Record<string, unknown> | null = null;
+        try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+        return { ok: res.ok, status: res.status, json, text };
+      })
+      .finally(() => clearTimeout(timeoutId));
+
+    // Detached handler: updates the sale in the background regardless of
+    // whether the client is still waiting on this same request.
+    const processGateway = gatewayPromise
+      .then(async ({ ok, status, json, text }) => {
+        console.info("e2payment response", { status, method: data.method, reference, body: text?.slice(0, 400) });
+        const transactionId = readGatewayTransactionId(json);
+        const finalStatus = normalizeGatewayStatus(json, ok);
+        if (finalStatus === "paid") {
+          await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
+        } else if (finalStatus === "failed" || finalStatus === "expired") {
+          const message = String(
+            (json?.message as string) || (json?.error as string) || (json?.detail as string) ||
+            (finalStatus === "expired" ? "Pagamento expirado." : "Pagamento cancelado ou recusado."),
+          );
+          await markSaleTerminalFailure({ saleId, status: finalStatus, transactionId, reference, reason: message });
+        }
+        return { finalStatus, transactionId, json };
+      })
+      .catch((err) => {
+        console.error("startPayment gateway error", err);
+        return null;
       });
-      clearTimeout(timeoutId);
-      const text = await res.text();
-      let json: Record<string, unknown> | null = null;
-      try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
-      console.info("e2payment response", { status: res.status, method: data.method, reference, body: text?.slice(0, 400) });
 
-      const transactionId = readGatewayTransactionId(json);
-      const finalStatus = normalizeGatewayStatus(json, res.ok);
-      const accessLink = product.access_link || product.delivery_link || null;
+    // Race: respond fast if gateway takes >3s. Popup on the phone fires
+    // from the gateway side as soon as it accepts the request; the client
+    // will keep polling to learn the outcome.
+    const fastResult = await Promise.race([
+      processGateway,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 3_000)),
+    ]);
 
-      if (finalStatus === "paid") {
-        await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
-        return { success: true, saleId, transactionId, status: "paid", accessLink };
-      }
-      if (finalStatus === "failed" || finalStatus === "expired") {
-        const message = String(
-          (json?.message as string) || (json?.error as string) || (json?.detail as string) ||
-          (finalStatus === "expired" ? "Pagamento expirado." : "Pagamento cancelado ou recusado."),
-        );
-        await markSaleTerminalFailure({ saleId, status: finalStatus, transactionId, reference, reason: message });
-        return { success: false, saleId, error: message };
-      }
-      return { success: true, saleId, transactionId, status: "pending", accessLink: null };
-    } catch (err) {
-      clearTimeout(timeoutId);
-      console.error("startPayment gateway error", err);
-      // Return pending so client keeps polling — webhook may still confirm
-      return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
+    const accessLink = product.access_link || product.delivery_link || null;
+    if (fastResult && fastResult.finalStatus === "paid") {
+      return { success: true, saleId, transactionId: fastResult.transactionId, status: "paid", accessLink };
     }
+    if (fastResult && (fastResult.finalStatus === "failed" || fastResult.finalStatus === "expired")) {
+      const j = fastResult.json;
+      const message = String(
+        (j?.message as string) || (j?.error as string) || (j?.detail as string) ||
+        (fastResult.finalStatus === "expired" ? "Pagamento expirado." : "Pagamento cancelado ou recusado."),
+      );
+      return { success: false, saleId, error: message };
+    }
+    // Either fast timer won, or gateway returned pending — client will poll.
+    return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
   });
+
