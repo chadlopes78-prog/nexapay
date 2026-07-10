@@ -143,6 +143,6 @@ function buildDefaultText(event: PushcutEventKey, d: Record<string, unknown>): s
     case "checkout_abandoned":
       return `Produto: ${g("product_name")}\nCliente: ${g("customer_name")}`;
     case "daily_summary":
-      return `Faturamento: ${g("revenue")}\nVendas: ${g("sales")}\nPendentes: ${g("pending")}\nFalhas: ${g("failed")}\nConversão: ${g("conversion")}`;
+      return `Você faturou ${g("revenue")} e teve lucro de ${g("profit")} na Nexapay🎉🇲🇿`;
   }
 }
