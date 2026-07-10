@@ -361,9 +361,13 @@ export const processPayment = createServerFn({ method: "POST" })
 export const startPayment = createServerFn({ method: "POST" })
   .inputValidator(InitiateInput)
   .handler(async ({ data }): Promise<PaymentResult> => {
+    const t0 = Date.now();
+    const mark = (label: string) => console.info(`[startPayment] ${label} +${Date.now() - t0}ms`);
     const v = await validateAndLoad(data);
     if (v.error) return { success: false, error: v.error };
     const msisdn = v.msisdn!;
+    mark("validate");
+
 
     // Parallelize both server-only module imports up-front (each import()
     // on the Worker can add 50-200ms on cold path).
@@ -378,6 +382,8 @@ export const startPayment = createServerFn({ method: "POST" })
       normalizeGatewayStatus,
       readGatewayTransactionId,
     } = confirmationMod;
+    mark("imports");
+
 
     // Idempotency short-circuit
     if (data.idempotencyKey) {
@@ -423,11 +429,15 @@ export const startPayment = createServerFn({ method: "POST" })
     if (product.status && product.status !== "active") {
       return { success: false, error: "Produto indisponível para compra." };
     }
+    mark("product");
+
 
     const creds = await loadUserCreds(product.user_id);
     if (!creds) return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
     const walletId = data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
     if (!walletId) return { success: false, error: `Carteira ${data.method.toUpperCase()} não configurada.` };
+    mark("creds");
+
 
     const amount = Number(product.price);
     if (!Number.isFinite(amount) || amount <= 0 || amount > 500_000) {
@@ -477,8 +487,10 @@ export const startPayment = createServerFn({ method: "POST" })
       return { success: false, saleId, error: "Falha ao autenticar com a gateway. Tenta novamente." };
     }
     const token = tokenResult;
+    mark("sale+token");
     const reference = paymentReferenceForSale(saleId);
     void supabaseAdmin.from("sales").update({ payment_reference: reference }).eq("id", saleId);
+
 
     const localPhone = msisdn.slice(3);
     const endpoint =
@@ -550,6 +562,8 @@ export const startPayment = createServerFn({ method: "POST" })
       processGateway,
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 3_000)),
     ]);
+    mark(`gateway (fastResult=${fastResult ? fastResult.finalStatus : "timeout"})`);
+
 
     const accessLink = product.access_link || product.delivery_link || null;
     if (fastResult && fastResult.finalStatus === "paid") {
