@@ -95,13 +95,14 @@ const INTEGRATIONS: IntegrationDef[] = [
     ],
   },
   {
-    id: "webhooks",
-    name: "Webhooks",
-    description: "Envie eventos em tempo real para URLs personalizadas.",
-    icon: Webhook,
-    color: "text-indigo-600 bg-indigo-50 border-indigo-100",
-    customEditor: "webhooks",
+    id: "e2payments",
+    name: "e2Payments",
+    description: "Configure suas credenciais M-Pesa e e-Mola para receber pagamentos.",
+    icon: Wallet,
+    color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    customEditor: "e2payments",
   },
+
   {
     id: "e2payments",
     name: "e2Payments",
