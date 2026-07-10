@@ -293,7 +293,7 @@ export const chargeSale = createServerFn({ method: "POST" })
       confirmSalePayment,
       markSaleTerminalFailure,
       normalizeGatewayStatus,
-        readGatewayFailureDetails,
+      readGatewayFailureDetails,
       readGatewayTransactionId,
     } = await import("@/lib/payments/confirmation.server");
 
@@ -491,13 +491,15 @@ export const startPayment = createServerFn({ method: "POST" })
       if (data.idempotencyKey && String(saleRes.error?.code) === "23505") {
         const { data: existing } = await supabaseAdmin
           .from("sales")
-          .select("id, status, products(access_link, delivery_link)")
+          .select("id, status, payment_reference, failure_reason, products(access_link, delivery_link)")
           .eq("idempotency_key", data.idempotencyKey)
           .maybeSingle();
         if (existing) {
           const raw = String(existing.status ?? "").toLowerCase();
           const paid = ["paid", "approved", "success", "completed"].includes(raw);
+          const failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
           const p = existing.products as { access_link?: string | null; delivery_link?: string | null } | null;
+          if (failed) return { success: false, saleId: existing.id, error: existing.failure_reason || existing.payment_reference || "Pagamento cancelado ou recusado." };
           return { success: true, saleId: existing.id, transactionId: null, status: paid ? "paid" : "pending", accessLink: paid ? (p?.access_link || p?.delivery_link || null) : null };
         }
       }
@@ -529,10 +531,9 @@ export const startPayment = createServerFn({ method: "POST" })
     // request reaches e2payment; waiting here only keeps checkout synchronized.
     const timeoutId = setTimeout(() => controller.abort(), PAYMENT_TIMEOUT_MS);
 
-    // Fire the gateway request. We race it against a short timer so the
-    // client gets a `pending` response as soon as the STK/PIN popup would
-    // realistically be on its way — the actual gateway result is processed
-    // in the background and reflected in the DB for the poller/webhook.
+    // Fire the gateway request immediately and keep this call open until the
+    // gateway returns the real outcome (paid, cancelled, insufficient funds,
+    // expired) or the safety timeout is reached.
     const gatewayPromise: Promise<GatewayCallResult> = fetch(endpoint, {
       method: "POST",
       headers: {
