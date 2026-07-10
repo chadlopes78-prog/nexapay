@@ -662,6 +662,8 @@ export type Database = {
           customer_id: string | null
           customer_name: string | null
           customer_phone: string | null
+          failure_code: string | null
+          failure_reason: string | null
           id: string
           idempotency_key: string | null
           payment_method: string | null
@@ -678,6 +680,8 @@ export type Database = {
           customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
           id?: string
           idempotency_key?: string | null
           payment_method?: string | null
@@ -694,6 +698,8 @@ export type Database = {
           customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
           id?: string
           idempotency_key?: string | null
           payment_method?: string | null
