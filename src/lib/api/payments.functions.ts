@@ -366,6 +366,26 @@ export const startPayment = createServerFn({ method: "POST" })
     const msisdn = v.msisdn!;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Idempotency short-circuit: if a sale already exists for this key,
+    // return its current state instead of creating a duplicate charge.
+    if (data.idempotencyKey) {
+      const { data: existing } = await supabaseAdmin
+        .from("sales")
+        .select("id, status, payment_reference, products(access_link, delivery_link)")
+        .eq("idempotency_key", data.idempotencyKey)
+        .maybeSingle();
+      if (existing) {
+        const raw = String(existing.status ?? "").toLowerCase();
+        const paid = ["paid", "approved", "success", "completed"].includes(raw);
+        const failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
+        const p = existing.products as { access_link?: string | null; delivery_link?: string | null } | null;
+        if (paid) return { success: true, saleId: existing.id, transactionId: null, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
+        if (failed) return { success: false, saleId: existing.id, error: existing.payment_reference || "Pagamento cancelado ou recusado." };
+        return { success: true, saleId: existing.id, transactionId: null, status: "pending", accessLink: null };
+      }
+    }
+
     const isUuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
         data.productId,
