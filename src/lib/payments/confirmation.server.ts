@@ -26,6 +26,12 @@ const EXPIRED_STATUSES = new Set(["expired", "timeout", "timed_out"]);
 export type NormalizedPaymentStatus = "paid" | "failed" | "expired" | "pending";
 
 type GatewayPayload = Record<string, unknown>;
+export type GatewayFailureDetails = {
+  code: string;
+  message: string;
+  rawMessage: string | null;
+};
+
 type SaleForConfirmation = {
   id: string;
   status?: string | null;
@@ -37,6 +43,8 @@ type SaleForConfirmation = {
   payment_method?: string | null;
   transaction_id?: string | null;
   payment_reference?: string | null;
+  failure_reason?: string | null;
+  failure_code?: string | null;
   traffic_page_id?: string | null;
   products?: { name?: string | null } | null;
 };
@@ -83,6 +91,100 @@ export function readGatewayReference(input: unknown): string | null {
     data.merchant_reference ??
     null;
   return value == null ? null : String(value);
+}
+
+function collectGatewayText(input: unknown) {
+  const payload = asObject(input);
+  const data = nestedObject(payload, "data");
+  const values = [
+    payload.message,
+    payload.error,
+    payload.detail,
+    payload.description,
+    payload.status,
+    payload.payment_status,
+    payload.state,
+    payload.result,
+    data.message,
+    data.error,
+    data.detail,
+    data.description,
+    data.status,
+    data.payment_status,
+    data.state,
+    data.result,
+  ];
+
+  const rawMessage = values
+    .filter((value) => value != null && String(value).trim().length > 0)
+    .map((value) => String(value).trim())
+    .join(" | ")
+    .slice(0, 500);
+
+  let serialized = "";
+  try {
+    serialized = JSON.stringify(input ?? {}).slice(0, 1_000);
+  } catch {
+    serialized = "";
+  }
+
+  return {
+    rawMessage: rawMessage || null,
+    combined: `${rawMessage} ${serialized}`.toLowerCase(),
+  };
+}
+
+export function readGatewayFailureDetails(
+  input: unknown,
+  fallbackStatus: "failed" | "expired" = "failed",
+): GatewayFailureDetails {
+  const { rawMessage, combined } = collectGatewayText(input);
+
+  if (/(saldo\s+insuf|insufficient|not\s+enough|sem\s+saldo|funds|balance)/i.test(combined)) {
+    return {
+      code: "insufficient_funds",
+      message: "Saldo insuficiente na conta do cliente.",
+      rawMessage,
+    };
+  }
+
+  if (/(customer\s+did\s+not\s+enter\s+pin|did\s+not\s+enter\s+pin|n[aã]o\s+introduziu\s+pin|n[aã]o\s+digitou\s+pin|cancel|cancelad|cancelou|recus|reject|declin|denied)/i.test(combined)) {
+    return {
+      code: "cancelled_by_user",
+      message: "Pagamento cancelado pelo cliente.",
+      rawMessage,
+    };
+  }
+
+  if (/(pin\s+incorret|wrong\s+pin|invalid\s+pin|pin\s+inv[aá]lid)/i.test(combined)) {
+    return {
+      code: "invalid_pin",
+      message: "PIN incorreto. O pagamento foi recusado.",
+      rawMessage,
+    };
+  }
+
+  if (/(expir|timeout|timed\s*out|tempo\s+expir)/i.test(combined) || fallbackStatus === "expired") {
+    return {
+      code: "timeout",
+      message: "O pedido expirou sem confirmação do PIN.",
+      rawMessage,
+    };
+  }
+
+  if (/(unauthor|forbidden|credencial|auth|token)/i.test(combined)) {
+    return {
+      code: "gateway_auth_error",
+      message: "Falha de autenticação com a gateway de pagamento.",
+      rawMessage,
+    };
+  }
+
+  return {
+    code: "payment_failed",
+    message: rawMessage && !/^pending$/i.test(rawMessage) ? rawMessage.slice(0, 200) : "Pagamento cancelado ou recusado.",
+    rawMessage,
+  };
 }
 
 export function normalizeGatewayStatus(input: unknown, httpOk = true): NormalizedPaymentStatus {
@@ -170,7 +272,7 @@ async function fetchSaleById(saleId: string) {
   const { data, error } = await supabaseAdmin
     .from("sales")
     .select(
-      "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)",
+      "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, failure_reason, failure_code, traffic_page_id, products(name)",
     )
     .eq("id", saleId)
     .maybeSingle();
@@ -186,7 +288,7 @@ export async function findSaleForGatewayEvent(
     const { data, error } = await supabaseAdmin
       .from("sales")
       .select(
-        "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)",
+        "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, failure_reason, failure_code, traffic_page_id, products(name)",
       )
       .eq("transaction_id", transactionId.slice(0, 200))
       .maybeSingle();
@@ -198,7 +300,7 @@ export async function findSaleForGatewayEvent(
     const { data, error } = await supabaseAdmin
       .from("sales")
       .select(
-        "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, traffic_page_id, products(name)",
+        "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method, transaction_id, payment_reference, failure_reason, failure_code, traffic_page_id, products(name)",
       )
       .eq("payment_reference", reference.slice(0, 200))
       .maybeSingle();
@@ -270,20 +372,20 @@ export async function markSaleTerminalFailure(options: {
   transactionId?: string | null;
   reference?: string | null;
   reason?: string | null;
+  code?: string | null;
 }) {
-  const { saleId, status, transactionId, reference, reason } = options;
+  const { saleId, status, transactionId, reference, reason, code } = options;
   const finalStatus = status === "expired" ? "failed" : "failed";
+  const updatePayload = {
+    status: finalStatus,
+    transaction_id: transactionId ? transactionId.slice(0, 200) : undefined,
+    payment_reference: reference ? reference.slice(0, 200) : undefined,
+    failure_reason: reason ? reason.slice(0, 500) : undefined,
+    failure_code: code ? code.slice(0, 80) : status,
+  };
   const { data: updated, error } = await supabaseAdmin
     .from("sales")
-    .update({
-      status: finalStatus,
-      transaction_id: transactionId ? transactionId.slice(0, 200) : undefined,
-      payment_reference: reference
-        ? reference.slice(0, 200)
-        : reason
-          ? reason.slice(0, 200)
-          : undefined,
-    })
+    .update(updatePayload as never)
     .eq("id", saleId)
     .neq("status", "paid")
     .neq("status", "failed")

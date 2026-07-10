@@ -29,6 +29,7 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
           findSaleForGatewayEvent,
           markSaleTerminalFailure,
           normalizeGatewayStatus,
+          readGatewayFailureDetails,
           readGatewayReference,
           readGatewayTransactionId,
         } = await import("@/lib/payments/confirmation.server");
@@ -41,8 +42,6 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
         }
 
         const status = normalizeGatewayStatus(payload, true);
-        const payloadObject =
-          payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
         const saleData = await findSaleForGatewayEvent(transactionId, reference);
         if (!saleData) {
           console.error("Sale not found for webhook", { transactionId, reference });
@@ -64,13 +63,15 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
             triggerPushcut: true,
           });
         } else if (status === "failed" || status === "expired") {
+          const failure = readGatewayFailureDetails(payload, status);
           console.log("[Webhook] Sale failed:", saleData.id);
           await markSaleTerminalFailure({
             saleId: saleData.id,
             status,
             transactionId,
             reference,
-            reason: String(payloadObject.message ?? payloadObject.error ?? status),
+            reason: failure.message,
+            code: failure.code,
           });
         }
 
