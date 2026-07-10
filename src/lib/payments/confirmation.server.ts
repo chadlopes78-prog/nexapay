@@ -145,8 +145,26 @@ export function normalizeGatewayStatus(input: unknown, httpOk = true): Normalize
     return message.includes("expir") ? "expired" : "failed";
   }
 
+  // HTTP não-OK com qualquer sinal de erro/cancelamento na resposta:
+  // tratar como falha terminal em vez de "pending" (evita polling infinito
+  // quando o cliente cancela ou não introduz o PIN).
+  if (!httpOk) {
+    const combined = `${message} ${raw} ${combinedSuccessMessage}`;
+    if (/expir/i.test(combined)) return "expired";
+    if (
+      successValue === false ||
+      /(recus|reject|declin|cancel|fail|erro|invalid|not\s+found|unauthor|forbidden|timeout)/i.test(
+        combined,
+      ) ||
+      combined.trim().length > 0
+    ) {
+      return "failed";
+    }
+  }
+
   return "pending";
 }
+
 
 async function fetchSaleById(saleId: string) {
   const { data, error } = await supabaseAdmin
