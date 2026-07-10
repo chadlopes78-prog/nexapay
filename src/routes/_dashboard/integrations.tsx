@@ -51,7 +51,8 @@ type IntegrationId =
   | "utmify"
   | "webhooks"
   | "e2payments"
-  | "custom_api";
+  | "custom_api"
+  | "pushcut";
 
 interface FieldDef {
   key: string;
