@@ -118,6 +118,15 @@ const INTEGRATIONS: IntegrationDef[] = [
     color: "text-slate-700 bg-slate-100 border-slate-200",
     customEditor: "custom_api",
   },
+  {
+    id: "pushcut",
+    name: "Pushcut (iPhone)",
+    description:
+      "Receba notificações instantâneas no seu iPhone sempre que ocorrer uma venda ou outro evento da plataforma.",
+    icon: Bell,
+    color: "text-rose-600 bg-rose-50 border-rose-100",
+    customEditor: "pushcut",
+  },
 ];
 
 const WEBHOOK_EVENTS = [
