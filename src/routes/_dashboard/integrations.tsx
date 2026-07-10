@@ -70,7 +70,7 @@ interface IntegrationDef {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   fields?: FieldDef[];
-  customEditor?: "webhooks" | "custom_api" | "e2payments";
+  customEditor?: "webhooks" | "custom_api" | "e2payments" | "pushcut";
 }
 
 const INTEGRATIONS: IntegrationDef[] = [
