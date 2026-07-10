@@ -283,11 +283,13 @@ function IntegrationsPage() {
                       update(integration.id, { enabled: v });
                       if (integration.id === "pushcut" && pushcutRow) {
                         try {
-                          await useServerFnCall(savePushcutIntegration, {
-                            url: pushcutRow.url,
-                            active: v,
-                            events: pushcutRow.events as any,
-                            daily_summary_time: pushcutRow.daily_summary_time,
+                          await savePushcutIntegration({
+                            data: {
+                              url: pushcutRow.url,
+                              active: v,
+                              events: pushcutRow.events as any,
+                              daily_summary_time: pushcutRow.daily_summary_time,
+                            },
                           });
                         } catch (e: any) {
                           toast.error(e.message || "Erro");
