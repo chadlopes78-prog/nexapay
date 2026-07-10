@@ -112,7 +112,7 @@ export const PushcutService = {
         metadata: {
           source: "pushcut_service",
           event,
-          data: opts.data ?? {},
+          data: (opts.data ?? {}) as any,
           url,
           response_code: status,
           response_body: responseBody,
