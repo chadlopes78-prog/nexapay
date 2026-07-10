@@ -21,7 +21,7 @@ export type PushEvent =
   | "system";
 
 const EVENT_TITLES: Record<PushEvent, string> = {
-  "sale.approved": "Venda Aprovada ✅",
+  "sale.approved": "Venda Aprovada✅",
   "sale.pending": "⏳ Pagamento Pendente",
   "sale.failed": "❌ Pagamento Falhado",
   "checkout.abandoned": "🛒 Carrinho Abandonado",
