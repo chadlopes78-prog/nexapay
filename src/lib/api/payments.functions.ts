@@ -382,6 +382,8 @@ export const startPayment = createServerFn({ method: "POST" })
       normalizeGatewayStatus,
       readGatewayTransactionId,
     } = confirmationMod;
+    mark("imports");
+
 
     // Idempotency short-circuit
     if (data.idempotencyKey) {
