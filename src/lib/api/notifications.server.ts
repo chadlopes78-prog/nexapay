@@ -51,11 +51,11 @@ export async function triggerSaleApprovedNotification(saleId: string) {
       return;
     }
 
-    const title = "Venda Aprovada ✅";
+    const title = "Venda Aprovada✅";
     const mznToBrl = Number(process.env.MZN_TO_BRL_RATE || "0.085");
     const brlValue = (amountNum * mznToBrl).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     void amountStr;
-    const body = `R$ ${brlValue} via ${paymentMethod}`;
+    const body = `${brlValue} R$ via ${paymentMethod}`;
     void productName;
 
     console.log(`[Notification] Sending push to user ${userId}: ${body}`);
