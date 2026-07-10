@@ -67,7 +67,7 @@ export const PushcutService = {
         order_id: dedupeKey,
         user_id: userId,
         status: "processing",
-        metadata: { source: "pushcut_service", event, data: opts.data ?? {} },
+        metadata: { source: "pushcut_service", event, data: (opts.data ?? {}) as any } as any,
       })
       .select("id")
       .single();
