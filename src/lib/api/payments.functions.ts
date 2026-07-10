@@ -487,8 +487,10 @@ export const startPayment = createServerFn({ method: "POST" })
       return { success: false, saleId, error: "Falha ao autenticar com a gateway. Tenta novamente." };
     }
     const token = tokenResult;
+    mark("sale+token");
     const reference = paymentReferenceForSale(saleId);
     void supabaseAdmin.from("sales").update({ payment_reference: reference }).eq("id", saleId);
+
 
     const localPhone = msisdn.slice(3);
     const endpoint =
