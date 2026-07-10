@@ -562,6 +562,8 @@ export const startPayment = createServerFn({ method: "POST" })
       processGateway,
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 3_000)),
     ]);
+    mark(`gateway (fastResult=${fastResult ? fastResult.finalStatus : "timeout"})`);
+
 
     const accessLink = product.access_link || product.delivery_link || null;
     if (fastResult && fastResult.finalStatus === "paid") {
