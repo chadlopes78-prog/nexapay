@@ -142,6 +142,8 @@ async function getAccessToken(clientId: string, clientSecret: string): Promise<s
   const cached = tokenCache.get(clientId);
   if (cached && cached.expiresAt > Date.now() + 30_000) return cached.value;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8_000);
   const res = await fetch(`${E2PAY_BASE_URL}/oauth/token`, {
     method: "POST",
     headers: {
@@ -154,7 +156,8 @@ async function getAccessToken(clientId: string, clientSecret: string): Promise<s
       client_id: clientId,
       client_secret: clientSecret,
     }),
-  });
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeoutId));
 
   const text = await res.text();
   let json: Record<string, unknown> | null = null;
