@@ -31,8 +31,6 @@ export type PaymentResult =
       saleId?: string;
     };
 
-const PAYMENT_TIMEOUT_MS = 75_000;
-
 type GatewayCallResult = {
   ok: boolean;
   status: number;
@@ -532,7 +530,7 @@ export const startPayment = createServerFn({ method: "POST" })
     // Wait for the gateway's real terminal answer instead of returning an
     // indefinite pending state. The phone popup is triggered as soon as this
     // request reaches e2payment; waiting here only keeps checkout synchronized.
-    const timeoutId = setTimeout(() => controller.abort(), PAYMENT_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), 75_000);
 
     // Fire the gateway request immediately and keep this call open until the
     // gateway returns the real outcome (paid, cancelled, insufficient funds,
