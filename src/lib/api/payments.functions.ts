@@ -31,13 +31,22 @@ export type PaymentResult =
       saleId?: string;
     };
 
+const PAYMENT_TIMEOUT_MS = 75_000;
+
+type GatewayCallResult = {
+  ok: boolean;
+  status: number;
+  json: Record<string, unknown> | null;
+  text: string;
+};
+
 export const getSaleStatus = createServerFn({ method: "GET" })
   .inputValidator((input) => PaymentSuccessInput.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sale } = await supabaseAdmin
       .from("sales")
-      .select("id, status, payment_reference, products(access_link, delivery_link)")
+      .select("id, status, payment_reference, failure_reason, failure_code, products(access_link, delivery_link)")
       .eq("id", data.saleId)
       .maybeSingle();
     if (!sale) return { status: "not_found" as const, accessLink: null, error: null };
@@ -48,7 +57,8 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     return {
       status: paid ? ("paid" as const) : failed ? ("failed" as const) : ("pending" as const),
       accessLink: paid ? (product?.access_link || product?.delivery_link || null) : null,
-      error: failed ? (sale.payment_reference || "Pagamento cancelado ou recusado.") : null,
+      error: failed ? (sale.failure_reason || sale.payment_reference || "Pagamento cancelado ou recusado.") : null,
+      failureCode: failed ? (sale.failure_code || null) : null,
     };
   });
 
@@ -283,6 +293,7 @@ export const chargeSale = createServerFn({ method: "POST" })
       confirmSalePayment,
       markSaleTerminalFailure,
       normalizeGatewayStatus,
+        readGatewayFailureDetails,
       readGatewayTransactionId,
     } = await import("@/lib/payments/confirmation.server");
 
@@ -332,17 +343,19 @@ export const chargeSale = createServerFn({ method: "POST" })
         return { success: true, saleId: sale.id, transactionId, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
       }
       if (finalStatus === "failed" || finalStatus === "expired") {
-        const message = String(
-          (json?.message as string) || (json?.error as string) || (json?.detail as string) ||
-          (finalStatus === "expired" ? "Pagamento expirado." : "Pagamento cancelado ou recusado."),
-        );
-        await markSaleTerminalFailure({ saleId: sale.id, status: finalStatus, transactionId, reference, reason: message });
-        return { success: false, saleId: sale.id, error: message };
+        const failure = readGatewayFailureDetails(json, finalStatus);
+        await markSaleTerminalFailure({ saleId: sale.id, status: finalStatus, transactionId, reference, reason: failure.message, code: failure.code });
+        return { success: false, saleId: sale.id, error: failure.message };
       }
       return { success: true, saleId: sale.id, transactionId, status: "pending", accessLink: null };
     } catch (err) {
       console.error("chargeSale error", err);
-      return { success: true, saleId: sale.id, transactionId: null, status: "pending", accessLink: null };
+      const message = "Falha de comunicação com a gateway. Tenta novamente.";
+      const { markSaleTerminalFailure } = await import("@/lib/payments/confirmation.server");
+      await markSaleTerminalFailure({ saleId: sale.id, status: "failed", reference, reason: message, code: "gateway_unavailable" }).catch((e) => {
+        console.error("chargeSale failure update error", e);
+      });
+      return { success: false, saleId: sale.id, error: message };
     }
   });
 
@@ -380,6 +393,7 @@ export const startPayment = createServerFn({ method: "POST" })
       confirmSalePayment,
       markSaleTerminalFailure,
       normalizeGatewayStatus,
+      readGatewayFailureDetails,
       readGatewayTransactionId,
     } = confirmationMod;
     mark("imports");
@@ -389,7 +403,7 @@ export const startPayment = createServerFn({ method: "POST" })
     if (data.idempotencyKey) {
       const { data: existing } = await supabaseAdmin
         .from("sales")
-        .select("id, status, payment_reference, products(access_link, delivery_link)")
+        .select("id, status, payment_reference, failure_reason, products(access_link, delivery_link)")
         .eq("idempotency_key", data.idempotencyKey)
         .maybeSingle();
       if (existing) {
@@ -398,7 +412,7 @@ export const startPayment = createServerFn({ method: "POST" })
         const failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
         const p = existing.products as { access_link?: string | null; delivery_link?: string | null } | null;
         if (paid) return { success: true, saleId: existing.id, transactionId: null, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
-        if (failed) return { success: false, saleId: existing.id, error: existing.payment_reference || "Pagamento cancelado ou recusado." };
+        if (failed) return { success: false, saleId: existing.id, error: existing.failure_reason || existing.payment_reference || "Pagamento cancelado ou recusado." };
         return { success: true, saleId: existing.id, transactionId: null, status: "pending", accessLink: null };
       }
     }
@@ -447,17 +461,24 @@ export const startPayment = createServerFn({ method: "POST" })
       ? `${data.customerName.trim()} (contacto: ${data.contactPhone.trim()})`
       : data.customerName.trim();
 
-    // Insert sale + preload OAuth token in parallel
+    const saleId = crypto.randomUUID();
+    const reference = paymentReferenceForSale(saleId);
+
+    // Insert sale with the final gateway reference + preload OAuth token in parallel.
+    // This removes the old insert→update race where a fast webhook could arrive
+    // before `payment_reference` existed, leaving checkout stuck in processing.
     const [saleRes, tokenResult] = await Promise.all([
       supabaseAdmin
         .from("sales")
         .insert({
+          id: saleId,
           product_id: product.id,
           user_id: product.user_id,
           customer_name: customerName.slice(0, 100),
           customer_phone: msisdn,
           amount,
           payment_method: data.method,
+          payment_reference: reference,
           status: "pending",
           traffic_page_id: (trafficRes.data as { id?: string } | null)?.id ?? null,
           idempotency_key: data.idempotencyKey ?? null,
@@ -482,14 +503,18 @@ export const startPayment = createServerFn({ method: "POST" })
       }
       return { success: false, error: "Não foi possível registar a venda." };
     }
-    const saleId = saleRes.data.id;
     if (tokenResult instanceof Error) {
+      await markSaleTerminalFailure({
+        saleId,
+        status: "failed",
+        reference,
+        reason: "Falha ao autenticar com a gateway. Tenta novamente.",
+        code: "gateway_auth_error",
+      }).catch((e) => console.error("startPayment token failure update error", e));
       return { success: false, saleId, error: "Falha ao autenticar com a gateway. Tenta novamente." };
     }
     const token = tokenResult;
     mark("sale+token");
-    const reference = paymentReferenceForSale(saleId);
-    void supabaseAdmin.from("sales").update({ payment_reference: reference }).eq("id", saleId);
 
 
     const localPhone = msisdn.slice(3);
@@ -499,14 +524,16 @@ export const startPayment = createServerFn({ method: "POST" })
         : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
 
     const controller = new AbortController();
-    // Hard cap the underlying fetch, but we won't wait that long before responding.
-    const timeoutId = setTimeout(() => controller.abort(), 60_000);
+    // Wait for the gateway's real terminal answer instead of returning an
+    // indefinite pending state. The phone popup is triggered as soon as this
+    // request reaches e2payment; waiting here only keeps checkout synchronized.
+    const timeoutId = setTimeout(() => controller.abort(), PAYMENT_TIMEOUT_MS);
 
     // Fire the gateway request. We race it against a short timer so the
     // client gets a `pending` response as soon as the STK/PIN popup would
     // realistically be on its way — the actual gateway result is processed
     // in the background and reflected in the DB for the poller/webhook.
-    const gatewayPromise = fetch(endpoint, {
+    const gatewayPromise: Promise<GatewayCallResult> = fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json; charset=utf-8",
@@ -532,8 +559,6 @@ export const startPayment = createServerFn({ method: "POST" })
       })
       .finally(() => clearTimeout(timeoutId));
 
-    // Detached handler: updates the sale in the background regardless of
-    // whether the client is still waiting on this same request.
     const processGateway = gatewayPromise
       .then(async ({ ok, status, json, text }) => {
         console.info("e2payment response", { status, method: data.method, reference, body: text?.slice(0, 400) });
@@ -542,27 +567,33 @@ export const startPayment = createServerFn({ method: "POST" })
         if (finalStatus === "paid") {
           await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
         } else if (finalStatus === "failed" || finalStatus === "expired") {
-          const message = String(
-            (json?.message as string) || (json?.error as string) || (json?.detail as string) ||
-            (finalStatus === "expired" ? "Pagamento expirado." : "Pagamento cancelado ou recusado."),
-          );
-          await markSaleTerminalFailure({ saleId, status: finalStatus, transactionId, reference, reason: message });
+          const failure = readGatewayFailureDetails(json, finalStatus);
+          await markSaleTerminalFailure({ saleId, status: finalStatus, transactionId, reference, reason: failure.message, code: failure.code });
         }
         return { finalStatus, transactionId, json };
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error("startPayment gateway error", err);
-        return null;
+        const isAbort = err instanceof Error && err.name === "AbortError";
+        const message = isAbort
+          ? "Tempo expirado sem confirmação no telefone."
+          : "Falha de comunicação com a gateway. Tenta novamente.";
+        await markSaleTerminalFailure({
+          saleId,
+          status: "failed",
+          reference,
+          reason: message,
+          code: isAbort ? "timeout" : "gateway_unavailable",
+        }).catch((e) => console.error("startPayment failure update error", e));
+        return {
+          finalStatus: "failed" as const,
+          transactionId: null,
+          json: { message, code: isAbort ? "timeout" : "gateway_unavailable" },
+        };
       });
 
-    // Race: respond fast if gateway takes >3s. Popup on the phone fires
-    // from the gateway side as soon as it accepts the request; the client
-    // will keep polling to learn the outcome.
-    const fastResult = await Promise.race([
-      processGateway,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 3_000)),
-    ]);
-    mark(`gateway (fastResult=${fastResult ? fastResult.finalStatus : "timeout"})`);
+    const fastResult = await processGateway;
+    mark(`gateway (finalStatus=${fastResult.finalStatus})`);
 
 
     const accessLink = product.access_link || product.delivery_link || null;
@@ -570,14 +601,10 @@ export const startPayment = createServerFn({ method: "POST" })
       return { success: true, saleId, transactionId: fastResult.transactionId, status: "paid", accessLink };
     }
     if (fastResult && (fastResult.finalStatus === "failed" || fastResult.finalStatus === "expired")) {
-      const j = fastResult.json;
-      const message = String(
-        (j?.message as string) || (j?.error as string) || (j?.detail as string) ||
-        (fastResult.finalStatus === "expired" ? "Pagamento expirado." : "Pagamento cancelado ou recusado."),
-      );
-      return { success: false, saleId, error: message };
+      const failure = readGatewayFailureDetails(fastResult.json, fastResult.finalStatus);
+      return { success: false, saleId, error: failure.message };
     }
-    // Either fast timer won, or gateway returned pending — client will poll.
+    // Gateway explicitly returned pending; client will poll webhook/status.
     return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
   });
 
