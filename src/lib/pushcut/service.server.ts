@@ -118,7 +118,7 @@ export const PushcutService = {
           response_body: responseBody,
           error: errorMsg,
           elapsed_ms: elapsedMs,
-        },
+        } as any,
       })
       .eq("id", log.id);
 
