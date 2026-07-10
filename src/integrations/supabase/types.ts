@@ -581,6 +581,36 @@ export type Database = {
         }
         Relationships: []
       }
+      pushcut_integrations: {
+        Row: {
+          active: boolean
+          created_at: string
+          daily_summary_time: string
+          events: Json
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          daily_summary_time?: string
+          events?: Json
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          daily_summary_time?: string
+          events?: Json
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pushcut_logs: {
         Row: {
           created_at: string
