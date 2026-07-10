@@ -209,8 +209,8 @@ function CheckoutPage() {
     };
 
     try {
-      // 1) Create sale fast, get saleId
-      const init = (await initFn({
+      // Single round-trip: creates sale + fires gateway (STK/PIN popup) in one server call.
+      const result = (await startFn({
         data: {
           productId,
           method: paymentMethod,
@@ -221,22 +221,12 @@ function CheckoutPage() {
         },
       })) as PaymentResult;
 
-      if (!init.success) return finishFailed(init.error || "Não foi possível iniciar o pagamento.");
+      if (!result.success) return finishFailed(result.error || "Não foi possível iniciar o pagamento.");
 
-      const saleId = init.saleId;
-
-      // 2) Start polling immediately — webhook may confirm before charge returns
+      const saleId = result.saleId;
+      if (result.status === "paid") return finishPaid(result.accessLink ?? null, saleId);
+      // pending → poll until webhook confirms
       startPolling(saleId);
-
-      // 3) Fire the gateway charge in parallel (do not await)
-      chargeFn({ data: { saleId } })
-        .then((r: PaymentResult) => {
-          if (settled) return;
-          if (!r.success) return finishFailed(r.error || "Pagamento cancelado ou recusado.");
-          if (r.status === "paid") return finishPaid(r.accessLink ?? null, saleId);
-          // pending → keep polling
-        })
-        .catch(() => { /* poller handles timeout */ });
     } catch (error: any) {
       finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
     }
