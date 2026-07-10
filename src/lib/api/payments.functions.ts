@@ -10,6 +10,7 @@ const PaymentInput = z.object({
   customerName: z.string().min(1).max(100),
   contactPhone: z.string().max(20).optional(),
   trafficPageTrackingId: z.string().max(100).nullable().optional(),
+  idempotencyKey: z.string().min(8).max(80).optional(),
 });
 
 const PaymentSuccessInput = z.object({
@@ -365,6 +366,26 @@ export const startPayment = createServerFn({ method: "POST" })
     const msisdn = v.msisdn!;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Idempotency short-circuit: if a sale already exists for this key,
+    // return its current state instead of creating a duplicate charge.
+    if (data.idempotencyKey) {
+      const { data: existing } = await supabaseAdmin
+        .from("sales")
+        .select("id, status, payment_reference, products(access_link, delivery_link)")
+        .eq("idempotency_key", data.idempotencyKey)
+        .maybeSingle();
+      if (existing) {
+        const raw = String(existing.status ?? "").toLowerCase();
+        const paid = ["paid", "approved", "success", "completed"].includes(raw);
+        const failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
+        const p = existing.products as { access_link?: string | null; delivery_link?: string | null } | null;
+        if (paid) return { success: true, saleId: existing.id, transactionId: null, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
+        if (failed) return { success: false, saleId: existing.id, error: existing.payment_reference || "Pagamento cancelado ou recusado." };
+        return { success: true, saleId: existing.id, transactionId: null, status: "pending", accessLink: null };
+      }
+    }
+
     const isUuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
         data.productId,
@@ -426,12 +447,29 @@ export const startPayment = createServerFn({ method: "POST" })
           payment_method: data.method,
           status: "pending",
           traffic_page_id: (trafficRes.data as { id?: string } | null)?.id ?? null,
+          idempotency_key: data.idempotencyKey ?? null,
         })
         .select("id")
         .single(),
       getAccessToken(creds.e2p_client_id, creds.e2p_client_secret).catch((e) => e as Error),
     ]);
-    if (saleRes.error || !saleRes.data) return { success: false, error: "Não foi possível registar a venda." };
+    if (saleRes.error || !saleRes.data) {
+      // Race on idempotency_key unique index → re-fetch and short-circuit.
+      if (data.idempotencyKey && String(saleRes.error?.code) === "23505") {
+        const { data: existing } = await supabaseAdmin
+          .from("sales")
+          .select("id, status, products(access_link, delivery_link)")
+          .eq("idempotency_key", data.idempotencyKey)
+          .maybeSingle();
+        if (existing) {
+          const raw = String(existing.status ?? "").toLowerCase();
+          const paid = ["paid", "approved", "success", "completed"].includes(raw);
+          const p = existing.products as { access_link?: string | null; delivery_link?: string | null } | null;
+          return { success: true, saleId: existing.id, transactionId: null, status: paid ? "paid" : "pending", accessLink: paid ? (p?.access_link || p?.delivery_link || null) : null };
+        }
+      }
+      return { success: false, error: "Não foi possível registar a venda." };
+    }
     const saleId = saleRes.data.id;
     if (tokenResult instanceof Error) {
       return { success: false, saleId, error: "Falha ao autenticar com a gateway. Tenta novamente." };

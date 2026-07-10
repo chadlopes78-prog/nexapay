@@ -209,6 +209,12 @@ function CheckoutPage() {
     };
 
     try {
+      // Stable idempotency key for this click — retries reuse it to avoid double-charging.
+      const idempotencyKey =
+        (typeof crypto !== "undefined" && "randomUUID" in crypto)
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
       // Single round-trip: creates sale + fires gateway (STK/PIN popup) in one server call.
       const result = (await startFn({
         data: {
@@ -218,6 +224,7 @@ function CheckoutPage() {
           customerName: name,
           contactPhone: contactPhone || undefined,
           trafficPageTrackingId: trafficPageId,
+          idempotencyKey,
         },
       })) as PaymentResult;
 
