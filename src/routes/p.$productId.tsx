@@ -1,7 +1,7 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { initiateSale, chargeSale, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
+import { startPayment, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
