@@ -453,7 +453,23 @@ export const startPayment = createServerFn({ method: "POST" })
         .single(),
       getAccessToken(creds.e2p_client_id, creds.e2p_client_secret).catch((e) => e as Error),
     ]);
-    if (saleRes.error || !saleRes.data) return { success: false, error: "Não foi possível registar a venda." };
+    if (saleRes.error || !saleRes.data) {
+      // Race on idempotency_key unique index → re-fetch and short-circuit.
+      if (data.idempotencyKey && String(saleRes.error?.code) === "23505") {
+        const { data: existing } = await supabaseAdmin
+          .from("sales")
+          .select("id, status, products(access_link, delivery_link)")
+          .eq("idempotency_key", data.idempotencyKey)
+          .maybeSingle();
+        if (existing) {
+          const raw = String(existing.status ?? "").toLowerCase();
+          const paid = ["paid", "approved", "success", "completed"].includes(raw);
+          const p = existing.products as { access_link?: string | null; delivery_link?: string | null } | null;
+          return { success: true, saleId: existing.id, transactionId: null, status: paid ? "paid" : "pending", accessLink: paid ? (p?.access_link || p?.delivery_link || null) : null };
+        }
+      }
+      return { success: false, error: "Não foi possível registar a venda." };
+    }
     const saleId = saleRes.data.id;
     if (tokenResult instanceof Error) {
       return { success: false, saleId, error: "Falha ao autenticar com a gateway. Tenta novamente." };
