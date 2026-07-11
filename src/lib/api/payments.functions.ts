@@ -18,6 +18,11 @@ const PaymentSuccessInput = z.object({
   saleId: z.string().uuid(),
 });
 
+const CancelPaymentInput = z.object({
+  saleId: z.string().uuid(),
+  reason: z.enum(["customer_cancelled", "timeout"]).default("customer_cancelled"),
+});
+
 export type PaymentResult =
   | {
       success: true;
@@ -52,6 +57,23 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     const raw = String(sale.status ?? "").toLowerCase();
     const paid = ["paid", "approved", "success", "completed"].includes(raw);
     const failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
+    const createdAt = sale.created_at ? new Date(sale.created_at).getTime() : 0;
+    if (!paid && !failed && createdAt > 0 && Date.now() - createdAt > 130_000) {
+      const { markSaleTerminalFailure } = await import("@/lib/payments/confirmation.server");
+      await markSaleTerminalFailure({
+        saleId: data.saleId,
+        status: "expired",
+        reference: sale.payment_reference,
+        reason: "O pedido expirou sem confirmação do PIN.",
+        code: "timeout",
+      }).catch((error) => console.error("getSaleStatus timeout update error", error));
+      return {
+        status: "failed" as const,
+        accessLink: null,
+        error: "O pedido expirou sem confirmação do PIN.",
+        failureCode: "timeout",
+      };
+    }
     const product = sale.products as { access_link?: string | null; delivery_link?: string | null } | null;
     return {
       status: paid ? ("paid" as const) : failed ? ("failed" as const) : ("pending" as const),
@@ -59,6 +81,57 @@ export const getSaleStatus = createServerFn({ method: "GET" })
       error: failed ? (sale.failure_reason || sale.payment_reference || "Pagamento cancelado ou recusado.") : null,
       failureCode: failed ? (sale.failure_code || null) : null,
     };
+  });
+
+export const cancelPayment = createServerFn({ method: "POST" })
+  .inputValidator((input) => CancelPaymentInput.parse(input))
+  .handler(async ({ data }) => {
+    const [{ supabaseAdmin }, { markSaleTerminalFailure }] = await Promise.all([
+      import("@/integrations/supabase/client.server"),
+      import("@/lib/payments/confirmation.server"),
+    ]);
+    const isTimeout = data.reason === "timeout";
+    const reason = isTimeout
+      ? "O pedido expirou sem confirmação do PIN."
+      : "Pagamento cancelado pelo cliente.";
+    const code = isTimeout ? "timeout" : "cancelled_by_user";
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const { data: sale } = await supabaseAdmin
+        .from("sales")
+        .select("id, status, payment_reference, failure_reason, failure_code")
+        .eq("id", data.saleId)
+        .maybeSingle();
+
+      if (!sale) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        continue;
+      }
+
+      const raw = String(sale.status ?? "").toLowerCase();
+      if (["paid", "approved", "success", "completed"].includes(raw)) {
+        return { success: false, error: "Pagamento já confirmado." };
+      }
+      if (["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw)) {
+        return {
+          success: true,
+          status: "failed" as const,
+          error: sale.failure_reason || reason,
+          failureCode: sale.failure_code || code,
+        };
+      }
+
+      await markSaleTerminalFailure({
+        saleId: data.saleId,
+        status: isTimeout ? "expired" : "failed",
+        reference: sale.payment_reference,
+        reason,
+        code,
+      });
+      return { success: true, status: "failed" as const, error: reason, failureCode: code };
+    }
+
+    return { success: false, error: "Venda não encontrada para cancelar." };
   });
 
 
@@ -624,7 +697,7 @@ export const startPayment = createServerFn({ method: "POST" })
 
     const fastResult = await Promise.race([
       processGateway,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 500)),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 70_000)),
     ]);
 
 

@@ -1,20 +1,18 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect } from "react";
-import { startPayment, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
+import { useState, useEffect, useRef } from "react";
+import { cancelPayment, startPayment, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import {
-  ShieldCheck,
   CheckCircle2,
   Lock,
   ShieldAlert,
   Package,
   Clock,
-  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -58,6 +56,7 @@ declare global {
 function CheckoutPage() {
   const startPaymentFn = useServerFn(startPayment);
   const statusFn = useServerFn(getSaleStatus);
+  const cancelPaymentFn = useServerFn(cancelPayment);
   const { productId } = useParams({ from: "/p/$productId" });
   const { product, checkout, defaultPixel } = Route.useLoaderData();
   const buttonLabel = (checkout?.button_text?.trim() || "Finalizar Compra");
@@ -66,9 +65,12 @@ function CheckoutPage() {
 
   const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [cancelingPayment, setCancelingPayment] = useState(false);
+  const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
   const [pinSecondsLeft, setPinSecondsLeft] = useState(120);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
+  const paymentRunRef = useRef(0);
 
   const [name, setName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -167,39 +169,47 @@ function CheckoutPage() {
     }
 
     setProcessingPayment(true);
+    setCancelingPayment(false);
     setPaymentErrorMessage(null);
     setPaymentStatusMessage(`Pedido enviado para ${paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}. Confirme no seu telefone.`);
     trackEvent('InitiateCheckout');
 
+    const runId = paymentRunRef.current + 1;
+    paymentRunRef.current = runId;
     let settled = false;
     const finishPaid = (link: string | null, saleId: string) => {
-      if (settled) return;
+      if (settled || paymentRunRef.current !== runId) return;
       settled = true;
+      setCurrentSaleId(null);
       trackEvent('Purchase');
       window.location.replace(link || `/payment-success?productId=${productId}&saleId=${saleId}`);
     };
     const finishFailed = (msg: string) => {
-      if (settled) return;
+      if (settled || paymentRunRef.current !== runId) return;
       settled = true;
+      setCurrentSaleId(null);
       setPaymentErrorMessage(msg);
       setPaymentStatusMessage(null);
       setProcessingPayment(false);
+      setCancelingPayment(false);
     };
 
     const startPolling = (saleId: string) => {
       const deadlineAt = Date.now() + 120_000;
       const tick = async () => {
-        if (settled) return;
+        if (settled || paymentRunRef.current !== runId) return;
         if (Date.now() >= deadlineAt) {
+          await cancelPaymentFn({ data: { saleId, reason: "timeout" } }).catch(() => undefined);
           finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
           return;
         }
         try {
           const s = await statusFn({ data: { saleId } });
-          if (settled) return;
+          if (settled || paymentRunRef.current !== runId) return;
           if (s.status === "paid") return finishPaid(s.accessLink, saleId);
           if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
         } catch { /* transient */ }
+        if (settled || paymentRunRef.current !== runId) return;
         const fastWindowActive = Date.now() < deadlineAt - 105_000;
         setTimeout(tick, fastWindowActive ? 300 : 1000);
       };
@@ -215,6 +225,7 @@ function CheckoutPage() {
           : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const saleId = createClientId();
       const idempotencyKey = createClientId();
+      setCurrentSaleId(saleId);
 
       let pollingStarted = false;
       const kickPolling = (currentSaleId: string) => {
@@ -258,6 +269,23 @@ function CheckoutPage() {
         });
     } catch (error: any) {
       finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
+    }
+  };
+
+  const handleCancelPayment = async () => {
+    if (!currentSaleId || cancelingPayment) return;
+    setCancelingPayment(true);
+    paymentRunRef.current += 1;
+    try {
+      const result = await cancelPaymentFn({ data: { saleId: currentSaleId, reason: "customer_cancelled" } });
+      setPaymentErrorMessage(result.error || "Pagamento cancelado pelo cliente.");
+      setPaymentStatusMessage(null);
+      setProcessingPayment(false);
+      setCurrentSaleId(null);
+    } catch (error: any) {
+      setPaymentErrorMessage(error?.message || "Não foi possível cancelar agora. Tenta novamente.");
+    } finally {
+      setCancelingPayment(false);
     }
   };
 
@@ -534,6 +562,16 @@ function CheckoutPage() {
                   <b>Não feche esta aba.</b> Assim que confirmar o PIN no telefone, o acesso será liberado automaticamente.
                 </span>
               </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                disabled={cancelingPayment}
+                onClick={handleCancelPayment}
+                className="h-12 w-full rounded-xl border-red-200 bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-70"
+              >
+                {cancelingPayment ? "Cancelando..." : "Já cancelei no telefone"}
+              </Button>
 
               {paymentErrorMessage && (
                 <div className="text-sm font-medium text-red-600">{paymentErrorMessage}</div>
