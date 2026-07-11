@@ -26,6 +26,8 @@ interface Props {
   thankYouButtonText: string; setThankYouButtonText: (v: string) => void;
   imageFile: File | null; setImageFile: (f: File | null) => void;
   imageUrl: string;
+  bannerFile: File | null; setBannerFile: (f: File | null) => void;
+  bannerUrl: string;
   onSubmit: () => void;
   onCancel: () => void;
   submitting?: boolean;
@@ -151,6 +153,18 @@ export function NewProductWizard(props: Props) {
                   src={props.imageFile ? URL.createObjectURL(props.imageFile) : props.imageUrl}
                   alt=""
                   className="mt-1 h-20 w-20 rounded-lg border object-cover"
+                />
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="wiz-banner" className="flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5" /> Banner do checkout</Label>
+              <Input id="wiz-banner" type="file" accept="image/*" onChange={(e) => props.setBannerFile(e.target.files?.[0] || null)} />
+              <p className="text-[11px] text-slate-500">Aparece no topo da página de checkout. Recomendado: 1200x300px.</p>
+              {(props.bannerFile || props.bannerUrl) && (
+                <img
+                  src={props.bannerFile ? URL.createObjectURL(props.bannerFile) : props.bannerUrl}
+                  alt=""
+                  className="mt-1 w-full max-h-32 rounded-lg border object-cover"
                 />
               )}
             </div>

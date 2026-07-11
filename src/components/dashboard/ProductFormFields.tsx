@@ -129,9 +129,9 @@ export function ProductFormFields(props: ProductFormFieldsProps) {
       )}
 
       {showProduct && (
-        <Section icon={ImageIcon} title="Imagem do produto" description="Foto principal exibida ao cliente">
+        <Section icon={ImageIcon} title="Imagens" description="Foto do produto e banner do checkout">
           <div className="grid gap-2">
-            <Label htmlFor={`${p}-image`}>Imagem principal</Label>
+            <Label htmlFor={`${p}-image`}>Imagem principal do produto</Label>
             <Input
               id={`${p}-image`}
               type="file"
@@ -143,6 +143,23 @@ export function ProductFormFields(props: ProductFormFieldsProps) {
                 src={props.imageFile ? URL.createObjectURL(props.imageFile) : props.imageUrl}
                 alt="Preview"
                 className="mt-1 h-24 w-24 rounded-lg border object-cover"
+              />
+            )}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor={`${p}-banner-product`}>Banner do checkout</Label>
+            <Input
+              id={`${p}-banner-product`}
+              type="file"
+              accept="image/*"
+              onChange={(e) => props.setBannerFile(e.target.files?.[0] || null)}
+            />
+            <p className="text-[11px] text-slate-500">Aparece no topo da página de checkout. Recomendado: 1200x300px.</p>
+            {(props.bannerFile || props.bannerUrl) && (
+              <img
+                src={props.bannerFile ? URL.createObjectURL(props.bannerFile) : props.bannerUrl}
+                alt="Banner"
+                className="mt-1 w-full max-h-40 rounded-lg border object-cover"
               />
             )}
           </div>
