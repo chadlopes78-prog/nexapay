@@ -340,9 +340,13 @@ function ProductsPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { id, created_at, updated_at, ...rest } = product;
+      const cleanName = String(product.name)
+        .replace(/^\s*C[óo]pia de\s+/i, "")
+        .replace(/\s*\(c[óo]pia\)\s*$/i, "")
+        .trim();
       const { data, error } = await supabase
         .from("products")
-        .insert({ ...rest, name: `Cópia de ${product.name}`, user_id: user.id, status: "active" })
+        .insert({ ...rest, name: `Cópia de ${cleanName}`, user_id: user.id, status: "active" })
         .select()
         .single();
       if (error) throw error;
