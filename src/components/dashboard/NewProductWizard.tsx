@@ -25,9 +25,9 @@ interface Props {
   accessLink: string; setAccessLink: (v: string) => void;
   thankYouButtonText: string; setThankYouButtonText: (v: string) => void;
   imageFile: File | null; setImageFile: (f: File | null) => void;
-  imageUrl: string;
+  imageUrl: string; setImageUrl?: (v: string) => void;
   bannerFile: File | null; setBannerFile: (f: File | null) => void;
-  bannerUrl: string;
+  bannerUrl: string; setBannerUrl?: (v: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
   submitting?: boolean;
@@ -149,11 +149,26 @@ export function NewProductWizard(props: Props) {
               <Label htmlFor="wiz-img" className="flex items-center gap-1"><ImageIcon className="h-3.5 w-3.5" /> Imagem do produto</Label>
               <Input id="wiz-img" type="file" accept="image/*" onChange={(e) => props.setImageFile(e.target.files?.[0] || null)} />
               {(props.imageFile || props.imageUrl) && (
-                <img
-                  src={props.imageFile ? URL.createObjectURL(props.imageFile) : props.imageUrl}
-                  alt=""
-                  className="mt-1 h-20 w-20 rounded-lg border object-cover"
-                />
+                <div className="relative mt-1 inline-block">
+                  <img
+                    src={props.imageFile ? URL.createObjectURL(props.imageFile) : props.imageUrl}
+                    alt=""
+                    className="h-20 w-20 rounded-lg border object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      props.setImageFile(null);
+                      props.setImageUrl?.("");
+                      const el = document.getElementById("wiz-img") as HTMLInputElement | null;
+                      if (el) el.value = "";
+                    }}
+                    className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-red-600 text-white text-xs shadow hover:bg-red-700"
+                    aria-label="Remover imagem"
+                  >
+                    ×
+                  </button>
+                </div>
               )}
             </div>
             <div className="grid gap-2">
@@ -161,11 +176,26 @@ export function NewProductWizard(props: Props) {
               <Input id="wiz-banner" type="file" accept="image/*" onChange={(e) => props.setBannerFile(e.target.files?.[0] || null)} />
               <p className="text-[11px] text-slate-500">Aparece no topo da página de checkout. Recomendado: 1200x300px.</p>
               {(props.bannerFile || props.bannerUrl) && (
-                <img
-                  src={props.bannerFile ? URL.createObjectURL(props.bannerFile) : props.bannerUrl}
-                  alt=""
-                  className="mt-1 w-full max-h-32 rounded-lg border object-cover"
-                />
+                <div className="relative mt-1">
+                  <img
+                    src={props.bannerFile ? URL.createObjectURL(props.bannerFile) : props.bannerUrl}
+                    alt=""
+                    className="w-full max-h-32 rounded-lg border object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      props.setBannerFile(null);
+                      props.setBannerUrl?.("");
+                      const el = document.getElementById("wiz-banner") as HTMLInputElement | null;
+                      if (el) el.value = "";
+                    }}
+                    className="absolute top-2 right-2 grid h-7 w-7 place-items-center rounded-full bg-red-600 text-white text-sm shadow hover:bg-red-700"
+                    aria-label="Remover banner"
+                  >
+                    ×
+                  </button>
+                </div>
               )}
             </div>
           </div>
