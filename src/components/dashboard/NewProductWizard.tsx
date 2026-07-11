@@ -25,9 +25,9 @@ interface Props {
   accessLink: string; setAccessLink: (v: string) => void;
   thankYouButtonText: string; setThankYouButtonText: (v: string) => void;
   imageFile: File | null; setImageFile: (f: File | null) => void;
-  imageUrl: string;
+  imageUrl: string; setImageUrl?: (v: string) => void;
   bannerFile: File | null; setBannerFile: (f: File | null) => void;
-  bannerUrl: string;
+  bannerUrl: string; setBannerUrl?: (v: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
   submitting?: boolean;
