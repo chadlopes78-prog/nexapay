@@ -544,33 +544,49 @@ async function dispatchApprovedSideEffects(
       : rawMethod.includes("mpesa") || rawMethod.includes("m-pesa")
         ? "MPESA"
         : (sale.payment_method ?? "").toString().toUpperCase() || "PAGAMENTO";
+    // Live MZN→BRL rate (fallback to env or 0.085)
+    let mznToBrl = Number(process.env.MZN_TO_BRL_RATE || "0.085");
+    try {
+      const fxCtrl = new AbortController();
+      const fxTimer = setTimeout(() => fxCtrl.abort(), 2500);
+      const fxRes = await fetch("https://open.er-api.com/v6/latest/MZN", { signal: fxCtrl.signal });
+      clearTimeout(fxTimer);
+      if (fxRes.ok) {
+        const fxJson = (await fxRes.json()) as { rates?: { BRL?: number } };
+        const live = Number(fxJson?.rates?.BRL);
+        if (Number.isFinite(live) && live > 0) mznToBrl = live;
+      }
+    } catch { /* ignore */ }
+    const brlValue = (amountNum * mznToBrl).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const bodyText = `${brlValue} R$ via ${method}`;
+
     await sendPushToUser(userId, {
       event: "sale.approved",
-      body: `R$ ${(amountNum * Number(process.env.MZN_TO_BRL_RATE || "0.085")).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} via ${method}`,
+      body: bodyText,
       url: "/transactions",
       metadata: { saleId: sale.id },
     });
+
+    // Native Pushcut integration — independent of the Webhooks system.
+    try {
+      const { PushcutService } = await import("@/lib/pushcut/service.server");
+      await PushcutService.sendEvent({
+        userId,
+        event: "sale_approved",
+        dedupeKey: `pushcut:sale_approved:${sale.id}`,
+        text: bodyText,
+        data: {
+          brl_value: brlValue,
+          payment_method: method,
+          product_name: productName,
+          customer_name: sale.customer_name,
+        },
+      });
+    } catch (e) {
+      console.error("[pushcut][sale.approved] error (suppressed)", e);
+    }
   } catch (e) {
     console.error("[push][sale.approved] error (suppressed)", e);
-  }
-
-  // Native Pushcut integration — independent of the Webhooks system.
-  try {
-    const { PushcutService } = await import("@/lib/pushcut/service.server");
-    await PushcutService.sendEvent({
-      userId,
-      event: "sale_approved",
-      dedupeKey: `pushcut:sale_approved:${sale.id}`,
-      data: {
-        product_name: productName,
-        amount: sale.amount,
-        payment_method: sale.payment_method,
-        customer_name: sale.customer_name,
-        approved_at: new Date().toISOString(),
-      },
-    });
-  } catch (e) {
-    console.error("[pushcut][sale.approved] error (suppressed)", e);
   }
 
   // Silence unused warning for helper kept for non-approved flows.

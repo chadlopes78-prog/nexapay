@@ -132,7 +132,7 @@ function buildDefaultText(event: PushcutEventKey, d: Record<string, unknown>): s
   const g = (k: string) => (d[k] == null ? "-" : String(d[k]));
   switch (event) {
     case "sale_approved":
-      return `Produto: ${g("product_name")}\nValor: ${g("amount")}\nPagamento: ${g("payment_method")}\nCliente: ${g("customer_name")}\nHora: ${g("approved_at")}`;
+      return `${g("brl_value")} R$ via ${g("payment_method")}`;
     case "sale_refused":
       return `Produto: ${g("product_name")}\nCliente: ${g("customer_name")}\nMotivo: ${g("reason")}`;
     case "payment_pending":
