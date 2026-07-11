@@ -242,24 +242,43 @@ export const initiateSale = createServerFn({ method: "POST" })
     }
 
     const { paymentReferenceForSale } = await import("@/lib/payments/confirmation.server");
+    const saleId = crypto.randomUUID();
+    const reference = paymentReferenceForSale(saleId);
     const { data: sale, error: saleError } = await supabaseAdmin
       .from("sales")
       .insert({
+        id: saleId,
         product_id: product.id,
         user_id: product.user_id,
         customer_name: customerName.slice(0, 100),
         customer_phone: msisdn,
         amount,
         payment_method: data.method,
+        payment_reference: reference,
         status: "pending",
         traffic_page_id: finalTrafficPageId,
+        idempotency_key: data.idempotencyKey ?? null,
       })
       .select("id")
       .single();
-    if (saleError || !sale) return { success: false, error: "Não foi possível registar a venda." };
-
-    const reference = paymentReferenceForSale(sale.id);
-    await supabaseAdmin.from("sales").update({ payment_reference: reference }).eq("id", sale.id);
+    if (saleError || !sale) {
+      if (data.idempotencyKey && String(saleError?.code) === "23505") {
+        const { data: existing } = await supabaseAdmin
+          .from("sales")
+          .select("id, status, failure_reason, payment_reference, products(access_link, delivery_link)")
+          .eq("idempotency_key", data.idempotencyKey)
+          .maybeSingle();
+        if (existing) {
+          const raw = String(existing.status ?? "").toLowerCase();
+          const paid = ["paid", "approved", "success", "completed"].includes(raw);
+          const failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
+          const p = existing.products as { access_link?: string | null; delivery_link?: string | null } | null;
+          if (failed) return { success: false, saleId: existing.id, error: existing.failure_reason || existing.payment_reference || "Pagamento cancelado ou recusado." };
+          return { success: true, saleId: existing.id, transactionId: null, status: paid ? "paid" : "pending", accessLink: paid ? (p?.access_link || p?.delivery_link || null) : null };
+        }
+      }
+      return { success: false, error: "Não foi possível registar a venda." };
+    }
 
     return { success: true, saleId: sale.id, transactionId: null, status: "pending", accessLink: null };
   });
