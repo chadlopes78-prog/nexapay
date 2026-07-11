@@ -371,6 +371,8 @@ function ProductsPage() {
               thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
               imageFile={imageFile} setImageFile={setImageFile}
               imageUrl={imageUrl}
+              bannerFile={bannerFile} setBannerFile={setBannerFile}
+              bannerUrl={bannerUrl}
               onCancel={() => setIsDialogOpen(false)}
               onSubmit={() => handleCreateProduct()}
             />
