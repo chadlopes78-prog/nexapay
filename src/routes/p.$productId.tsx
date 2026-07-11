@@ -353,16 +353,70 @@ function CheckoutPage() {
                 </div>
               </div>
 
+              {checkout?.order_bump_enabled && (
+                <div className="mt-4 relative">
+                  {/* Seta animada apontando para o order bump */}
+                  <div className="absolute -top-3 left-6 z-10 flex flex-col items-center pointer-events-none">
+                    <span className="text-[10px] font-extrabold text-orange-600 bg-orange-100 border border-orange-300 rounded-full px-2 py-0.5 shadow-sm animate-pulse">
+                      OFERTA ESPECIAL
+                    </span>
+                  </div>
+                  <label
+                    className={cn(
+                      "block cursor-pointer rounded-xl border-2 border-dashed p-3 transition-all",
+                      bumpAccepted
+                        ? "border-emerald-500 bg-emerald-50"
+                        : "border-orange-400 bg-orange-50 hover:bg-orange-100 animate-[bump-wiggle_1.2s_ease-in-out_infinite]",
+                    )}
+                    style={{
+                      // keyframes inline fallback
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={bumpAccepted}
+                        onChange={(e) => setBumpAccepted(e.target.checked)}
+                        className="mt-1 h-5 w-5 accent-emerald-500 flex-shrink-0"
+                      />
+                      {checkout?.order_bump_image_url && (
+                        <img src={checkout.order_bump_image_url} alt="" className="h-14 w-14 rounded-lg object-cover border border-slate-200 flex-shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          {/* Seta pequena abanando apontando para o título */}
+                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-orange-500 flex-shrink-0 animate-[bump-arrow_0.8s_ease-in-out_infinite]" fill="currentColor">
+                            <path d="M4 12l6-6v4h10v4H10v4z" transform="rotate(180 12 12)" />
+                          </svg>
+                          <p className="text-sm font-bold text-slate-900 leading-tight">
+                            {checkout?.order_bump_title || "Adicione uma oferta especial"}
+                          </p>
+                        </div>
+                        {checkout?.order_bump_description && (
+                          <p className="mt-1 text-xs text-slate-600 leading-snug">{checkout.order_bump_description}</p>
+                        )}
+                        {bumpPrice > 0 && (
+                          <p className="mt-1 text-sm font-extrabold text-emerald-600">
+                            + Mt {bumpPrice.toLocaleString("pt-MZ")} MZN
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              )}
+
               <div className="pt-4 space-y-2 text-sm">
                 <div className="pt-3 mt-2 border-t border-slate-100 flex justify-between items-center">
                   <span className="font-bold text-slate-900">Total:</span>
                   <span className="text-lg font-extrabold text-emerald-500">
-                    Mt {product.price.toLocaleString("pt-MZ")} MZN
+                    Mt {totalPrice.toLocaleString("pt-MZ")} MZN
                   </span>
                 </div>
               </div>
 
             </div>
+
 
             {checkout?.social_proof_enabled && (
               <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-center justify-center gap-2 text-sm text-slate-700">
