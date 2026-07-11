@@ -250,11 +250,26 @@ export function ProductFormFields(props: ProductFormFieldsProps) {
               onChange={(e) => props.setBannerFile(e.target.files?.[0] || null)}
             />
             {(props.bannerFile || props.bannerUrl) && (
-              <img
-                src={props.bannerFile ? URL.createObjectURL(props.bannerFile) : props.bannerUrl}
-                alt="Banner"
-                className="mt-1 w-full rounded-lg border object-cover max-h-40"
-              />
+              <div className="relative mt-1">
+                <img
+                  src={props.bannerFile ? URL.createObjectURL(props.bannerFile) : props.bannerUrl}
+                  alt="Banner"
+                  className="w-full rounded-lg border object-cover max-h-40"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    props.setBannerFile(null);
+                    props.setBannerUrl?.("");
+                    const el = document.getElementById(`${p}-banner`) as HTMLInputElement | null;
+                    if (el) el.value = "";
+                  }}
+                  className="absolute top-2 right-2 grid h-7 w-7 place-items-center rounded-full bg-red-600 text-white text-sm shadow hover:bg-red-700"
+                  aria-label="Remover banner"
+                >
+                  ×
+                </button>
+              </div>
             )}
           </div>
         </Section>
