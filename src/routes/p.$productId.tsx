@@ -66,6 +66,7 @@ function CheckoutPage() {
   const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [cancelingPayment, setCancelingPayment] = useState(false);
+  const [showCancelButton, setShowCancelButton] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
   const [pinSecondsLeft, setPinSecondsLeft] = useState(120);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
