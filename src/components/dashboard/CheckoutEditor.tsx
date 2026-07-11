@@ -337,8 +337,39 @@ export function CheckoutEditor({ productId }: { productId: string }) {
             />
           </div>
           <div className="grid gap-1.5">
-            <Label className="text-xs flex items-center gap-1"><ImageIcon className="h-3 w-3" /> URL da imagem</Label>
-            <Input value={data.order_bump_image_url ?? ""} onChange={(e) => update({ order_bump_image_url: e.target.value })} placeholder="https://..." />
+            <Label className="text-xs flex items-center gap-1"><ImageIcon className="h-3 w-3" /> Imagem da oferta</Label>
+            <label className="flex items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-white px-3 py-2 cursor-pointer hover:border-slate-400">
+              {data.order_bump_image_url ? (
+                <img src={data.order_bump_image_url} alt="" className="h-12 w-12 rounded object-cover" />
+              ) : (
+                <div className="h-12 w-12 grid place-items-center rounded bg-slate-100 text-slate-400">
+                  <ImageIcon className="h-5 w-5" />
+                </div>
+              )}
+              <span className="text-xs text-slate-600 flex-1">
+                {uploadingBump ? "Enviando..." : data.order_bump_image_url ? "Trocar imagem" : "Clique para enviar (JPG/PNG)"}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploadingBump}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleBumpImageUpload(f);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {data.order_bump_image_url && (
+              <button
+                type="button"
+                onClick={() => update({ order_bump_image_url: "" })}
+                className="text-xs text-red-600 hover:underline self-start"
+              >
+                Remover imagem
+              </button>
+            )}
           </div>
         </div>
       </Section>
