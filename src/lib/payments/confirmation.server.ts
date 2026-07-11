@@ -397,39 +397,66 @@ export async function markSaleTerminalFailure(options: {
   if (error) throw error;
   if (!updated?.user_id) return { becameFailed: false };
 
+  void dispatchFailureSideEffects({
+    sale: updated,
+    event: status === "expired" ? "payment.expired" : "payment.refused",
+    finalStatus,
+    reason: reason?.slice(0, 200) ?? status,
+  }).catch((e) => console.error("[payments] failure side-effects failed", e));
+
+  return { becameFailed: true };
+}
+
+async function dispatchFailureSideEffects(options: {
+  sale: Pick<
+    SaleForConfirmation,
+    | "id"
+    | "user_id"
+    | "product_id"
+    | "customer_name"
+    | "customer_phone"
+    | "amount"
+    | "payment_method"
+  >;
+  event: "payment.expired" | "payment.refused";
+  finalStatus: string;
+  reason: string;
+}) {
+  const { sale, event, finalStatus, reason } = options;
+  const userId = sale.user_id as string | null;
+  if (!userId) return;
+
   const { enqueueWebhookEvent, processPendingForUser } =
     await import("@/lib/webhooks/dispatcher.server");
   await enqueueWebhookEvent({
-    userId: updated.user_id,
-    productId: updated.product_id,
-    event: status === "expired" ? "payment.expired" : "payment.refused",
+    userId,
+    productId: sale.product_id,
+    event,
     payload: {
-      sale_id: updated.id,
-      product_id: updated.product_id,
-      customer_name: updated.customer_name,
-      customer_phone: updated.customer_phone,
-      amount: updated.amount,
-      payment_method: updated.payment_method,
+      sale_id: sale.id,
+      product_id: sale.product_id,
+      customer_name: sale.customer_name,
+      customer_phone: sale.customer_phone,
+      amount: sale.amount,
+      payment_method: sale.payment_method,
       status: finalStatus,
-      reason: reason?.slice(0, 200) ?? status,
+      reason,
     },
   });
-  await processPendingForUser(updated.user_id);
+  await processPendingForUser(userId);
 
-  // Native Web Push — notify user of failed payment
   try {
     const { sendPushToUser } = await import("@/lib/push/sender.server");
-    const method = updated.payment_method ?? "pagamento";
-    await sendPushToUser(updated.user_id, {
+    const method = sale.payment_method ?? "pagamento";
+    await sendPushToUser(userId, {
       event: "sale.failed",
-      body: `${method} — ${reason?.slice(0, 80) ?? status}`,
+      body: `${method} — ${reason.slice(0, 80)}`,
       url: "/transactions",
-      metadata: { saleId: updated.id },
+      metadata: { saleId: sale.id },
     });
   } catch (e) {
     console.error("[push][sale.failed] error (suppressed)", e);
   }
-  return { becameFailed: true };
 }
 
 async function dispatchApprovedSideEffects(
