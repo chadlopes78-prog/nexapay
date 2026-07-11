@@ -455,9 +455,9 @@ function ProductsPage() {
                     accessLink={accessLink} setAccessLink={setAccessLink}
                     thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
                     imageFile={imageFile} setImageFile={setImageFile}
-                    imageUrl={imageUrl}
+                    imageUrl={imageUrl} setImageUrl={setImageUrl}
                     bannerFile={bannerFile} setBannerFile={setBannerFile}
-                    bannerUrl={bannerUrl}
+                    bannerUrl={bannerUrl} setBannerUrl={setBannerUrl}
                     showDeliveryFile={false}
                   />
                   <section className="rounded-xl border border-slate-200/70 bg-white p-4 sm:p-5 grid gap-4">
