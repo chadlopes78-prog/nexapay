@@ -209,10 +209,19 @@ function CheckoutPage() {
 
     try {
       // Stable idempotency key for this click — retries reuse it to avoid double-charging.
-      const idempotencyKey =
+      const createClientId = () =>
         (typeof crypto !== "undefined" && "randomUUID" in crypto)
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const saleId = createClientId();
+      const idempotencyKey = createClientId();
+
+      let pollingStarted = false;
+      const kickPolling = (currentSaleId: string) => {
+        if (pollingStarted) return;
+        pollingStarted = true;
+        startPolling(currentSaleId);
+      };
 
       // Uma ÚNICA chamada faz insert + OAuth + gateway em paralelo no servidor.
       // Isso elimina o segundo round-trip (chargeSale) e a recarga redundante
@@ -226,17 +235,13 @@ function CheckoutPage() {
           contactPhone: contactPhone || undefined,
           trafficPageTrackingId: trafficPageId,
           idempotencyKey,
+          saleId,
         },
       }) as Promise<PaymentResult>;
 
-      // Começa a observar o status imediatamente. Se o webhook chegar antes
-      // da resposta HTTP da gateway, o checkout reage na hora.
-      let pollingStarted = false;
-      const kickPolling = (saleId: string) => {
-        if (pollingStarted) return;
-        pollingStarted = true;
-        startPolling(saleId);
-      };
+      // Começa a observar imediatamente com o ID já conhecido pelo cliente.
+      // As primeiras consultas podem retornar not_found até o insert concluir.
+      kickPolling(saleId);
 
       void paymentPromise
         .then((result) => {

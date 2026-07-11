@@ -624,7 +624,7 @@ export const startPayment = createServerFn({ method: "POST" })
 
     const fastResult = await Promise.race([
       processGateway,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2_500)),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 500)),
     ]);
 
 
