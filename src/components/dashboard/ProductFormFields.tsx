@@ -141,11 +141,26 @@ export function ProductFormFields(props: ProductFormFieldsProps) {
               onChange={(e) => props.setImageFile(e.target.files?.[0] || null)}
             />
             {(props.imageFile || props.imageUrl) && (
-              <img
-                src={props.imageFile ? URL.createObjectURL(props.imageFile) : props.imageUrl}
-                alt="Preview"
-                className="mt-1 h-24 w-24 rounded-lg border object-cover"
-              />
+              <div className="relative mt-1 inline-block">
+                <img
+                  src={props.imageFile ? URL.createObjectURL(props.imageFile) : props.imageUrl}
+                  alt="Preview"
+                  className="h-24 w-24 rounded-lg border object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    props.setImageFile(null);
+                    props.setImageUrl?.("");
+                    const el = document.getElementById(`${p}-image`) as HTMLInputElement | null;
+                    if (el) el.value = "";
+                  }}
+                  className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-red-600 text-white text-xs shadow hover:bg-red-700"
+                  aria-label="Remover imagem"
+                >
+                  ×
+                </button>
+              </div>
             )}
           </div>
           <div className="grid gap-2">
@@ -158,11 +173,26 @@ export function ProductFormFields(props: ProductFormFieldsProps) {
             />
             <p className="text-[11px] text-slate-500">Aparece no topo da página de checkout. Recomendado: 1200x300px.</p>
             {(props.bannerFile || props.bannerUrl) && (
-              <img
-                src={props.bannerFile ? URL.createObjectURL(props.bannerFile) : props.bannerUrl}
-                alt="Banner"
-                className="mt-1 w-full max-h-40 rounded-lg border object-cover"
-              />
+              <div className="relative mt-1">
+                <img
+                  src={props.bannerFile ? URL.createObjectURL(props.bannerFile) : props.bannerUrl}
+                  alt="Banner"
+                  className="w-full max-h-40 rounded-lg border object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    props.setBannerFile(null);
+                    props.setBannerUrl?.("");
+                    const el = document.getElementById(`${p}-banner-product`) as HTMLInputElement | null;
+                    if (el) el.value = "";
+                  }}
+                  className="absolute top-2 right-2 grid h-7 w-7 place-items-center rounded-full bg-red-600 text-white text-sm shadow hover:bg-red-700"
+                  aria-label="Remover banner"
+                >
+                  ×
+                </button>
+              </div>
             )}
           </div>
         </Section>
