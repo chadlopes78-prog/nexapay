@@ -614,19 +614,34 @@ export const startPayment = createServerFn({ method: "POST" })
         };
       });
 
-    const fastResult = await processGateway;
-    mark(`gateway (finalStatus=${fastResult.finalStatus})`);
+    const { waitUntil } = await import("@/lib/runtime-context.server");
+    const backgroundTask = processGateway
+      .then((result) => {
+        mark(`gateway (finalStatus=${result.finalStatus})`);
+        return result;
+      })
+      .catch((error) => {
+        console.error("startPayment background gateway error", error);
+      });
+    if (!waitUntil(backgroundTask)) void backgroundTask;
+
+    const fastResult = await Promise.race([
+      processGateway,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2_500)),
+    ]);
 
 
     const accessLink = product.access_link || product.delivery_link || null;
-    if (fastResult && fastResult.finalStatus === "paid") {
+    if (fastResult?.finalStatus === "paid") {
       return { success: true, saleId, transactionId: fastResult.transactionId, status: "paid", accessLink };
     }
     if (fastResult && (fastResult.finalStatus === "failed" || fastResult.finalStatus === "expired")) {
       const failure = readGatewayFailureDetails(fastResult.json, fastResult.finalStatus);
       return { success: false, saleId, error: failure.message };
     }
-    // Gateway explicitly returned pending; client will poll webhook/status.
+    // Return the sale id quickly so the checkout can poll status immediately.
+    // The gateway request continues in the worker background and updates the
+    // sale to paid/failed as soon as e2payment returns the real outcome.
     return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
   });
 
