@@ -633,15 +633,20 @@ function CheckoutPage() {
               </div>
 
               {showCancelButton && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={cancelingPayment}
-                  onClick={handleCancelPayment}
-                  className="h-12 w-full rounded-xl border-red-200 bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-70"
-                >
-                  {cancelingPayment ? "Cancelando..." : "Já cancelei no telefone"}
-                </Button>
+                <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-800 font-medium text-left">
+                    Se já não quer liberar o acesso ou não está mais interessado, clique no botão <b>cancelar</b> abaixo. Ou pode tentar novamente confirmando o PIN no telefone.
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={cancelingPayment}
+                    onClick={handleCancelPayment}
+                    className="h-12 w-full rounded-xl border-red-300 bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-70 animate-[cancel-pulse_1.4s_ease-in-out_infinite]"
+                  >
+                    {cancelingPayment ? "Cancelando..." : "Já cancelei no telefone"}
+                  </Button>
+                </div>
               )}
 
               {paymentErrorMessage && (
