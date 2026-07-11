@@ -408,9 +408,9 @@ function ProductsPage() {
               accessLink={accessLink} setAccessLink={setAccessLink}
               thankYouButtonText={thankYouButtonText} setThankYouButtonText={setThankYouButtonText}
               imageFile={imageFile} setImageFile={setImageFile}
-              imageUrl={imageUrl}
+              imageUrl={imageUrl} setImageUrl={setImageUrl}
               bannerFile={bannerFile} setBannerFile={setBannerFile}
-              bannerUrl={bannerUrl}
+              bannerUrl={bannerUrl} setBannerUrl={setBannerUrl}
               onCancel={() => setIsDialogOpen(false)}
               onSubmit={() => handleCreateProduct()}
             />
