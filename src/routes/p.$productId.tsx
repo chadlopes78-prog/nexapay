@@ -14,7 +14,6 @@ import {
   ShieldAlert,
   Package,
   Clock,
-  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -199,7 +198,7 @@ function CheckoutPage() {
     const startPolling = (saleId: string) => {
       const deadlineAt = Date.now() + 120_000;
       const tick = async () => {
-        if (settled) return;
+        if (settled || paymentRunRef.current !== runId) return;
         if (Date.now() >= deadlineAt) {
           await cancelPaymentFn({ data: { saleId, reason: "timeout" } }).catch(() => undefined);
           finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
@@ -207,10 +206,11 @@ function CheckoutPage() {
         }
         try {
           const s = await statusFn({ data: { saleId } });
-          if (settled) return;
+          if (settled || paymentRunRef.current !== runId) return;
           if (s.status === "paid") return finishPaid(s.accessLink, saleId);
           if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
         } catch { /* transient */ }
+        if (settled || paymentRunRef.current !== runId) return;
         const fastWindowActive = Date.now() < deadlineAt - 105_000;
         setTimeout(tick, fastWindowActive ? 300 : 1000);
       };
