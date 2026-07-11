@@ -399,7 +399,7 @@ function ProductsPage() {
                 <TabsContent value="product" className="p-4 sm:p-6 mt-0">
                   <ProductFormFields
                     idPrefix="edit-p"
-                    section="product"
+                    section="all"
                     name={name} setName={setName}
                     description={description} setDescription={setDescription}
                     price={price} setPrice={setPrice}
@@ -419,6 +419,7 @@ function ProductsPage() {
                     showDeliveryFile={false}
                   />
                 </TabsContent>
+
                 <TabsContent value="checkout" className="p-4 sm:p-6 mt-0">
                   {editingProduct?.id && <CheckoutEditor productId={editingProduct.id} />}
                 </TabsContent>
