@@ -93,6 +93,16 @@ function CheckoutPage() {
   // Contador puramente visual (feedback ao usuário).
   // NÃO controla nem atrasa a chamada à API de pagamento.
   useEffect(() => {
+    if (!processingPayment) {
+      setShowCancelButton(false);
+      return;
+    }
+    // Só mostra "Já cancelei no telefone" depois que o pop-up teve tempo de aparecer
+    const t = setTimeout(() => setShowCancelButton(true), 15000);
+    return () => clearTimeout(t);
+  }, [processingPayment]);
+
+  useEffect(() => {
     if (!processingPayment) return;
     setPinSecondsLeft(10);
     const t = setInterval(() => {
