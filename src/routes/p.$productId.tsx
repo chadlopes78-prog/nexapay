@@ -76,7 +76,11 @@ function CheckoutPage() {
   const [contactPhone, setContactPhone] = useState("");
   const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
+  const [bumpAccepted, setBumpAccepted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600);
+
+  const bumpPrice = checkout?.order_bump_enabled ? Number(checkout?.order_bump_price ?? 0) : 0;
+  const totalPrice = (product?.price ?? 0) + (bumpAccepted ? bumpPrice : 0);
 
   useEffect(() => {
     const timer = setInterval(() => {
