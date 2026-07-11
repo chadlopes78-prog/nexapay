@@ -1,7 +1,7 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { startPayment, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
+import { initiateSale, chargeSale, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,8 @@ declare global {
 }
 
 function CheckoutPage() {
-  const startFn = useServerFn(startPayment);
+  const initiateFn = useServerFn(initiateSale);
+  const chargeFn = useServerFn(chargeSale);
   const statusFn = useServerFn(getSaleStatus);
   const { productId } = useParams({ from: "/p/$productId" });
   const { product, checkout, defaultPixel } = Route.useLoaderData();
@@ -187,22 +188,21 @@ function CheckoutPage() {
     };
 
     const startPolling = (saleId: string) => {
-      let attempts = 0;
-      const maxAttempts = 120; // ~2 min @ 1s
+      const deadlineAt = Date.now() + 120_000;
       const tick = async () => {
         if (settled) return;
-        if (attempts >= maxAttempts) {
+        if (Date.now() >= deadlineAt) {
           finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
           return;
         }
-        attempts++;
         try {
           const s = await statusFn({ data: { saleId } });
           if (settled) return;
           if (s.status === "paid") return finishPaid(s.accessLink, saleId);
           if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
         } catch { /* transient */ }
-        setTimeout(tick, 1000);
+        const fastWindowActive = Date.now() < deadlineAt - 105_000;
+        setTimeout(tick, fastWindowActive ? 300 : 1000);
       };
       // Primeira consulta IMEDIATA — sem atraso artificial.
       void tick();
@@ -215,8 +215,8 @@ function CheckoutPage() {
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-      // Single round-trip: creates sale + fires gateway (STK/PIN popup) in one server call.
-      const result = (await startFn({
+      // Cria a venda primeiro para o checkout começar a observar o status na hora.
+      const result = (await initiateFn({
         data: {
           productId,
           method: paymentMethod,
@@ -232,8 +232,26 @@ function CheckoutPage() {
 
       const saleId = result.saleId;
       if (result.status === "paid") return finishPaid(result.accessLink ?? null, saleId);
-      // pending → poll until webhook confirms
+
+      // Dispara a cobrança em paralelo com a consulta de status. Assim, se o
+      // webhook marcar "cancelado" antes da resposta HTTP da gateway terminar,
+      // o checkout reage imediatamente em vez de esperar a chamada bloquear.
+      const chargePromise = chargeFn({ data: { saleId } }) as Promise<PaymentResult>;
       startPolling(saleId);
+      void chargePromise
+        .then((chargeResult) => {
+          if (settled) return;
+          if (!chargeResult.success) {
+            finishFailed(chargeResult.error || "Pagamento cancelado ou recusado.");
+            return;
+          }
+          if (chargeResult.status === "paid") {
+            finishPaid(chargeResult.accessLink ?? null, saleId);
+          }
+        })
+        .catch((error: any) => {
+          finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
+        });
     } catch (error: any) {
       finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
     }
