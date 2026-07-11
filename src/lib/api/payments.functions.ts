@@ -243,7 +243,7 @@ export const initiateSale = createServerFn({ method: "POST" })
     }
 
     const { paymentReferenceForSale } = await import("@/lib/payments/confirmation.server");
-    const saleId = crypto.randomUUID();
+    const saleId = data.saleId || crypto.randomUUID();
     const reference = paymentReferenceForSale(saleId);
     const { data: sale, error: saleError } = await supabaseAdmin
       .from("sales")
@@ -482,7 +482,7 @@ export const startPayment = createServerFn({ method: "POST" })
       ? `${data.customerName.trim()} (contacto: ${data.contactPhone.trim()})`
       : data.customerName.trim();
 
-    const saleId = crypto.randomUUID();
+    const saleId = data.saleId || crypto.randomUUID();
     const reference = paymentReferenceForSale(saleId);
 
     // Insert sale with the final gateway reference + preload OAuth token in parallel.
