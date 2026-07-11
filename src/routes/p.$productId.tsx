@@ -332,12 +332,15 @@ function CheckoutPage() {
 
             </div>
 
-            <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-center justify-center gap-2 text-sm text-slate-700">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <span>
-                <b className="text-emerald-600">+4999</b> pessoas já compraram este produto!
-              </span>
-            </div>
+            {checkout?.social_proof_enabled && (
+              <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-center justify-center gap-2 text-sm text-slate-700">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <span>
+                  <b className="text-emerald-600">{checkout?.social_proof_count ?? 127}</b> {checkout?.social_proof_message || "pessoas já compraram este produto"}
+                </span>
+              </div>
+            )}
+
 
             {product.checkout_banner_url && (
               <img src={product.checkout_banner_url} alt="Oferta" className="mt-4 w-full rounded-xl border border-slate-200" loading="lazy" />
