@@ -1,7 +1,7 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { initiateSale, chargeSale, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
+import { startPayment, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -56,8 +56,7 @@ declare global {
 }
 
 function CheckoutPage() {
-  const initiateFn = useServerFn(initiateSale);
-  const chargeFn = useServerFn(chargeSale);
+  const startPaymentFn = useServerFn(startPayment);
   const statusFn = useServerFn(getSaleStatus);
   const { productId } = useParams({ from: "/p/$productId" });
   const { product, checkout, defaultPixel } = Route.useLoaderData();
@@ -215,8 +214,10 @@ function CheckoutPage() {
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-      // Cria a venda primeiro para o checkout começar a observar o status na hora.
-      const result = (await initiateFn({
+      // Uma ÚNICA chamada faz insert + OAuth + gateway em paralelo no servidor.
+      // Isso elimina o segundo round-trip (chargeSale) e a recarga redundante
+      // de venda/credenciais, reduzindo o tempo até o pop-up do PIN aparecer.
+      const paymentPromise = startPaymentFn({
         data: {
           productId,
           method: paymentMethod,
@@ -226,28 +227,26 @@ function CheckoutPage() {
           trafficPageTrackingId: trafficPageId,
           idempotencyKey,
         },
-      })) as PaymentResult;
+      }) as Promise<PaymentResult>;
 
-      if (!result.success) return finishFailed(result.error || "Não foi possível iniciar o pagamento.");
+      // Começa a observar o status imediatamente. Se o webhook chegar antes
+      // da resposta HTTP da gateway, o checkout reage na hora.
+      let pollingStarted = false;
+      const kickPolling = (saleId: string) => {
+        if (pollingStarted) return;
+        pollingStarted = true;
+        startPolling(saleId);
+      };
 
-      const saleId = result.saleId;
-      if (result.status === "paid") return finishPaid(result.accessLink ?? null, saleId);
-
-      // Dispara a cobrança em paralelo com a consulta de status. Assim, se o
-      // webhook marcar "cancelado" antes da resposta HTTP da gateway terminar,
-      // o checkout reage imediatamente em vez de esperar a chamada bloquear.
-      const chargePromise = chargeFn({ data: { saleId } }) as Promise<PaymentResult>;
-      startPolling(saleId);
-      void chargePromise
-        .then((chargeResult) => {
+      void paymentPromise
+        .then((result) => {
           if (settled) return;
-          if (!chargeResult.success) {
-            finishFailed(chargeResult.error || "Pagamento cancelado ou recusado.");
-            return;
+          if (!result.success) {
+            if (result.saleId) kickPolling(result.saleId);
+            return finishFailed(result.error || "Pagamento cancelado ou recusado.");
           }
-          if (chargeResult.status === "paid") {
-            finishPaid(chargeResult.accessLink ?? null, saleId);
-          }
+          kickPolling(result.saleId);
+          if (result.status === "paid") finishPaid(result.accessLink ?? null, result.saleId);
         })
         .catch((error: any) => {
           finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
