@@ -11,6 +11,7 @@ const PaymentInput = z.object({
   contactPhone: z.string().max(20).optional(),
   trafficPageTrackingId: z.string().max(100).nullable().optional(),
   idempotencyKey: z.string().min(8).max(80).optional(),
+  saleId: z.string().uuid().optional(),
 });
 
 const PaymentSuccessInput = z.object({
@@ -44,7 +45,7 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sale } = await supabaseAdmin
       .from("sales")
-      .select("id, status, payment_reference, failure_reason, failure_code, products(access_link, delivery_link)")
+      .select("id, status, created_at, payment_reference, failure_reason, failure_code, products(access_link, delivery_link)")
       .eq("id", data.saleId)
       .maybeSingle();
     if (!sale) return { status: "not_found" as const, accessLink: null, error: null };
@@ -242,7 +243,7 @@ export const initiateSale = createServerFn({ method: "POST" })
     }
 
     const { paymentReferenceForSale } = await import("@/lib/payments/confirmation.server");
-    const saleId = crypto.randomUUID();
+    const saleId = data.saleId || crypto.randomUUID();
     const reference = paymentReferenceForSale(saleId);
     const { data: sale, error: saleError } = await supabaseAdmin
       .from("sales")
@@ -481,7 +482,7 @@ export const startPayment = createServerFn({ method: "POST" })
       ? `${data.customerName.trim()} (contacto: ${data.contactPhone.trim()})`
       : data.customerName.trim();
 
-    const saleId = crypto.randomUUID();
+    const saleId = data.saleId || crypto.randomUUID();
     const reference = paymentReferenceForSale(saleId);
 
     // Insert sale with the final gateway reference + preload OAuth token in parallel.
@@ -546,14 +547,11 @@ export const startPayment = createServerFn({ method: "POST" })
         : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
 
     const controller = new AbortController();
-    // Wait for the gateway's real terminal answer instead of returning an
-    // indefinite pending state. The phone popup is triggered as soon as this
-    // request reaches e2payment; waiting here only keeps checkout synchronized.
     const timeoutId = setTimeout(() => controller.abort(), 75_000);
 
-    // Fire the gateway request immediately and keep this call open until the
-    // gateway returns the real outcome (paid, cancelled, insufficient funds,
-    // expired) or the safety timeout is reached.
+    // Fire the gateway request immediately. The checkout response returns in
+    // ~2.5s with saleId so the browser can poll status, while this promise keeps
+    // running in the worker background until e2payment closes paid/cancelled.
     const gatewayPromise: Promise<GatewayCallResult> = fetch(endpoint, {
       method: "POST",
       headers: {
@@ -613,19 +611,34 @@ export const startPayment = createServerFn({ method: "POST" })
         };
       });
 
-    const fastResult = await processGateway;
-    mark(`gateway (finalStatus=${fastResult.finalStatus})`);
+    const { waitUntil } = await import("@/lib/runtime-context.server");
+    const backgroundTask = processGateway
+      .then((result) => {
+        mark(`gateway (finalStatus=${result.finalStatus})`);
+        return result;
+      })
+      .catch((error) => {
+        console.error("startPayment background gateway error", error);
+      });
+    if (!waitUntil(backgroundTask)) void backgroundTask;
+
+    const fastResult = await Promise.race([
+      processGateway,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2_500)),
+    ]);
 
 
     const accessLink = product.access_link || product.delivery_link || null;
-    if (fastResult && fastResult.finalStatus === "paid") {
+    if (fastResult?.finalStatus === "paid") {
       return { success: true, saleId, transactionId: fastResult.transactionId, status: "paid", accessLink };
     }
     if (fastResult && (fastResult.finalStatus === "failed" || fastResult.finalStatus === "expired")) {
       const failure = readGatewayFailureDetails(fastResult.json, fastResult.finalStatus);
       return { success: false, saleId, error: failure.message };
     }
-    // Gateway explicitly returned pending; client will poll webhook/status.
+    // Return the sale id quickly so the checkout can poll status immediately.
+    // The gateway request continues in the worker background and updates the
+    // sale to paid/failed as soon as e2payment returns the real outcome.
     return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
   });
 
