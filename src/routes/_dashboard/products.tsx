@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -341,7 +342,7 @@ function ProductsPage() {
       const { id, created_at, updated_at, ...rest } = product;
       const { data, error } = await supabase
         .from("products")
-        .insert({ ...rest, name: `${product.name} (cópia)`, user_id: user.id })
+        .insert({ ...rest, name: `Cópia de ${product.name}`, user_id: user.id, status: "active" })
         .select()
         .single();
       if (error) throw error;
@@ -433,10 +434,10 @@ function ProductsPage() {
                     <TabsTrigger value="checkout" className="px-6">Checkout</TabsTrigger>
                   </TabsList>
                 </div>
-                <TabsContent value="product" className="p-4 sm:p-6 mt-0">
+                <TabsContent value="product" className="p-4 sm:p-6 mt-0 space-y-4">
                   <ProductFormFields
                     idPrefix="edit-p"
-                    section="all"
+                    section="product"
                     name={name} setName={setName}
                     description={description} setDescription={setDescription}
                     price={price} setPrice={setPrice}
@@ -455,6 +456,17 @@ function ProductsPage() {
                     bannerUrl={bannerUrl}
                     showDeliveryFile={false}
                   />
+                  <section className="rounded-xl border border-slate-200/70 bg-white p-4 sm:p-5 grid gap-4">
+                    <h3 className="text-sm font-semibold text-slate-900">Acesso ao produto</h3>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-access">Link de acesso principal</Label>
+                      <Input id="edit-access" value={accessLink} onChange={(e) => setAccessLink(e.target.value)} placeholder="Link do produto, grupo ou arquivo" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-thanks">Texto do botão de acesso</Label>
+                      <Input id="edit-thanks" value={thankYouButtonText} onChange={(e) => setThankYouButtonText(e.target.value)} placeholder="Liberar acesso" maxLength={40} />
+                    </div>
+                  </section>
                 </TabsContent>
 
                 <TabsContent value="checkout" className="p-4 sm:p-6 mt-0">
