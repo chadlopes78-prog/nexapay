@@ -334,6 +334,43 @@ function ProductsPage() {
     }
   };
 
+  const handleDuplicateProduct = async (product: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { id, created_at, updated_at, ...rest } = product;
+      const { data, error } = await supabase
+        .from("products")
+        .insert({ ...rest, name: `${product.name} (cópia)`, user_id: user.id })
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Duplicate checkout settings if any
+      const { data: originalCheckout } = await supabase
+        .from("checkouts")
+        .select("*")
+        .eq("product_id", product.id)
+        .maybeSingle();
+      if (originalCheckout) {
+        const { id: _cid, created_at: _cc, updated_at: _cu, product_id: _pid, ...checkoutRest } = originalCheckout as any;
+        await supabase.from("checkouts").insert({ ...checkoutRest, product_id: data.id });
+      } else {
+        await supabase.from("checkouts").insert({
+          product_id: data.id,
+          title: data.name,
+          subtitle: data.description ? String(data.description).substring(0, 100) : "",
+        });
+      }
+
+      toast.success("Produto duplicado!");
+      fetchProducts();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+
   const copyCheckoutLink = (productId: string) => {
     const url = `${window.location.origin}/p/${productId}`;
     navigator.clipboard.writeText(url);
