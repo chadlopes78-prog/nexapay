@@ -632,15 +632,17 @@ function CheckoutPage() {
                 </span>
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                disabled={cancelingPayment}
-                onClick={handleCancelPayment}
-                className="h-12 w-full rounded-xl border-red-200 bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-70"
-              >
-                {cancelingPayment ? "Cancelando..." : "Já cancelei no telefone"}
-              </Button>
+              {showCancelButton && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={cancelingPayment}
+                  onClick={handleCancelPayment}
+                  className="h-12 w-full rounded-xl border-red-200 bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-70"
+                >
+                  {cancelingPayment ? "Cancelando..." : "Já cancelei no telefone"}
+                </Button>
+              )}
 
               {paymentErrorMessage && (
                 <div className="text-sm font-medium text-red-600">{paymentErrorMessage}</div>
