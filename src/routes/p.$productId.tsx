@@ -66,6 +66,7 @@ function CheckoutPage() {
   const [trafficPageId, setTrafficPageId] = useState<string | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [cancelingPayment, setCancelingPayment] = useState(false);
+  const [showCancelButton, setShowCancelButton] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
   const [pinSecondsLeft, setPinSecondsLeft] = useState(120);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
@@ -91,6 +92,16 @@ function CheckoutPage() {
 
   // Contador puramente visual (feedback ao usuário).
   // NÃO controla nem atrasa a chamada à API de pagamento.
+  useEffect(() => {
+    if (!processingPayment) {
+      setShowCancelButton(false);
+      return;
+    }
+    // Só mostra "Já cancelei no telefone" depois que o pop-up teve tempo de aparecer
+    const t = setTimeout(() => setShowCancelButton(true), 15000);
+    return () => clearTimeout(t);
+  }, [processingPayment]);
+
   useEffect(() => {
     if (!processingPayment) return;
     setPinSecondsLeft(10);
@@ -621,15 +632,17 @@ function CheckoutPage() {
                 </span>
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                disabled={cancelingPayment}
-                onClick={handleCancelPayment}
-                className="h-12 w-full rounded-xl border-red-200 bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-70"
-              >
-                {cancelingPayment ? "Cancelando..." : "Já cancelei no telefone"}
-              </Button>
+              {showCancelButton && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={cancelingPayment}
+                  onClick={handleCancelPayment}
+                  className="h-12 w-full rounded-xl border-red-200 bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-70"
+                >
+                  {cancelingPayment ? "Cancelando..." : "Já cancelei no telefone"}
+                </Button>
+              )}
 
               {paymentErrorMessage && (
                 <div className="text-sm font-medium text-red-600">{paymentErrorMessage}</div>
