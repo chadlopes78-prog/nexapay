@@ -547,6 +547,9 @@ function ProductsPage() {
                       <DropdownMenuItem onClick={() => copyCheckoutLink(product.id)}>
                         <Copy className="mr-2 h-4 w-4" /> Copiar link
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDuplicateProduct(product)}>
+                        <Copy className="mr-2 h-4 w-4" /> Duplicar
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="text-red-600"
