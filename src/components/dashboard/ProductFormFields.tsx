@@ -44,9 +44,11 @@ export interface ProductFormFieldsProps {
   imageFile: File | null;
   setImageFile: (f: File | null) => void;
   imageUrl: string;
+  setImageUrl?: (v: string) => void;
   bannerFile: File | null;
   setBannerFile: (f: File | null) => void;
   bannerUrl: string;
+  setBannerUrl?: (v: string) => void;
   showDeliveryFile?: boolean;
 }
 
