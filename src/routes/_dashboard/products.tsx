@@ -342,7 +342,7 @@ function ProductsPage() {
       const { id, created_at, updated_at, ...rest } = product;
       const { data, error } = await supabase
         .from("products")
-        .insert({ ...rest, name: `${product.name} (cópia)`, user_id: user.id })
+        .insert({ ...rest, name: `Cópia de ${product.name}`, user_id: user.id, status: "active" })
         .select()
         .single();
       if (error) throw error;
