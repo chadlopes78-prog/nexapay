@@ -108,15 +108,43 @@ export function CheckoutEditor({ productId }: { productId: string }) {
 
   return (
     <div className="space-y-4">
-      {/* Aparência */}
+      {/* Botão de compra — destacado */}
+      <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">
+            <ShoppingCart className="h-4 w-4" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-slate-900">Botão de compra</h4>
+            <p className="text-xs text-slate-500">Texto exibido no botão de finalizar</p>
+          </div>
+        </div>
+        <div className="grid gap-1.5">
+          <Input
+            value={data.button_text ?? ""}
+            onChange={(e) => update({ button_text: e.target.value })}
+            placeholder="Ex: Comprar agora"
+            maxLength={40}
+            className="bg-white"
+          />
+          <div
+            className="mt-1 rounded-lg px-4 py-3 text-center text-white text-sm font-semibold shadow-sm"
+            style={{ backgroundColor: data.primary_color ?? "#3b82f6" }}
+          >
+            {(data.button_text?.trim() || "Finalizar Compra")}
+          </div>
+        </div>
+      </div>
+
+      {/* Textos do checkout */}
       <div className="rounded-xl border bg-white p-4 space-y-3">
         <div className="flex items-center gap-2">
           <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-900 text-white">
             <Palette className="h-4 w-4" />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-slate-900">Aparência do checkout</h4>
-            <p className="text-xs text-slate-500">Textos e cor principal</p>
+            <h4 className="text-sm font-semibold text-slate-900">Textos e cor</h4>
+            <p className="text-xs text-slate-500">Título, subtítulo, garantia e cor principal</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -128,11 +156,7 @@ export function CheckoutEditor({ productId }: { productId: string }) {
             <Label className="text-xs">Subtítulo</Label>
             <Input value={data.subtitle ?? ""} onChange={(e) => update({ subtitle: e.target.value })} placeholder="Ex: Acesso imediato após pagamento" />
           </div>
-          <div className="grid gap-1.5">
-            <Label className="text-xs">Texto do botão</Label>
-            <Input value={data.button_text ?? ""} onChange={(e) => update({ button_text: e.target.value })} placeholder="Comprar agora" />
-          </div>
-          <div className="grid gap-1.5">
+          <div className="grid gap-1.5 sm:col-span-2">
             <Label className="text-xs">Garantia</Label>
             <Input value={data.guarantee_text ?? ""} onChange={(e) => update({ guarantee_text: e.target.value })} placeholder="7 dias de garantia" />
           </div>
@@ -161,6 +185,7 @@ export function CheckoutEditor({ productId }: { productId: string }) {
           </div>
         </div>
       </div>
+
 
       {/* Cronômetro */}
       <Section
