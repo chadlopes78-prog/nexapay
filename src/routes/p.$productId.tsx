@@ -56,8 +56,7 @@ declare global {
 }
 
 function CheckoutPage() {
-  const initiateFn = useServerFn(initiateSale);
-  const chargeFn = useServerFn(chargeSale);
+  const startPaymentFn = useServerFn(startPayment);
   const statusFn = useServerFn(getSaleStatus);
   const { productId } = useParams({ from: "/p/$productId" });
   const { product, checkout, defaultPixel } = Route.useLoaderData();
