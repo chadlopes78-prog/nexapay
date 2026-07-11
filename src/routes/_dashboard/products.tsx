@@ -334,6 +334,43 @@ function ProductsPage() {
     }
   };
 
+  const handleDuplicateProduct = async (product: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { id, created_at, updated_at, ...rest } = product;
+      const { data, error } = await supabase
+        .from("products")
+        .insert({ ...rest, name: `${product.name} (cópia)`, user_id: user.id })
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Duplicate checkout settings if any
+      const { data: originalCheckout } = await supabase
+        .from("checkouts")
+        .select("*")
+        .eq("product_id", product.id)
+        .maybeSingle();
+      if (originalCheckout) {
+        const { id: _cid, created_at: _cc, updated_at: _cu, product_id: _pid, ...checkoutRest } = originalCheckout as any;
+        await supabase.from("checkouts").insert({ ...checkoutRest, product_id: data.id });
+      } else {
+        await supabase.from("checkouts").insert({
+          product_id: data.id,
+          title: data.name,
+          subtitle: data.description ? String(data.description).substring(0, 100) : "",
+        });
+      }
+
+      toast.success("Produto duplicado!");
+      fetchProducts();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+
   const copyCheckoutLink = (productId: string) => {
     const url = `${window.location.origin}/p/${productId}`;
     navigator.clipboard.writeText(url);
@@ -399,7 +436,7 @@ function ProductsPage() {
                 <TabsContent value="product" className="p-4 sm:p-6 mt-0">
                   <ProductFormFields
                     idPrefix="edit-p"
-                    section="product"
+                    section="all"
                     name={name} setName={setName}
                     description={description} setDescription={setDescription}
                     price={price} setPrice={setPrice}
@@ -419,6 +456,7 @@ function ProductsPage() {
                     showDeliveryFile={false}
                   />
                 </TabsContent>
+
                 <TabsContent value="checkout" className="p-4 sm:p-6 mt-0">
                   {editingProduct?.id && <CheckoutEditor productId={editingProduct.id} />}
                 </TabsContent>
@@ -508,6 +546,9 @@ function ProductsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => copyCheckoutLink(product.id)}>
                         <Copy className="mr-2 h-4 w-4" /> Copiar link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDuplicateProduct(product)}>
+                        <Copy className="mr-2 h-4 w-4" /> Duplicar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
