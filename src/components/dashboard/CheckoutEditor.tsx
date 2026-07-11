@@ -74,6 +74,32 @@ function Section({ icon: Icon, title, description, enabled, onToggle, accent = "
 export function CheckoutEditor({ productId }: { productId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingBump, setUploadingBump] = useState(false);
+
+  const handleBumpImageUpload = async (file: File) => {
+    setUploadingBump(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const userId = userRes.user?.id;
+      if (!userId) throw new Error("Sessão expirada");
+      const ext = file.name.split(".").pop();
+      const path = `${userId}/bump-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("product-images")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+      if (upErr) throw upErr;
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("product-images")
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (signErr) throw signErr;
+      update({ order_bump_image_url: signed.signedUrl });
+      toast.success("Imagem enviada!");
+    } catch (e: any) {
+      toast.error(e.message ?? "Falha ao enviar imagem");
+    } finally {
+      setUploadingBump(false);
+    }
+  };
   const [data, setData] = useState<CheckoutData>({});
 
   useEffect(() => {
