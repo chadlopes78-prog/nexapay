@@ -11,6 +11,7 @@ const PaymentInput = z.object({
   contactPhone: z.string().max(20).optional(),
   trafficPageTrackingId: z.string().max(100).nullable().optional(),
   idempotencyKey: z.string().min(8).max(80).optional(),
+  saleId: z.string().uuid().optional(),
 });
 
 const PaymentSuccessInput = z.object({
@@ -44,7 +45,7 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sale } = await supabaseAdmin
       .from("sales")
-      .select("id, status, payment_reference, failure_reason, failure_code, products(access_link, delivery_link)")
+      .select("id, status, created_at, payment_reference, failure_reason, failure_code, products(access_link, delivery_link)")
       .eq("id", data.saleId)
       .maybeSingle();
     if (!sale) return { status: "not_found" as const, accessLink: null, error: null };
