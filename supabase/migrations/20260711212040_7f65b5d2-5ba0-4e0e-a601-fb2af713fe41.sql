@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.is_product_publicly_visible(uuid) TO anon, authenticated, service_role;
