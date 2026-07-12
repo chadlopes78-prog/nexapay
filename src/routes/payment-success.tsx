@@ -44,7 +44,8 @@ function PaymentSuccessPage() {
     const FAST_ATTEMPTS = 15;
     const MED_ATTEMPTS = 40;
     const MAX_ATTEMPTS = 100;
-    const TERMINAL = ["paid", "approved", "success", "completed", "failed", "expired", "cancelled", "canceled"];
+    const PAID = ["paid", "approved", "success", "completed"];
+    const FAILED = ["failed", "expired", "cancelled", "canceled"];
 
     const poll = async () => {
       while (!cancelled && attempts < MAX_ATTEMPTS) {
@@ -55,7 +56,9 @@ function PaymentSuccessPage() {
           if (result) {
             setData(result);
             const status = String(result.sale?.status ?? "").toLowerCase();
-            if (TERMINAL.includes(status)) return;
+            const product = result.product;
+            const link = product?.access_link || product?.delivery_link;
+            if (FAILED.includes(status) || (PAID.includes(status) && link)) return;
           }
         } catch (e) {
           console.error("[payment-success] poll error", e);
@@ -89,6 +92,18 @@ function PaymentSuccessPage() {
   const accessLink = product?.access_link || product?.delivery_link;
   const supportNumber = product?.support_number || product?.support_phone || "258840000000";
   const buttonText = (product?.thank_you_button_text || "Liberar acesso").trim();
+
+  const refreshAccess = async () => {
+    if (!saleId) return;
+    try {
+      const result = await fetchPaymentData({ data: { saleId } });
+      if (result) setData(result);
+      const link = result?.product?.access_link || result?.product?.delivery_link;
+      if (link) window.location.replace(link);
+    } catch (e) {
+      console.error("[payment-success] manual refresh error", e);
+    }
+  };
 
   // Redirect AUTOMÁTICO assim que o pagamento é confirmado e temos o link.
   // Elimina o clique extra e resolve o caso "paguei mas não fui redirecionado".
@@ -138,9 +153,19 @@ function PaymentSuccessPage() {
             <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
           </a>
         ) : isPaid ? (
-          <p className="text-slate-500 text-sm">
-            O seu acesso será enviado em breve. Em caso de dúvida, contacte o suporte.
-          </p>
+          <div className="space-y-3">
+            <p className="text-slate-500 text-sm">
+              O pagamento foi confirmado. Estamos a sincronizar o link de acesso.
+            </p>
+            <button
+              type="button"
+              onClick={refreshAccess}
+              className="inline-flex w-full items-center justify-center gap-2 h-12 px-6 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-all duration-200 active:scale-[0.98]"
+            >
+              Recarregar acesso
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
         ) : (
           <p className="text-slate-500 text-sm">
             {timedOut
