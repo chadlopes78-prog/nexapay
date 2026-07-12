@@ -104,7 +104,7 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!processingPayment) return;
-    setPinSecondsLeft(10);
+    setPinSecondsLeft(120);
     const t = setInterval(() => {
       setPinSecondsLeft((p) => (p > 0 ? p - 1 : 0));
     }, 1000);

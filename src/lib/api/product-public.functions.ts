@@ -9,41 +9,39 @@ const PUBLIC_PRODUCT_COLUMNS =
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+// C5: reuse Supabase client across requests (module scope)
+let _supabase: ReturnType<typeof createClient<Database>> | null = null;
+function getSupabase() {
+  if (_supabase) return _supabase;
+  _supabase = createClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
+  );
+  return _supabase;
+}
+
 export const getPublicProduct = createServerFn({ method: "GET" })
   .inputValidator((data) => z.object({ productId: z.string().min(1) }).parse(data))
   .handler(async ({ data }) => {
-    const url = process.env.SUPABASE_URL!;
-    const key = process.env.SUPABASE_PUBLISHABLE_KEY!;
-    const supabase = createClient<Database>(url, key, {
-      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-    });
-
+    const supabase = getSupabase();
     const { productId } = data;
     const isUuid = UUID_RE.test(productId);
 
-    let product: any = null;
-    const primary = await supabase
+    // C4: single query using OR — matches id OR custom_url in one round-trip
+    const filter = isUuid
+      ? `id.eq.${productId},custom_url.eq.${productId}`
+      : `custom_url.eq.${productId}`;
+
+    const { data: product, error } = await supabase
       .from("products")
       .select(PUBLIC_PRODUCT_COLUMNS)
-      .eq(isUuid ? "id" : "custom_url", productId)
+      .or(filter)
+      .limit(1)
       .maybeSingle();
 
-    if (primary.error) {
-      console.error("Public checkout product lookup failed:", primary.error.message);
-    }
-    product = primary.data;
-
-    if (!product && isUuid) {
-      const fallback = await supabase
-        .from("products")
-        .select(PUBLIC_PRODUCT_COLUMNS)
-        .eq("custom_url", productId)
-        .maybeSingle();
-
-      if (fallback.error) {
-        console.error("Public checkout fallback lookup failed:", fallback.error.message);
-      }
-      product = fallback.data;
+    if (error) {
+      console.error("Public checkout product lookup failed:", error.message);
     }
 
     if (!product) {
