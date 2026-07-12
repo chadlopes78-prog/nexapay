@@ -74,10 +74,21 @@ export const getSaleStatus = createServerFn({ method: "GET" })
         failureCode: "timeout",
       };
     }
-    const product = sale.products as { access_link?: string | null; delivery_link?: string | null } | null;
+    // PostgREST pode devolver `products` como objeto OU array dependendo
+    // da inferência de cardinalidade. Normalizamos para os dois casos para
+    // garantir que o access_link seja SEMPRE resolvido em vendas pagas.
+    const rawProducts = sale.products as
+      | { access_link?: string | null; delivery_link?: string | null }
+      | Array<{ access_link?: string | null; delivery_link?: string | null }>
+      | null;
+    const product = Array.isArray(rawProducts) ? rawProducts[0] ?? null : rawProducts;
+    const accessLink = paid ? (product?.access_link || product?.delivery_link || null) : null;
+    if (paid) {
+      console.info("[getSaleStatus] paid resolved", { saleId: data.saleId, hasAccessLink: !!accessLink });
+    }
     return {
       status: paid ? ("paid" as const) : failed ? ("failed" as const) : ("pending" as const),
-      accessLink: paid ? (product?.access_link || product?.delivery_link || null) : null,
+      accessLink,
       error: failed ? (sale.failure_reason || sale.payment_reference || "Pagamento cancelado ou recusado.") : null,
       failureCode: failed ? (sale.failure_code || null) : null,
     };
@@ -155,13 +166,23 @@ export const getPaymentSuccessData = createServerFn({ method: "GET" })
 
     const status = String(sale.status ?? "").toLowerCase();
     const isPaid = ["paid", "approved", "success", "completed"].includes(status);
-    const product = sale.products as {
-      access_link?: string | null;
-      delivery_link?: string | null;
-      support_phone?: string | null;
-      support_number?: string | null;
-      thank_you_button_text?: string | null;
-    } | null;
+    const rawProducts = sale.products as
+      | {
+          access_link?: string | null;
+          delivery_link?: string | null;
+          support_phone?: string | null;
+          support_number?: string | null;
+          thank_you_button_text?: string | null;
+        }
+      | Array<{
+          access_link?: string | null;
+          delivery_link?: string | null;
+          support_phone?: string | null;
+          support_number?: string | null;
+          thank_you_button_text?: string | null;
+        }>
+      | null;
+    const product = Array.isArray(rawProducts) ? rawProducts[0] ?? null : rawProducts;
 
     return {
       sale: { status: sale.status },

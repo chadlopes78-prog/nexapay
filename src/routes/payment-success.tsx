@@ -90,6 +90,14 @@ function PaymentSuccessPage() {
   const supportNumber = product?.support_number || product?.support_phone || "258840000000";
   const buttonText = (product?.thank_you_button_text || "Liberar acesso").trim();
 
+  // Redirect AUTOMÁTICO assim que o pagamento é confirmado e temos o link.
+  // Elimina o clique extra e resolve o caso "paguei mas não fui redirecionado".
+  useEffect(() => {
+    if (isPaid && accessLink) {
+      window.location.replace(accessLink);
+    }
+  }, [isPaid, accessLink]);
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-md text-center space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
