@@ -66,6 +66,28 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
   }
 
   const title = payload.title ?? EVENT_TITLES[payload.event] ?? "NexaPay";
+  await supabaseAdmin.from("notifications_log").insert({
+    user_id: userId,
+    title,
+    body: payload.body,
+    type: payload.event === "daily_summary" ? "daily_report" : payload.event.startsWith("sale") ? "sale" : "system",
+    metadata: { event: payload.event, url: payload.url, ...(payload.metadata ?? {}) },
+  });
+
+  const { data: subs } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("endpoint, p256dh, auth")
+    .eq("user_id", userId);
+
+  if (!subs || subs.length === 0) return;
+
+  try {
+    getVapidDetails();
+  } catch (e) {
+    console.error("[push] VAPID not configured:", e);
+    return;
+  }
+
   const notifPayload = JSON.stringify({
     title,
     body: payload.body,
@@ -103,11 +125,4 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
       .in("endpoint", expiredEndpoints);
   }
 
-  await supabaseAdmin.from("notifications_log").insert({
-    user_id: userId,
-    title,
-    body: payload.body,
-    type: payload.event === "daily_summary" ? "daily_report" : payload.event.startsWith("sale") ? "sale" : "system",
-    metadata: { event: payload.event, url: payload.url, ...(payload.metadata ?? {}) },
-  });
 }
