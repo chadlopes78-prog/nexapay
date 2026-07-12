@@ -60,7 +60,10 @@ type Sale = {
   product_id: string | null;
   products?: SaleProduct;
   traffic_page_id?: string | null;
+  failure_reason?: string | null;
+  failure_code?: string | null;
 };
+
 
 const STATUS_LABEL: Record<string, string> = {
   approved: "Aprovado",
@@ -85,13 +88,26 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const FAILURE_HINTS: Record<string, string> = {
-  insufficient_funds: "Saldo insuficiente",
-  wallet_unavailable: "Carteira indisponível",
-  timeout: "Tempo expirado",
-  invalid_data: "Dados inválidos",
-  cancelled_by_user: "Pagamento cancelado",
-  internal_error: "Erro interno",
+  insufficient_funds: "Saldo insuficiente na conta do cliente",
+  wallet_unavailable: "Carteira do vendedor indisponível",
+  timeout: "Tempo expirado — cliente não introduziu o PIN",
+  invalid_data: "Dados de pagamento inválidos",
+  invalid_pin: "PIN incorreto — pagamento recusado",
+  cancelled_by_user: "Pagamento cancelado pelo cliente",
+  gateway_auth_error: "Falha de autenticação com a gateway",
+  gateway_unavailable: "Gateway indisponível — falha de comunicação",
+  payment_failed: "Pagamento recusado pela operadora",
+  internal_error: "Erro interno no processamento",
 };
+
+function justificationFor(sale: Pick<Sale, "status" | "failure_reason" | "failure_code">) {
+  const st = (sale.status || "").toLowerCase();
+  if (!["failed", "error", "cancelled", "canceled"].includes(st)) return "—";
+  if (sale.failure_reason && sale.failure_reason.trim()) return sale.failure_reason;
+  if (sale.failure_code && FAILURE_HINTS[sale.failure_code]) return FAILURE_HINTS[sale.failure_code];
+  return "Pagamento cancelado ou recusado pela operadora";
+}
+
 
 function normalizeStatus(s: string | null | undefined) {
   const v = (s || "").toLowerCase();
@@ -514,7 +530,8 @@ function SalesPage() {
                   filtered.map((s) => {
                     const st = normalizeStatus(s.status);
                     const created = new Date(s.created_at);
-                    const justification = st === "failed" ? (FAILURE_HINTS[s.status || ""] || "Sem detalhes") : "—";
+                    const justification = justificationFor(s);
+
                     return (
                       <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50/60">
                         <td className="px-4 py-3">
@@ -537,7 +554,7 @@ function SalesPage() {
                             {STATUS_LABEL[s.status || ""] || STATUS_LABEL[st] || s.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 max-w-[180px] truncate">{justification}</td>
+                        <td className="px-4 py-3 text-xs text-slate-500 max-w-[220px]" title={justification}><span className="line-clamp-2">{justification}</span></td>
                         <td className="px-4 py-3 text-right">
                           <Button variant="ghost" size="sm" onClick={() => setSelected(s)}>
                             <Eye className="h-4 w-4 mr-1" /> Ver
@@ -648,12 +665,16 @@ function TransactionDetail({ sale }: { sale: Sale }) {
       <DetailRow label="Referência" value={sale.payment_reference || "—"} mono />
       <DetailRow label="ID da transação" value={sale.transaction_id || sale.id} mono />
       <DetailRow label="Criado em" value={created.toLocaleString("pt-MZ")} />
-      {st === "failed" && (
+      {(st === "failed" || st === "cancelled") && (
         <div className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs text-rose-700">
           <p className="font-semibold mb-1">Justificativa</p>
-          {FAILURE_HINTS[sale.status || ""] || "Sem detalhes retornados pelo provedor."}
+          <p>{justificationFor(sale)}</p>
+          {sale.failure_code && (
+            <p className="mt-1 font-mono text-[10px] text-rose-500">código: {sale.failure_code}</p>
+          )}
         </div>
       )}
+
     </div>
   );
 }
