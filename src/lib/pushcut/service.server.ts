@@ -63,39 +63,40 @@ export const PushcutService = {
       const createdAt = existing.created_at ? new Date(existing.created_at).getTime() : 0;
       const isStale = createdAt > 0 && Date.now() - createdAt > 2 * 60_000;
       if (!isStale) return { ok: false, skipped: "processing" };
-      await supabaseAdmin
-        .from("pushcut_logs")
-        .update({
-          status: "failed",
-          metadata: {
-            source: "pushcut_service",
-            event,
-            recovered: true,
-            error: "stale_processing_released",
-            released_at: new Date().toISOString(),
-          } as any,
-        })
-        .eq("id", existing.id);
     }
 
-    // 3. Insert lock/log row
-    const lockOrderId = existing?.status && existing.status !== "sent"
-      ? `${dedupeKey}:retry:${Date.now()}`
-      : dedupeKey;
+    // 3. Insert or reclaim one durable lock/log row for this sale.
+    // Keep the same order_id so a successful retry remains idempotent.
+    const lockPayload = {
+      user_id: userId,
+      status: "processing",
+      sent_at: null,
+      metadata: {
+        source: "pushcut_service",
+        event,
+        data: (opts.data ?? {}) as any,
+        recovered: Boolean(existing),
+        locked_at: new Date().toISOString(),
+      } as any,
+    };
+    const lockResult = existing
+      ? await supabaseAdmin
+          .from("pushcut_logs")
+          .update(lockPayload)
+          .eq("id", existing.id)
+          .select("id")
+          .single()
+      : await supabaseAdmin
+          .from("pushcut_logs")
+          .insert({ order_id: dedupeKey, ...lockPayload })
+          .select("id")
+          .single();
 
-    const { data: log, error: lockErr } = await supabaseAdmin
-      .from("pushcut_logs")
-      .insert({
-        order_id: lockOrderId,
-        user_id: userId,
-        status: "processing",
-        metadata: { source: "pushcut_service", event, data: (opts.data ?? {}) as any } as any,
-      })
-      .select("id")
-      .single();
-    if (lockErr) {
-      if (lockErr.code === "23505") return { ok: false, skipped: "duplicate" };
-      return { ok: false, error: lockErr.message };
+    const log = lockResult.data;
+    const lockErr = lockResult.error;
+    if (lockErr || !log) {
+      if (lockErr?.code === "23505") return { ok: false, skipped: "duplicate" };
+      return { ok: false, error: lockErr?.message ?? "lock_failed" };
     }
 
     // 4. Build payload
