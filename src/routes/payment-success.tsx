@@ -38,9 +38,12 @@ function PaymentSuccessPage() {
 
     let cancelled = false;
     let attempts = 0;
-    // Fast cadence first (1.2s), then slow (3s). Total ~3min.
-    const FAST_ATTEMPTS = 25;
-    const MAX_ATTEMPTS = 80;
+    // Cadência agressiva: 400ms nos primeiros 15 ticks (~6s) para liberar
+    // o acesso INSTANTANEAMENTE após a confirmação da gateway, depois 1.2s,
+    // depois 3s. Total ~3min.
+    const FAST_ATTEMPTS = 15;
+    const MED_ATTEMPTS = 40;
+    const MAX_ATTEMPTS = 100;
     const TERMINAL = ["paid", "approved", "success", "completed", "failed", "expired", "cancelled", "canceled"];
 
     const poll = async () => {
@@ -57,7 +60,7 @@ function PaymentSuccessPage() {
         } catch (e) {
           console.error("[payment-success] poll error", e);
         }
-        const delay = attempts < FAST_ATTEMPTS ? 1200 : 3000;
+        const delay = attempts < FAST_ATTEMPTS ? 400 : attempts < MED_ATTEMPTS ? 1200 : 3000;
         await new Promise((r) => setTimeout(r, delay));
       }
       if (!cancelled) setTimedOut(true);
