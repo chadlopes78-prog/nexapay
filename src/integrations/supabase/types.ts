@@ -992,6 +992,7 @@ export type Database = {
         Args: { _product_id: string }
         Returns: boolean
       }
+      sweep_pushcut_paid_sales: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "super_admin" | "admin" | "user"
