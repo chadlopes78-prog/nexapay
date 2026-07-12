@@ -73,6 +73,7 @@ function CheckoutPage() {
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
+  const prewarmedProductRef = useRef<string | null>(null);
   // Cooldown depois de cancelar: a operadora precisa liberar o número
   // (o STK anterior ainda pode estar ativo por alguns segundos). Sem isto
   // a gateway rejeita o novo pedido e cai em "Erro processando pagamento".
@@ -110,6 +111,8 @@ function CheckoutPage() {
   }, []);
 
   useEffect(() => {
+    if (prewarmedProductRef.current === productId) return;
+    prewarmedProductRef.current = productId;
     void prewarmGatewayFn({ data: { productId } }).catch(() => undefined);
   }, [prewarmGatewayFn, productId]);
 
