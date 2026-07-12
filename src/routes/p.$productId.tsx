@@ -72,6 +72,24 @@ function CheckoutPage() {
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
+  // Cooldown depois de cancelar: a operadora precisa liberar o número
+  // (o STK anterior ainda pode estar ativo por alguns segundos). Sem isto
+  // a gateway rejeita o novo pedido e cai em "Erro processando pagamento".
+  const RETRY_COOLDOWN_MS = 8000;
+  const [retryCooldownUntil, setRetryCooldownUntil] = useState(0);
+  const [retryCooldownLeft, setRetryCooldownLeft] = useState(0);
+
+  useEffect(() => {
+    if (!retryCooldownUntil) return;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((retryCooldownUntil - Date.now()) / 1000));
+      setRetryCooldownLeft(left);
+      if (left === 0) setRetryCooldownUntil(0);
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [retryCooldownUntil]);
 
   const [name, setName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -187,6 +205,12 @@ function CheckoutPage() {
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (retryCooldownUntil && Date.now() < retryCooldownUntil) {
+      const left = Math.ceil((retryCooldownUntil - Date.now()) / 1000);
+      toast.error(`Aguarda ${left}s antes de tentar de novo — a operadora ainda está a libertar o número.`);
+      return;
+    }
+
     if (!phone || phone.replace(/\D/g, "").length < 9) {
       toast.error("Por favor, insira um número de telefone válido.");
       return;
@@ -216,6 +240,7 @@ function CheckoutPage() {
       setPaymentStatusMessage(null);
       setProcessingPayment(false);
       setCancelingPayment(false);
+      setRetryCooldownUntil(Date.now() + RETRY_COOLDOWN_MS);
     };
 
     const startPolling = (saleId: string) => {
@@ -302,10 +327,11 @@ function CheckoutPage() {
     paymentRunRef.current += 1;
     try {
       const result = await cancelPaymentFn({ data: { saleId: currentSaleId, reason: "customer_cancelled" } });
-      setPaymentErrorMessage(result.error || "Pagamento cancelado pelo cliente.");
+      setPaymentErrorMessage(result.error || "Pagamento cancelado. Aguarda alguns segundos antes de tentar de novo.");
       setPaymentStatusMessage(null);
       setProcessingPayment(false);
       setCurrentSaleId(null);
+      setRetryCooldownUntil(Date.now() + RETRY_COOLDOWN_MS);
     } catch (error: any) {
       setPaymentErrorMessage(error?.message || "Não foi possível cancelar agora. Tenta novamente.");
     } finally {
@@ -552,7 +578,7 @@ function CheckoutPage() {
 
             <Button
               type="submit"
-              disabled={processingPayment}
+              disabled={processingPayment || retryCooldownLeft > 0}
               className="w-full h-14 text-base font-bold rounded-xl text-white shadow-lg disabled:opacity-70 transition-all active:scale-[0.99] flex items-center justify-center gap-2"
               style={{
                 background: `linear-gradient(180deg, ${accent} 0%, ${paymentMethod === "mpesa" ? "#B30410" : "#EA580C"} 100%)`,
@@ -563,6 +589,11 @@ function CheckoutPage() {
                 <>
                   <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Processando...
+                </>
+              ) : retryCooldownLeft > 0 ? (
+                <>
+                  <Clock className="h-4 w-4" />
+                  Aguarda {retryCooldownLeft}s para tentar de novo
                 </>
               ) : (
                 <>
