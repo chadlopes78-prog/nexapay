@@ -322,7 +322,7 @@ function CheckoutPage() {
           if (result.status === "paid") finishPaid(result.accessLink ?? null, result.saleId);
         })
         .catch((error: any) => {
-          if (!settled && currentSaleId === saleId) return;
+          if (!settled && pollingStarted) return;
           finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
         });
     } catch (error: any) {
