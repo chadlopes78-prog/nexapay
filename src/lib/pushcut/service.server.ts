@@ -55,7 +55,7 @@ export const PushcutService = {
     const dedupeKey = opts.dedupeKey || `${event}:${Date.now()}`;
     const { data: existing } = await supabaseAdmin
       .from("pushcut_logs")
-      .select("id, status, created_at")
+      .select("id, status, created_at, updated_at")
       .eq("order_id", dedupeKey)
       .maybeSingle();
     if (existing?.status === "sent") return { ok: false, skipped: "duplicate" };
@@ -63,6 +63,11 @@ export const PushcutService = {
       const createdAt = existing.created_at ? new Date(existing.created_at).getTime() : 0;
       const isStale = createdAt > 0 && Date.now() - createdAt > 2 * 60_000;
       if (!isStale) return { ok: false, skipped: "processing" };
+    }
+    if (existing?.status === "failed") {
+      const updatedAt = existing.updated_at ? new Date(existing.updated_at).getTime() : 0;
+      const recentlyFailed = updatedAt > 0 && Date.now() - updatedAt < 30_000;
+      if (recentlyFailed) return { ok: false, skipped: "recent_failed" };
     }
 
     // 3. Insert or reclaim one durable lock/log row for this sale.
