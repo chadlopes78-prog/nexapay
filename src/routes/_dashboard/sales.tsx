@@ -88,13 +88,26 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const FAILURE_HINTS: Record<string, string> = {
-  insufficient_funds: "Saldo insuficiente",
-  wallet_unavailable: "Carteira indisponível",
-  timeout: "Tempo expirado",
-  invalid_data: "Dados inválidos",
-  cancelled_by_user: "Pagamento cancelado",
-  internal_error: "Erro interno",
+  insufficient_funds: "Saldo insuficiente na conta do cliente",
+  wallet_unavailable: "Carteira do vendedor indisponível",
+  timeout: "Tempo expirado — cliente não introduziu o PIN",
+  invalid_data: "Dados de pagamento inválidos",
+  invalid_pin: "PIN incorreto — pagamento recusado",
+  cancelled_by_user: "Pagamento cancelado pelo cliente",
+  gateway_auth_error: "Falha de autenticação com a gateway",
+  gateway_unavailable: "Gateway indisponível — falha de comunicação",
+  payment_failed: "Pagamento recusado pela operadora",
+  internal_error: "Erro interno no processamento",
 };
+
+function justificationFor(sale: Pick<Sale, "status" | "failure_reason" | "failure_code">) {
+  const st = (sale.status || "").toLowerCase();
+  if (!["failed", "error", "cancelled", "canceled"].includes(st)) return "—";
+  if (sale.failure_reason && sale.failure_reason.trim()) return sale.failure_reason;
+  if (sale.failure_code && FAILURE_HINTS[sale.failure_code]) return FAILURE_HINTS[sale.failure_code];
+  return "Pagamento cancelado ou recusado pela operadora";
+}
+
 
 function normalizeStatus(s: string | null | undefined) {
   const v = (s || "").toLowerCase();
