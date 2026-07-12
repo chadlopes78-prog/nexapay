@@ -530,7 +530,8 @@ function SalesPage() {
                   filtered.map((s) => {
                     const st = normalizeStatus(s.status);
                     const created = new Date(s.created_at);
-                    const justification = st === "failed" ? (FAILURE_HINTS[s.status || ""] || "Sem detalhes") : "—";
+                    const justification = justificationFor(s);
+
                     return (
                       <tr key={s.id} className="border-t border-slate-100 hover:bg-slate-50/60">
                         <td className="px-4 py-3">
