@@ -195,6 +195,13 @@ export const getPaymentSuccessData = createServerFn({ method: "GET" })
       | null;
     const product = Array.isArray(rawProducts) ? rawProducts[0] ?? null : rawProducts;
 
+    if (isPaid) {
+      const { confirmSalePayment } = await import("@/lib/payments/confirmation.server");
+      await confirmSalePayment({ saleId: data.saleId, triggerPushcut: true }).catch((error) =>
+        console.error("payment-success paid side-effects recovery error", error),
+      );
+    }
+
     return {
       sale: { status: sale.status },
       product: product
@@ -323,6 +330,34 @@ async function getAccessToken(clientId: string, clientSecret: string): Promise<s
 
 const InitiateInput = PaymentInput;
 const ChargeInput = z.object({ saleId: z.string().uuid() });
+
+export const prewarmPaymentGateway = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ productId: z.string().min(1).max(120) }).parse(input))
+  .handler(async ({ data }) => {
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const isUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          data.productId,
+        );
+      let productQuery = supabaseAdmin.from("products").select("id, user_id, status");
+      productQuery = isUuid
+        ? productQuery.eq("id", data.productId)
+        : productQuery.eq("custom_url", data.productId);
+      const { data: product } = await productQuery.maybeSingle();
+      if (!product || (product.status && product.status !== "active")) return { ok: false };
+      const creds = await loadUserCreds(product.user_id);
+      if (!creds) return { ok: false };
+      await Promise.race([
+        getAccessToken(creds.e2p_client_id, creds.e2p_client_secret),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 4_500)),
+      ]);
+      return { ok: true };
+    } catch (error) {
+      console.warn("prewarmPaymentGateway failed", error instanceof Error ? error.message : String(error));
+      return { ok: false };
+    }
+  });
 
 async function validateAndLoad(data: z.infer<typeof PaymentInput>) {
   const msisdn = normalizeMozambicanPhone(data.msisdn);
@@ -636,26 +671,26 @@ export const startPayment = createServerFn({ method: "POST" })
     // Insert sale with the final gateway reference + preload OAuth token in parallel.
     // This removes the old insert→update race where a fast webhook could arrive
     // before `payment_reference` existed, leaving checkout stuck in processing.
-    const [saleRes, tokenResult] = await Promise.all([
-      supabaseAdmin
-        .from("sales")
-        .insert({
-          id: saleId,
-          product_id: product.id,
-          user_id: product.user_id,
-          customer_name: customerName.slice(0, 100),
-          customer_phone: msisdn,
-          amount,
-          payment_method: data.method,
-          payment_reference: reference,
-          status: "pending",
-          traffic_page_id: (trafficRes.data as { id?: string } | null)?.id ?? null,
-          idempotency_key: data.idempotencyKey ?? null,
-        })
-        .select("id")
-        .single(),
-      getAccessToken(creds.e2p_client_id, creds.e2p_client_secret).catch((e) => e as Error),
-    ]);
+    const tokenPromise = getAccessToken(creds.e2p_client_id, creds.e2p_client_secret).catch(
+      (e) => e as Error,
+    );
+    const saleRes = await supabaseAdmin
+      .from("sales")
+      .insert({
+        id: saleId,
+        product_id: product.id,
+        user_id: product.user_id,
+        customer_name: customerName.slice(0, 100),
+        customer_phone: msisdn,
+        amount,
+        payment_method: data.method,
+        payment_reference: reference,
+        status: "pending",
+        traffic_page_id: (trafficRes.data as { id?: string } | null)?.id ?? null,
+        idempotency_key: data.idempotencyKey ?? null,
+      })
+      .select("id")
+      .single();
     if (saleRes.error || !saleRes.data) {
       if (data.idempotencyKey && String(saleRes.error?.code) === "23505") {
         const { data: existing } = await supabaseAdmin
@@ -674,6 +709,7 @@ export const startPayment = createServerFn({ method: "POST" })
       }
       return { success: false, error: "Não foi possível registar a venda." };
     }
+    const tokenResult = await tokenPromise;
     if (tokenResult instanceof Error) {
       // NÃO falha a venda nem mostra erro ao cliente. Mantém "pending" e agenda
       // retry em background: busca token novo (com backoff) e dispara a gateway.
@@ -821,24 +857,13 @@ export const startPayment = createServerFn({ method: "POST" })
         };
       });
 
-    // Retorna rápido para o cliente conseguir mostrar o pop-up do PIN
-    // imediatamente. A gateway continua processando em background: o cliente
-    // faz polling em getSaleStatus para receber o resultado final (paid/failed).
-    // Damos uma pequena janela (2.5s) para capturar respostas ultra-rápidas
-    // (ex.: erro imediato de validação) e evitar um flash de "pending".
-    const { waitUntil } = await import("@/lib/runtime-context.server");
-    const scheduled = waitUntil(processGateway.catch(() => {}));
-    if (!scheduled) {
-      // Sem waitUntil disponível: mantém a promise viva sem bloquear o retorno.
-      processGateway.catch(() => {});
-    }
-
     const accessLink = product.access_link || product.delivery_link || null;
-    const fastResult = await Promise.race([
-      processGateway,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
-    ]);
-    mark(`fastResult (${fastResult?.finalStatus ?? "pending-timeout"})`);
+    // Mantém a chamada à e2payment viva até fechar paid/failed/expired.
+    // O cliente já abriu a janela de PIN localmente e faz polling com saleId,
+    // então a UX continua rápida, mas a venda não fica órfã quando a gateway
+    // só responde depois do PIN.
+    const fastResult = await processGateway;
+    mark(`gatewayResult (${fastResult.finalStatus})`);
 
     if (fastResult?.finalStatus === "paid") {
       return { success: true, saleId, transactionId: fastResult.transactionId, status: "paid", accessLink };
