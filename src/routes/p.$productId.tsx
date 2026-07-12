@@ -72,6 +72,24 @@ function CheckoutPage() {
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
+  // Cooldown depois de cancelar: a operadora precisa liberar o número
+  // (o STK anterior ainda pode estar ativo por alguns segundos). Sem isto
+  // a gateway rejeita o novo pedido e cai em "Erro processando pagamento".
+  const RETRY_COOLDOWN_MS = 8000;
+  const [retryCooldownUntil, setRetryCooldownUntil] = useState(0);
+  const [retryCooldownLeft, setRetryCooldownLeft] = useState(0);
+
+  useEffect(() => {
+    if (!retryCooldownUntil) return;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((retryCooldownUntil - Date.now()) / 1000));
+      setRetryCooldownLeft(left);
+      if (left === 0) setRetryCooldownUntil(0);
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [retryCooldownUntil]);
 
   const [name, setName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
