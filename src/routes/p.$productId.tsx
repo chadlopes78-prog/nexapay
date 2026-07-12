@@ -81,6 +81,19 @@ function CheckoutPage() {
   const [retryCooldownUntil, setRetryCooldownUntil] = useState(0);
   const [retryCooldownLeft, setRetryCooldownLeft] = useState(0);
 
+  // Checkout deve ser SEMPRE claro, mesmo com o site/telemóvel em modo noturno.
+  useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    const prevScheme = root.style.colorScheme;
+    root.classList.remove("dark");
+    root.style.colorScheme = "light";
+    return () => {
+      if (hadDark) root.classList.add("dark");
+      root.style.colorScheme = prevScheme;
+    };
+  }, []);
+
   useEffect(() => {
     if (!retryCooldownUntil) return;
     const tick = () => {
