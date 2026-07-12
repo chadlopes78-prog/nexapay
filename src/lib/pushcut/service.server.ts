@@ -55,25 +55,53 @@ export const PushcutService = {
     const dedupeKey = opts.dedupeKey || `${event}:${Date.now()}`;
     const { data: existing } = await supabaseAdmin
       .from("pushcut_logs")
-      .select("id, status")
+      .select("id, status, created_at, updated_at")
       .eq("order_id", dedupeKey)
       .maybeSingle();
-    if (existing) return { ok: false, skipped: "duplicate" };
+    if (existing?.status === "sent") return { ok: false, skipped: "duplicate" };
+    if (existing?.status === "processing") {
+      const createdAt = existing.created_at ? new Date(existing.created_at).getTime() : 0;
+      const isStale = createdAt > 0 && Date.now() - createdAt > 2 * 60_000;
+      if (!isStale) return { ok: false, skipped: "processing" };
+    }
+    if (existing?.status === "failed") {
+      const updatedAt = existing.updated_at ? new Date(existing.updated_at).getTime() : 0;
+      const recentlyFailed = updatedAt > 0 && Date.now() - updatedAt < 30_000;
+      if (recentlyFailed) return { ok: false, skipped: "recent_failed" };
+    }
 
-    // 3. Insert lock/log row
-    const { data: log, error: lockErr } = await supabaseAdmin
-      .from("pushcut_logs")
-      .insert({
-        order_id: dedupeKey,
-        user_id: userId,
-        status: "processing",
-        metadata: { source: "pushcut_service", event, data: (opts.data ?? {}) as any } as any,
-      })
-      .select("id")
-      .single();
-    if (lockErr) {
-      if (lockErr.code === "23505") return { ok: false, skipped: "duplicate" };
-      return { ok: false, error: lockErr.message };
+    // 3. Insert or reclaim one durable lock/log row for this sale.
+    // Keep the same order_id so a successful retry remains idempotent.
+    const lockPayload = {
+      user_id: userId,
+      status: "processing",
+      sent_at: null,
+      metadata: {
+        source: "pushcut_service",
+        event,
+        data: (opts.data ?? {}) as any,
+        recovered: Boolean(existing),
+        locked_at: new Date().toISOString(),
+      } as any,
+    };
+    const lockResult = existing
+      ? await supabaseAdmin
+          .from("pushcut_logs")
+          .update(lockPayload)
+          .eq("id", existing.id)
+          .select("id")
+          .single()
+      : await supabaseAdmin
+          .from("pushcut_logs")
+          .insert({ order_id: dedupeKey, ...lockPayload })
+          .select("id")
+          .single();
+
+    const log = lockResult.data;
+    const lockErr = lockResult.error;
+    if (lockErr || !log) {
+      if (lockErr?.code === "23505") return { ok: false, skipped: "duplicate" };
+      return { ok: false, error: lockErr?.message ?? "lock_failed" };
     }
 
     // 4. Build payload

@@ -90,6 +90,12 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     const accessLink = paid ? (product?.access_link || product?.delivery_link || null) : null;
     if (paid) {
       console.info("[getSaleStatus] paid resolved", { saleId: data.saleId, hasAccessLink: !!accessLink });
+      const { confirmSalePayment } = await import("@/lib/payments/confirmation.server");
+      await confirmSalePayment({
+        saleId: data.saleId,
+        reference: sale.payment_reference,
+        triggerPushcut: true,
+      }).catch((error) => console.error("getSaleStatus paid side-effects recovery error", error));
     }
     return {
       status: paid ? ("paid" as const) : failed ? ("failed" as const) : ("pending" as const),

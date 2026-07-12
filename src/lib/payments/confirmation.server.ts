@@ -46,7 +46,7 @@ type SaleForConfirmation = {
   failure_reason?: string | null;
   failure_code?: string | null;
   traffic_page_id?: string | null;
-  products?: { name?: string | null } | null;
+  products?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
 function asObject(value: unknown): GatewayPayload {
@@ -472,7 +472,9 @@ async function dispatchApprovedSideEffects(
 
   const { enqueueWebhookEvent, processPendingForUser } =
     await import("@/lib/webhooks/dispatcher.server");
-  const productName = sale.products?.name ?? null;
+  const rawProducts = sale.products;
+  const product = Array.isArray(rawProducts) ? rawProducts[0] ?? null : rawProducts;
+  const productName = product?.name ?? null;
   const payload = {
     sale_id: sale.id,
     product_id: sale.product_id,
@@ -552,55 +554,67 @@ async function dispatchApprovedSideEffects(
     }
     inserted++;
   }
-  if (inserted > 0) {
-    // Fire-and-forget: do not block the payment response on webhook delivery.
-    // pg_cron drains remaining pending rows every minute; stuck "processing"
-    // rows are auto-reset after 30s at the top of this function.
-    await processPendingForUser(userId).catch((err) =>
-      console.error("[webhooks] background deliver failed", err),
-    );
-  }
-  // Native Web Push notification — always fires regardless of Pushcut config
+  // Processa também retries/dedupes pendentes, mas não deixa webhooks lentos
+  // bloquear Web Push/Pushcut da venda aprovada.
+  const webhookProcessing = processPendingForUser(userId).catch((err) =>
+    console.error("[webhooks] background deliver failed", err),
+  );
+  const amountNum = sale.amount != null ? Number(sale.amount) : 0;
+  const rawMethod = (sale.payment_method ?? "").toString().toLowerCase();
+  const method = rawMethod.includes("emola")
+    ? "EMOLA"
+    : rawMethod.includes("mpesa") || rawMethod.includes("m-pesa")
+      ? "MPESA"
+      : (sale.payment_method ?? "").toString().toUpperCase() || "PAGAMENTO";
+
+  // Live MZN→BRL rate (fallback to env or 0.085)
+  let mznToBrl = Number(process.env.MZN_TO_BRL_RATE || "0.085");
   try {
-    const { sendPushToUser } = await import("@/lib/push/sender.server");
-    const amountNum = sale.amount != null ? Number(sale.amount) : 0;
-    const amountStr = amountNum.toLocaleString("pt-MZ", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    const rawMethod = (sale.payment_method ?? "").toString().toLowerCase();
-    const method = rawMethod.includes("emola")
-      ? "EMOLA"
-      : rawMethod.includes("mpesa") || rawMethod.includes("m-pesa")
-        ? "MPESA"
-        : (sale.payment_method ?? "").toString().toUpperCase() || "PAGAMENTO";
-    // Live MZN→BRL rate (fallback to env or 0.085)
-    let mznToBrl = Number(process.env.MZN_TO_BRL_RATE || "0.085");
+    const fxCtrl = new AbortController();
+    const fxTimer = setTimeout(() => fxCtrl.abort(), 2500);
+    const fxRes = await fetch("https://open.er-api.com/v6/latest/MZN", { signal: fxCtrl.signal });
+    clearTimeout(fxTimer);
+    if (fxRes.ok) {
+      const fxJson = (await fxRes.json()) as { rates?: { BRL?: number } };
+      const live = Number(fxJson?.rates?.BRL);
+      if (Number.isFinite(live) && live > 0) mznToBrl = live;
+    }
+  } catch { /* ignore */ }
+
+  const brlValue = (amountNum * mznToBrl).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  const bodyText = `${brlValue} R$ via ${method}`;
+
+  // Web Push e Pushcut são independentes e rodam em paralelo: uma falha ou
+  // lentidão em uma via não pode impedir a outra notificação aprovada.
+  const webPushTask = (async () => {
     try {
-      const fxCtrl = new AbortController();
-      const fxTimer = setTimeout(() => fxCtrl.abort(), 2500);
-      const fxRes = await fetch("https://open.er-api.com/v6/latest/MZN", { signal: fxCtrl.signal });
-      clearTimeout(fxTimer);
-      if (fxRes.ok) {
-        const fxJson = (await fxRes.json()) as { rates?: { BRL?: number } };
-        const live = Number(fxJson?.rates?.BRL);
-        if (Number.isFinite(live) && live > 0) mznToBrl = live;
+      const { data: existingNotification } = await supabaseAdmin
+        .from("notifications_log")
+        .select("id")
+        .eq("user_id", userId)
+        .contains("metadata", { saleId: sale.id })
+        .limit(1);
+      if (!existingNotification?.length) {
+        const { sendPushToUser } = await import("@/lib/push/sender.server");
+        await sendPushToUser(userId, {
+          event: "sale.approved",
+          body: bodyText,
+          url: "/transactions",
+          metadata: { saleId: sale.id },
+        });
       }
-    } catch { /* ignore */ }
-    const brlValue = (amountNum * mznToBrl).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const bodyText = `${brlValue} R$ via ${method}`;
+    } catch (e) {
+      console.error("[push][sale.approved] error (suppressed)", e);
+    }
+  })();
 
-    await sendPushToUser(userId, {
-      event: "sale.approved",
-      body: bodyText,
-      url: "/transactions",
-      metadata: { saleId: sale.id },
-    });
-
-    // Native Pushcut integration — independent of the Webhooks system.
+  const pushcutTask = (async () => {
     try {
       const { PushcutService } = await import("@/lib/pushcut/service.server");
-      await PushcutService.sendEvent({
+      const pushcutResult = await PushcutService.sendEvent({
         userId,
         event: "sale_approved",
         dedupeKey: `pushcut:sale_approved:${sale.id}`,
@@ -612,22 +626,47 @@ async function dispatchApprovedSideEffects(
           customer_name: sale.customer_name,
         },
       });
+      if (!pushcutResult.ok) {
+        console.warn("[pushcut][sale.approved] not sent", {
+          saleId: sale.id,
+          skipped: pushcutResult.skipped ?? null,
+          status: pushcutResult.status ?? null,
+          error: pushcutResult.error ?? null,
+        });
+      }
     } catch (e) {
       console.error("[pushcut][sale.approved] error (suppressed)", e);
     }
-  } catch (e) {
-    console.error("[push][sale.approved] error (suppressed)", e);
-  }
+  })();
+
+  await Promise.race([
+    Promise.allSettled([webPushTask, pushcutTask]),
+    new Promise((resolve) => setTimeout(resolve, 10_000)),
+  ]);
 
   // Silence unused warning for helper kept for non-approved flows.
   void enqueueWebhookEvent;
 
 
   if (sale.traffic_page_id) {
-    await supabaseAdmin.from("traffic_events").insert({
-      page_id: sale.traffic_page_id,
-      event_type: "purchase",
-      metadata: { saleId: sale.id, productId: sale.product_id },
-    });
+    const { data: existingTrafficEvent } = await supabaseAdmin
+      .from("traffic_events")
+      .select("id")
+      .eq("page_id", sale.traffic_page_id)
+      .eq("event_type", "purchase")
+      .contains("metadata", { saleId: sale.id })
+      .limit(1);
+    if (!existingTrafficEvent?.length) {
+      await supabaseAdmin.from("traffic_events").insert({
+        page_id: sale.traffic_page_id,
+        event_type: "purchase",
+        metadata: { saleId: sale.id, productId: sale.product_id },
+      });
+    }
   }
+
+  await Promise.race([
+    webhookProcessing,
+    new Promise((resolve) => setTimeout(resolve, inserted > 0 ? 3_000 : 500)),
+  ]);
 }
