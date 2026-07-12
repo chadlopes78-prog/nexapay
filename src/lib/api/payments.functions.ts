@@ -734,7 +734,8 @@ export const startPayment = createServerFn({ method: "POST" })
       })();
       const scheduled = waitUntil(bgTask.catch(() => {}));
       if (!scheduled) bgTask.catch(() => {});
-      const accessLink = product.access_link || product.delivery_link || null;
+
+
       return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
     }
     const token = tokenResult;
