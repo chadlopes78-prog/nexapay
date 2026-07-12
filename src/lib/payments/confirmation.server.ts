@@ -579,19 +579,10 @@ async function dispatchApprovedSideEffects(
       ? "MPESA"
       : (sale.payment_method ?? "").toString().toUpperCase() || "PAGAMENTO";
 
-  // Live MZN→BRL rate (fallback to env or 0.085)
+  // Taxa fixa/fallback local: notificação de venda aprovada não pode depender
+  // de uma API externa de câmbio antes de tocar no iPhone do vendedor.
   let mznToBrl = Number(process.env.MZN_TO_BRL_RATE || "0.085");
-  try {
-    const fxCtrl = new AbortController();
-    const fxTimer = setTimeout(() => fxCtrl.abort(), 2500);
-    const fxRes = await fetch("https://open.er-api.com/v6/latest/MZN", { signal: fxCtrl.signal });
-    clearTimeout(fxTimer);
-    if (fxRes.ok) {
-      const fxJson = (await fxRes.json()) as { rates?: { BRL?: number } };
-      const live = Number(fxJson?.rates?.BRL);
-      if (Number.isFinite(live) && live > 0) mznToBrl = live;
-    }
-  } catch { /* ignore */ }
+  if (!Number.isFinite(mznToBrl) || mznToBrl <= 0) mznToBrl = 0.085;
 
   const brlValue = (amountNum * mznToBrl).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
@@ -629,7 +620,11 @@ async function dispatchApprovedSideEffects(
       const pushcutResult = await PushcutService.sendEvent({
         userId,
         event: "sale_approved",
-        dedupeKey: `pushcut:sale_approved:${sale.id}`,
+        // Não reutilizar o order_id do trigger SQL. Esse trigger registra
+        // "sent" quando o pedido pg_net é enfileirado, mas isso não prova que
+        // o Pushcut recebeu. A via do app precisa ter o próprio idempotency key
+        // para garantir o envio real via fetch após pagamento aprovado.
+        dedupeKey: `pushcut:app:sale_approved:${sale.id}`,
         text: bodyText,
         data: {
           brl_value: brlValue,

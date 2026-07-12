@@ -862,31 +862,24 @@ export const startPayment = createServerFn({ method: "POST" })
       });
 
     const accessLink = product.access_link || product.delivery_link || null;
-    // Aguardamos até 15s a resposta do gateway. O pop-up STK é disparado
-    // pela e2payment ASSIM QUE RECEBE o request (poucos segundos) — não
-    // quando responde — portanto aguardar não atrasa o pop-up. Isto garante
-    // que, quando o cliente digita o PIN rápido, retornamos "paid" já com o
-    // link e o redirect é IMEDIATO. Se demorar mais que 15s, retornamos
-    // "pending" e mantemos processGateway vivo via waitUntil; o cliente
-    // continua o polling e o DB trigger dispara o Pushcut no instante em
-    // que sales.status vira "paid".
-    const { waitUntil } = await import("@/lib/runtime-context.server");
-    const quick = await Promise.race([
-      processGateway,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 15_000)),
-    ]);
-    if (quick?.finalStatus === "paid") {
+    // Contrato crítico do checkout: só respondemos ao cliente depois da
+    // gateway fechar o resultado real do PIN. O pedido ao gateway já foi
+    // enviado acima, então o pop-up STK aparece no telefone enquanto esta
+    // chamada fica aberta. Quando o cliente paga, retornamos "paid" com o
+    // link imediatamente — sem depender de background/waitUntil, que pode
+    // morrer antes de marcar a venda como paga.
+    const gatewayResult = await processGateway;
+    mark(`gatewayResult (${gatewayResult.finalStatus})`);
+
+    if (gatewayResult.finalStatus === "paid") {
       mark("returned paid");
-      return { success: true, saleId, transactionId: quick.transactionId, status: "paid", accessLink };
+      return { success: true, saleId, transactionId: gatewayResult.transactionId, status: "paid", accessLink };
     }
-    if (quick?.finalStatus === "failed" || quick?.finalStatus === "expired") {
-      const failure = readGatewayFailureDetails(quick.json, quick.finalStatus);
+    if (gatewayResult.finalStatus === "failed" || gatewayResult.finalStatus === "expired") {
+      const failure = readGatewayFailureDetails(gatewayResult.json, gatewayResult.finalStatus);
       return { success: false, saleId, error: failure.message };
     }
-    const bg = processGateway.catch((e) => {
-      console.error("startPayment background gateway task failed", e);
-    });
-    waitUntil(bg);
+
     mark("returned pending");
     return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
   });
