@@ -651,10 +651,16 @@ async function dispatchApprovedSideEffects(
     }
   })();
 
-  await Promise.race([
-    Promise.allSettled([webPushTask, pushcutTask]),
-    new Promise((resolve) => setTimeout(resolve, 10_000)),
-  ]);
+  // Mantém as tarefas vivas mesmo depois de a resposta HTTP ser enviada.
+  // Sem waitUntil o Worker termina antes do fetch ao Pushcut concluir e a
+  // notificação é perdida (registrada como "processing" ou nem chega a criar
+  // o log). Só aguardamos inline como fallback quando não há runtime context.
+  const notificationTasks = Promise.allSettled([webPushTask, pushcutTask, webhookProcessing]);
+  const { waitUntil: scheduleAfterResponse } = await import("@/lib/runtime-context.server");
+  if (!scheduleAfterResponse(notificationTasks)) {
+    await notificationTasks;
+  }
+
 
   // Silence unused warning for helper kept for non-approved flows.
   void enqueueWebhookEvent;
