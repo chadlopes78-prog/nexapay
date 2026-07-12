@@ -209,41 +209,66 @@ async function loadUserCreds(userId: string): Promise<UserCreds | null> {
 }
 
 const tokenCache = new Map<string, { value: string; expiresAt: number }>();
+// Deduplica pedidos concorrentes: se 10 clientes pagarem ao mesmo tempo com
+// o mesmo vendedor, faz 1 único fetch /oauth/token em vez de 10.
+const inflightToken = new Map<string, Promise<string>>();
+
+// Margem de segurança: reusa o token enquanto faltar >2 min pra expirar.
+const TOKEN_SAFETY_MARGIN_MS = 2 * 60 * 1000;
+// Piso: mesmo que a API devolva expires_in curto/ausente, cacheia 10 min.
+const TOKEN_MIN_TTL_MS = 10 * 60 * 1000;
+// Teto: nunca confia em token por mais de 55 min (E2Payments emite 1h).
+const TOKEN_MAX_TTL_MS = 55 * 60 * 1000;
+
+export function invalidateAccessToken(clientId: string) {
+  tokenCache.delete(clientId);
+  inflightToken.delete(clientId);
+}
 
 async function getAccessToken(clientId: string, clientSecret: string): Promise<string> {
   const cached = tokenCache.get(clientId);
-  if (cached && cached.expiresAt > Date.now() + 30_000) return cached.value;
+  if (cached && cached.expiresAt > Date.now() + TOKEN_SAFETY_MARGIN_MS) return cached.value;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8_000);
-  const res = await fetch(`${E2PAY_BASE_URL}/oauth/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "User-Agent": "Mozilla/5.0 (compatible; NexaPay/1.0)",
-    },
-    body: JSON.stringify({
-      grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
-    signal: controller.signal,
-  }).finally(() => clearTimeout(timeoutId));
+  const existing = inflightToken.get(clientId);
+  if (existing) return existing;
 
-  const text = await res.text();
-  let json: Record<string, unknown> | null = null;
-  try { json = text ? JSON.parse(text) : null; } catch { /* noop */ }
+  const promise = (async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8_000);
+    const res = await fetch(`${E2PAY_BASE_URL}/oauth/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; NexaPay/1.0)",
+      },
+      body: JSON.stringify({
+        grant_type: "client_credentials",
+        client_id: clientId,
+        client_secret: clientSecret,
+      }),
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
 
-  if (!res.ok || !json?.access_token) {
-    console.error("e2payment token error", { status: res.status, body: text?.slice(0, 500) });
-    throw new Error(`Falha ao autenticar com e2payment (HTTP ${res.status}).`);
-  }
+    const text = await res.text();
+    let json: Record<string, unknown> | null = null;
+    try { json = text ? JSON.parse(text) : null; } catch { /* noop */ }
 
-  const expiresInMs = (Number(json.expires_in) || 3600) * 1000;
-  const value = String(json.access_token);
-  tokenCache.set(clientId, { value, expiresAt: Date.now() + expiresInMs });
-  return value;
+    if (!res.ok || !json?.access_token) {
+      console.error("e2payment token error", { status: res.status, body: text?.slice(0, 500) });
+      throw new Error(`Falha ao autenticar com e2payment (HTTP ${res.status}).`);
+    }
+
+    // Aplica piso e teto no TTL para blindar contra respostas inconsistentes.
+    const rawTtlMs = (Number(json.expires_in) || 3600) * 1000;
+    const ttlMs = Math.min(TOKEN_MAX_TTL_MS, Math.max(TOKEN_MIN_TTL_MS, rawTtlMs));
+    const value = String(json.access_token);
+    tokenCache.set(clientId, { value, expiresAt: Date.now() + ttlMs });
+    return value;
+  })().finally(() => inflightToken.delete(clientId));
+
+  inflightToken.set(clientId, promise);
+  return promise;
 }
 
 const InitiateInput = PaymentInput;
@@ -654,6 +679,9 @@ export const startPayment = createServerFn({ method: "POST" })
     const processGateway = gatewayPromise
       .then(async ({ ok, status, json, text }) => {
         console.info("e2payment response", { status, method: data.method, reference, body: text?.slice(0, 400) });
+        // Se o gateway rejeitou por token inválido/expirado, invalida o cache
+        // para a próxima venda buscar um token fresco.
+        if (status === 401 || status === 403) invalidateAccessToken(creds.e2p_client_id);
         const transactionId = readGatewayTransactionId(json);
         const finalStatus = normalizeGatewayStatus(json, ok);
         if (finalStatus === "paid") {
