@@ -55,16 +55,38 @@ export const PushcutService = {
     const dedupeKey = opts.dedupeKey || `${event}:${Date.now()}`;
     const { data: existing } = await supabaseAdmin
       .from("pushcut_logs")
-      .select("id, status")
+      .select("id, status, created_at")
       .eq("order_id", dedupeKey)
       .maybeSingle();
-    if (existing) return { ok: false, skipped: "duplicate" };
+    if (existing?.status === "sent") return { ok: false, skipped: "duplicate" };
+    if (existing?.status === "processing") {
+      const createdAt = existing.created_at ? new Date(existing.created_at).getTime() : 0;
+      const isStale = createdAt > 0 && Date.now() - createdAt > 2 * 60_000;
+      if (!isStale) return { ok: false, skipped: "processing" };
+      await supabaseAdmin
+        .from("pushcut_logs")
+        .update({
+          status: "failed",
+          metadata: {
+            source: "pushcut_service",
+            event,
+            recovered: true,
+            error: "stale_processing_released",
+            released_at: new Date().toISOString(),
+          } as any,
+        })
+        .eq("id", existing.id);
+    }
 
     // 3. Insert lock/log row
+    const lockOrderId = existing?.status && existing.status !== "sent"
+      ? `${dedupeKey}:retry:${Date.now()}`
+      : dedupeKey;
+
     const { data: log, error: lockErr } = await supabaseAdmin
       .from("pushcut_logs")
       .insert({
-        order_id: dedupeKey,
+        order_id: lockOrderId,
         user_id: userId,
         status: "processing",
         metadata: { source: "pushcut_service", event, data: (opts.data ?? {}) as any } as any,
