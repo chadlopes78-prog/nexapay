@@ -326,10 +326,11 @@ function CheckoutPage() {
     paymentRunRef.current += 1;
     try {
       const result = await cancelPaymentFn({ data: { saleId: currentSaleId, reason: "customer_cancelled" } });
-      setPaymentErrorMessage(result.error || "Pagamento cancelado pelo cliente.");
+      setPaymentErrorMessage(result.error || "Pagamento cancelado. Aguarda alguns segundos antes de tentar de novo.");
       setPaymentStatusMessage(null);
       setProcessingPayment(false);
       setCurrentSaleId(null);
+      setRetryCooldownUntil(Date.now() + RETRY_COOLDOWN_MS);
     } catch (error: any) {
       setPaymentErrorMessage(error?.message || "Não foi possível cancelar agora. Tenta novamente.");
     } finally {
