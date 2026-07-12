@@ -69,7 +69,7 @@ function CheckoutPage() {
   const [cancelingPayment, setCancelingPayment] = useState(false);
   const [showCancelButton, setShowCancelButton] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
-  const [pinSecondsLeft, setPinSecondsLeft] = useState(120);
+  const [pinSecondsLeft, setPinSecondsLeft] = useState(240);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
@@ -130,7 +130,7 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!processingPayment) return;
-    setPinSecondsLeft(120);
+    setPinSecondsLeft(240);
     const t = setInterval(() => {
       setPinSecondsLeft((p) => (p > 0 ? p - 1 : 0));
     }, 1000);
@@ -252,7 +252,7 @@ function CheckoutPage() {
     };
 
     const startPolling = (saleId: string) => {
-      const deadlineAt = Date.now() + 120_000;
+      const deadlineAt = Date.now() + 240_000;
       const tick = async () => {
         if (settled || paymentRunRef.current !== runId) return;
         if (Date.now() >= deadlineAt) {
