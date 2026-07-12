@@ -591,13 +591,21 @@ async function dispatchApprovedSideEffects(
   // Web Push e Pushcut são independentes: uma falha em uma via não pode
   // impedir a outra notificação aprovada de sair.
   try {
-    const { sendPushToUser } = await import("@/lib/push/sender.server");
-    await sendPushToUser(userId, {
-      event: "sale.approved",
-      body: bodyText,
-      url: "/transactions",
-      metadata: { saleId: sale.id },
-    });
+    const { data: existingNotification } = await supabaseAdmin
+      .from("notifications_log")
+      .select("id")
+      .eq("user_id", userId)
+      .contains("metadata", { saleId: sale.id })
+      .limit(1);
+    if (!existingNotification?.length) {
+      const { sendPushToUser } = await import("@/lib/push/sender.server");
+      await sendPushToUser(userId, {
+        event: "sale.approved",
+        body: bodyText,
+        url: "/transactions",
+        metadata: { saleId: sale.id },
+      });
+    }
   } catch (e) {
     console.error("[push][sale.approved] error (suppressed)", e);
   }
