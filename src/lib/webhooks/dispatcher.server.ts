@@ -127,7 +127,8 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
     const paymentStatus = String(payload.payment_status ?? payload.status ?? "").toLowerCase().trim();
     const webhookOnlySource = payload.pushcut_source === "payment_webhook";
     const isTestEvent = payload.test === true || payload.event === "webhook.test" || delivery.event === "webhook.test";
-    const isApprovedPayment = delivery.event === "sale.approved" && paymentStatus === "paid" && webhookOnlySource;
+    const approvedEvents = new Set(["sale.approved", "payment.received", "product.delivered"]);
+    const isApprovedPayment = approvedEvents.has(delivery.event) && paymentStatus === "paid" && webhookOnlySource;
 
     console.log("[webhooks] pushcut webhook received", {
       deliveryId,
@@ -168,8 +169,8 @@ export async function deliverOnce(deliveryId: string): Promise<void> {
     }
 
     const result = await postJsonWithTimeout(endpoint.url, {
-      event: "sale.approved",
-      type: isTestEvent ? "webhook.test" : "sale.approved",
+      event: delivery.event,
+      type: isTestEvent ? "webhook.test" : delivery.event,
       orderId,
       sent_at: new Date().toISOString(),
       data: payload,
