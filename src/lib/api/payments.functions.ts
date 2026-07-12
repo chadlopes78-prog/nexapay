@@ -265,39 +265,57 @@ async function getAccessToken(clientId: string, clientSecret: string): Promise<s
   if (existing) return existing;
 
   const promise = (async () => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8_000);
-    const res = await fetch(`${E2PAY_BASE_URL}/oauth/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "User-Agent": "Mozilla/5.0 (compatible; NexaPay/1.0)",
-      },
-      body: JSON.stringify({
-        grant_type: "client_credentials",
-        client_id: clientId,
-        client_secret: clientSecret,
-      }),
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeoutId));
+    // Tenta até 3 vezes com backoff curto. A e2payment ocasionalmente devolve
+    // 5xx/timeout transitório no /oauth/token — sem retry o cliente vê logo
+    // "Falha ao autenticar com a gateway" e a venda é marcada como falhada.
+    let lastErr: unknown = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15_000);
+      try {
+        const res = await fetch(`${E2PAY_BASE_URL}/oauth/token`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "User-Agent": "Mozilla/5.0 (compatible; NexaPay/1.0)",
+          },
+          body: JSON.stringify({
+            grant_type: "client_credentials",
+            client_id: clientId,
+            client_secret: clientSecret,
+          }),
+          signal: controller.signal,
+        });
+        const text = await res.text();
+        let json: Record<string, unknown> | null = null;
+        try { json = text ? JSON.parse(text) : null; } catch { /* noop */ }
 
-    const text = await res.text();
-    let json: Record<string, unknown> | null = null;
-    try { json = text ? JSON.parse(text) : null; } catch { /* noop */ }
+        if (res.ok && json?.access_token) {
+          const rawTtlMs = (Number(json.expires_in) || 3600) * 1000;
+          const ttlMs = Math.min(TOKEN_MAX_TTL_MS, Math.max(TOKEN_MIN_TTL_MS, rawTtlMs));
+          const value = String(json.access_token);
+          tokenCache.set(clientId, { value, expiresAt: Date.now() + ttlMs });
+          return value;
+        }
 
-    if (!res.ok || !json?.access_token) {
-      console.error("e2payment token error", { status: res.status, body: text?.slice(0, 500) });
-      throw new Error(`Falha ao autenticar com e2payment (HTTP ${res.status}).`);
+        console.error("e2payment token error", { attempt, status: res.status, body: text?.slice(0, 500) });
+        // 4xx (credenciais inválidas) não adianta retry — aborta já.
+        if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+          throw new Error(`Falha ao autenticar com e2payment (HTTP ${res.status}).`);
+        }
+        lastErr = new Error(`Falha ao autenticar com e2payment (HTTP ${res.status}).`);
+      } catch (err) {
+        lastErr = err;
+        console.warn("e2payment token attempt failed", { attempt, err: err instanceof Error ? err.message : String(err) });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      if (attempt < 3) await new Promise((r) => setTimeout(r, 400 * attempt));
     }
-
-    // Aplica piso e teto no TTL para blindar contra respostas inconsistentes.
-    const rawTtlMs = (Number(json.expires_in) || 3600) * 1000;
-    const ttlMs = Math.min(TOKEN_MAX_TTL_MS, Math.max(TOKEN_MIN_TTL_MS, rawTtlMs));
-    const value = String(json.access_token);
-    tokenCache.set(clientId, { value, expiresAt: Date.now() + ttlMs });
-    return value;
+    throw lastErr instanceof Error ? lastErr : new Error("Falha ao autenticar com e2payment.");
   })().finally(() => inflightToken.delete(clientId));
+
 
   inflightToken.set(clientId, promise);
   return promise;
