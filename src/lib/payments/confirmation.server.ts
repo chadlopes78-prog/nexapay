@@ -649,11 +649,20 @@ async function dispatchApprovedSideEffects(
 
 
   if (sale.traffic_page_id) {
-    await supabaseAdmin.from("traffic_events").insert({
-      page_id: sale.traffic_page_id,
-      event_type: "purchase",
-      metadata: { saleId: sale.id, productId: sale.product_id },
-    });
+    const { data: existingTrafficEvent } = await supabaseAdmin
+      .from("traffic_events")
+      .select("id")
+      .eq("page_id", sale.traffic_page_id)
+      .eq("event_type", "purchase")
+      .contains("metadata", { saleId: sale.id })
+      .limit(1);
+    if (!existingTrafficEvent?.length) {
+      await supabaseAdmin.from("traffic_events").insert({
+        page_id: sale.traffic_page_id,
+        event_type: "purchase",
+        metadata: { saleId: sale.id, productId: sale.product_id },
+      });
+    }
   }
 
   await Promise.race([
