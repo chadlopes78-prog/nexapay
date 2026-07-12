@@ -671,7 +671,11 @@ export const startPayment = createServerFn({ method: "POST" })
         : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 75_000);
+    // 4 minutos: cobre o tempo real que a e2payment aguarda o PIN do cliente.
+    // 75s cortava a chamada antes do gateway confirmar o pagamento, deixando
+    // a venda em "pending" para sempre (e nunca disparando a notificação).
+    const timeoutId = setTimeout(() => controller.abort(), 240_000);
+
 
     // Fire the gateway request immediately. The checkout response returns in
     // ~2.5s with saleId so the browser can poll status, while this promise keeps
