@@ -695,10 +695,16 @@ export const startPayment = createServerFn({ method: "POST" })
       });
     if (!waitUntil(backgroundTask)) void backgroundTask;
 
+    // Fast path: só espera ~800ms pra capturar erros imediatos do gateway
+    // (wallet inválida, credenciais). Se o gateway aceitou o request e está
+    // aguardando o PIN, retornamos "pending" na hora — o STK push já foi
+    // disparado no telefone. O processGateway continua no waitUntil() e
+    // atualiza a venda quando e2payment fechar.
     const fastResult = await Promise.race([
       processGateway,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 70_000)),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 800)),
     ]);
+    mark(`fastResult (${fastResult ? fastResult.finalStatus : "pending"})`);
 
 
     const accessLink = product.access_link || product.delivery_link || null;
