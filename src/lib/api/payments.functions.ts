@@ -166,13 +166,23 @@ export const getPaymentSuccessData = createServerFn({ method: "GET" })
 
     const status = String(sale.status ?? "").toLowerCase();
     const isPaid = ["paid", "approved", "success", "completed"].includes(status);
-    const product = sale.products as {
-      access_link?: string | null;
-      delivery_link?: string | null;
-      support_phone?: string | null;
-      support_number?: string | null;
-      thank_you_button_text?: string | null;
-    } | null;
+    const rawProducts = sale.products as
+      | {
+          access_link?: string | null;
+          delivery_link?: string | null;
+          support_phone?: string | null;
+          support_number?: string | null;
+          thank_you_button_text?: string | null;
+        }
+      | Array<{
+          access_link?: string | null;
+          delivery_link?: string | null;
+          support_phone?: string | null;
+          support_number?: string | null;
+          thank_you_button_text?: string | null;
+        }>
+      | null;
+    const product = Array.isArray(rawProducts) ? rawProducts[0] ?? null : rawProducts;
 
     return {
       sale: { status: sale.status },
