@@ -1,7 +1,7 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect, useRef } from "react";
-import { cancelPayment, startPayment, getSaleStatus, type PaymentResult } from "@/lib/api/payments.functions";
+import { cancelPayment, startPayment, getSaleStatus, prewarmPaymentGateway, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ function CheckoutPage() {
   const startPaymentFn = useServerFn(startPayment);
   const statusFn = useServerFn(getSaleStatus);
   const cancelPaymentFn = useServerFn(cancelPayment);
+  const prewarmGatewayFn = useServerFn(prewarmPaymentGateway);
   const { productId } = useParams({ from: "/p/$productId" });
   const { product, checkout, defaultPixel } = Route.useLoaderData();
   const buttonLabel = (checkout?.button_text?.trim() || "Finalizar Compra");
@@ -68,10 +69,11 @@ function CheckoutPage() {
   const [cancelingPayment, setCancelingPayment] = useState(false);
   const [showCancelButton, setShowCancelButton] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
-  const [pinSecondsLeft, setPinSecondsLeft] = useState(120);
+  const [pinSecondsLeft, setPinSecondsLeft] = useState(240);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
+  const prewarmedProductRef = useRef<string | null>(null);
   // Cooldown depois de cancelar: a operadora precisa liberar o número
   // (o STK anterior ainda pode estar ativo por alguns segundos). Sem isto
   // a gateway rejeita o novo pedido e cai em "Erro processando pagamento".
@@ -108,6 +110,12 @@ function CheckoutPage() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (prewarmedProductRef.current === productId) return;
+    prewarmedProductRef.current = productId;
+    void prewarmGatewayFn({ data: { productId } }).catch(() => undefined);
+  }, [prewarmGatewayFn, productId]);
+
   // Contador puramente visual (feedback ao usuário).
   // NÃO controla nem atrasa a chamada à API de pagamento.
   useEffect(() => {
@@ -125,7 +133,7 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!processingPayment) return;
-    setPinSecondsLeft(120);
+    setPinSecondsLeft(240);
     const t = setInterval(() => {
       setPinSecondsLeft((p) => (p > 0 ? p - 1 : 0));
     }, 1000);
@@ -247,7 +255,7 @@ function CheckoutPage() {
     };
 
     const startPolling = (saleId: string) => {
-      const deadlineAt = Date.now() + 120_000;
+      const deadlineAt = Date.now() + 240_000;
       const tick = async () => {
         if (settled || paymentRunRef.current !== runId) return;
         if (Date.now() >= deadlineAt) {
@@ -317,6 +325,7 @@ function CheckoutPage() {
           if (result.status === "paid") finishPaid(result.accessLink ?? null, result.saleId);
         })
         .catch((error: any) => {
+          if (!settled && pollingStarted) return;
           finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
         });
     } catch (error: any) {

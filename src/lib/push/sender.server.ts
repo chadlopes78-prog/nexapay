@@ -51,6 +51,15 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     return;
   }
 
+  const title = payload.title ?? EVENT_TITLES[payload.event] ?? "NexaPay";
+  await supabaseAdmin.from("notifications_log").insert({
+    user_id: userId,
+    title,
+    body: payload.body,
+    type: payload.event === "daily_summary" ? "daily_report" : payload.event.startsWith("sale") ? "sale" : "system",
+    metadata: { event: payload.event, url: payload.url, ...(payload.metadata ?? {}) },
+  });
+
   const { data: subs } = await supabaseAdmin
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth")
@@ -65,7 +74,6 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     return;
   }
 
-  const title = payload.title ?? EVENT_TITLES[payload.event] ?? "NexaPay";
   const notifPayload = JSON.stringify({
     title,
     body: payload.body,
@@ -103,11 +111,4 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
       .in("endpoint", expiredEndpoints);
   }
 
-  await supabaseAdmin.from("notifications_log").insert({
-    user_id: userId,
-    title,
-    body: payload.body,
-    type: payload.event === "daily_summary" ? "daily_report" : payload.event.startsWith("sale") ? "sale" : "system",
-    metadata: { event: payload.event, url: payload.url, ...(payload.metadata ?? {}) },
-  });
 }
