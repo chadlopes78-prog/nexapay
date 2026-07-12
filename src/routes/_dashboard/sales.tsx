@@ -60,7 +60,10 @@ type Sale = {
   product_id: string | null;
   products?: SaleProduct;
   traffic_page_id?: string | null;
+  failure_reason?: string | null;
+  failure_code?: string | null;
 };
+
 
 const STATUS_LABEL: Record<string, string> = {
   approved: "Aprovado",
