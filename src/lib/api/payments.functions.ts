@@ -862,30 +862,31 @@ export const startPayment = createServerFn({ method: "POST" })
       });
 
     const accessLink = product.access_link || product.delivery_link || null;
-    // Não bloqueia a resposta esperando a e2payment: ela pode segurar a
-    // conexão até 4min aguardando o PIN. O cliente já dispara polling em
-    // getSaleStatus com o saleId, então retornamos "pending" na hora e
-    // deixamos a tarefa completar no worker via waitUntil. Assim o pop-up
-    // "confirme no telefone" aparece em ~1-2s em qualquer aparelho.
+    // Aguardamos até 15s a resposta do gateway. O pop-up STK é disparado
+    // pela e2payment ASSIM QUE RECEBE o request (poucos segundos) — não
+    // quando responde — portanto aguardar não atrasa o pop-up. Isto garante
+    // que, quando o cliente digita o PIN rápido, retornamos "paid" já com o
+    // link e o redirect é IMEDIATO. Se demorar mais que 15s, retornamos
+    // "pending" e mantemos processGateway vivo via waitUntil; o cliente
+    // continua o polling e o DB trigger dispara o Pushcut no instante em
+    // que sales.status vira "paid".
     const { waitUntil } = await import("@/lib/runtime-context.server");
+    const quick = await Promise.race([
+      processGateway,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 15_000)),
+    ]);
+    if (quick?.finalStatus === "paid") {
+      mark("returned paid");
+      return { success: true, saleId, transactionId: quick.transactionId, status: "paid", accessLink };
+    }
+    if (quick?.finalStatus === "failed" || quick?.finalStatus === "expired") {
+      const failure = readGatewayFailureDetails(quick.json, quick.finalStatus);
+      return { success: false, saleId, error: failure.message };
+    }
     const bg = processGateway.catch((e) => {
       console.error("startPayment background gateway task failed", e);
     });
-    const scheduled = waitUntil(bg);
-    if (!scheduled) {
-      // Fallback sem runtime context: race curto para capturar resposta rápida.
-      const quick = await Promise.race([
-        processGateway,
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3_500)),
-      ]);
-      if (quick?.finalStatus === "paid") {
-        return { success: true, saleId, transactionId: quick.transactionId, status: "paid", accessLink };
-      }
-      if (quick?.finalStatus === "failed" || quick?.finalStatus === "expired") {
-        const failure = readGatewayFailureDetails(quick.json, quick.finalStatus);
-        return { success: false, saleId, error: failure.message };
-      }
-    }
+    waitUntil(bg);
     mark("returned pending");
     return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
   });
