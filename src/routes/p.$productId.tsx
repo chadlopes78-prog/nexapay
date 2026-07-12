@@ -578,7 +578,7 @@ function CheckoutPage() {
 
             <Button
               type="submit"
-              disabled={processingPayment}
+              disabled={processingPayment || retryCooldownLeft > 0}
               className="w-full h-14 text-base font-bold rounded-xl text-white shadow-lg disabled:opacity-70 transition-all active:scale-[0.99] flex items-center justify-center gap-2"
               style={{
                 background: `linear-gradient(180deg, ${accent} 0%, ${paymentMethod === "mpesa" ? "#B30410" : "#EA580C"} 100%)`,
@@ -589,6 +589,11 @@ function CheckoutPage() {
                 <>
                   <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Processando...
+                </>
+              ) : retryCooldownLeft > 0 ? (
+                <>
+                  <Clock className="h-4 w-4" />
+                  Aguarda {retryCooldownLeft}s para tentar de novo
                 </>
               ) : (
                 <>
