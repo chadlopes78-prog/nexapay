@@ -91,11 +91,13 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     if (paid) {
       console.info("[getSaleStatus] paid resolved", { saleId: data.saleId, hasAccessLink: !!accessLink });
       const { confirmSalePayment } = await import("@/lib/payments/confirmation.server");
-      await confirmSalePayment({
+      const sideEffectsTask = confirmSalePayment({
         saleId: data.saleId,
         reference: sale.payment_reference,
         triggerPushcut: true,
       }).catch((error) => console.error("getSaleStatus paid side-effects recovery error", error));
+      const { waitUntil } = await import("@/lib/runtime-context.server");
+      if (!waitUntil(sideEffectsTask)) void sideEffectsTask;
     }
     return {
       status: paid ? ("paid" as const) : failed ? ("failed" as const) : ("pending" as const),
@@ -197,9 +199,11 @@ export const getPaymentSuccessData = createServerFn({ method: "GET" })
 
     if (isPaid) {
       const { confirmSalePayment } = await import("@/lib/payments/confirmation.server");
-      await confirmSalePayment({ saleId: data.saleId, triggerPushcut: true }).catch((error) =>
+      const sideEffectsTask = confirmSalePayment({ saleId: data.saleId, triggerPushcut: true }).catch((error) =>
         console.error("payment-success paid side-effects recovery error", error),
       );
+      const { waitUntil } = await import("@/lib/runtime-context.server");
+      if (!waitUntil(sideEffectsTask)) void sideEffectsTask;
     }
 
     return {
