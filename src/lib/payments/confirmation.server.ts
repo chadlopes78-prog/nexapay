@@ -375,7 +375,10 @@ export async function markSaleTerminalFailure(options: {
   code?: string | null;
 }) {
   const { saleId, status, transactionId, reference, reason, code } = options;
-  const finalStatus = status === "expired" ? "failed" : "failed";
+  // Preserve the real terminal reason ("expired" vs "failed") instead of
+  // collapsing everything to "failed". Webhooks and UI need to distinguish
+  // timeouts from gateway refusals.
+  const finalStatus: "failed" | "expired" = status === "expired" ? "expired" : "failed";
   const updatePayload = {
     status: finalStatus,
     transaction_id: transactionId ? transactionId.slice(0, 200) : undefined,
@@ -387,8 +390,8 @@ export async function markSaleTerminalFailure(options: {
     .from("sales")
     .update(updatePayload as never)
     .eq("id", saleId)
-    .neq("status", "paid")
-    .neq("status", "failed")
+    // Idempotency: don't overwrite an already-terminal sale
+    .not("status", "in", "(paid,approved,failed,expired)")
     .select(
       "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method",
     )
