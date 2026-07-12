@@ -587,53 +587,62 @@ async function dispatchApprovedSideEffects(
   });
   const bodyText = `${brlValue} R$ via ${method}`;
 
-  // Web Push e Pushcut são independentes: uma falha em uma via não pode
-  // impedir a outra notificação aprovada de sair.
-  try {
-    const { data: existingNotification } = await supabaseAdmin
-      .from("notifications_log")
-      .select("id")
-      .eq("user_id", userId)
-      .contains("metadata", { saleId: sale.id })
-      .limit(1);
-    if (!existingNotification?.length) {
-      const { sendPushToUser } = await import("@/lib/push/sender.server");
-      await sendPushToUser(userId, {
-        event: "sale.approved",
-        body: bodyText,
-        url: "/transactions",
-        metadata: { saleId: sale.id },
-      });
+  // Web Push e Pushcut são independentes e rodam em paralelo: uma falha ou
+  // lentidão em uma via não pode impedir a outra notificação aprovada.
+  const webPushTask = (async () => {
+    try {
+      const { data: existingNotification } = await supabaseAdmin
+        .from("notifications_log")
+        .select("id")
+        .eq("user_id", userId)
+        .contains("metadata", { saleId: sale.id })
+        .limit(1);
+      if (!existingNotification?.length) {
+        const { sendPushToUser } = await import("@/lib/push/sender.server");
+        await sendPushToUser(userId, {
+          event: "sale.approved",
+          body: bodyText,
+          url: "/transactions",
+          metadata: { saleId: sale.id },
+        });
+      }
+    } catch (e) {
+      console.error("[push][sale.approved] error (suppressed)", e);
     }
-  } catch (e) {
-    console.error("[push][sale.approved] error (suppressed)", e);
-  }
+  })();
 
-  try {
-    const { PushcutService } = await import("@/lib/pushcut/service.server");
-    const pushcutResult = await PushcutService.sendEvent({
-      userId,
-      event: "sale_approved",
-      dedupeKey: `pushcut:sale_approved:${sale.id}`,
-      text: bodyText,
-      data: {
-        brl_value: brlValue,
-        payment_method: method,
-        product_name: productName,
-        customer_name: sale.customer_name,
-      },
-    });
-    if (!pushcutResult.ok) {
-      console.warn("[pushcut][sale.approved] not sent", {
-        saleId: sale.id,
-        skipped: pushcutResult.skipped ?? null,
-        status: pushcutResult.status ?? null,
-        error: pushcutResult.error ?? null,
+  const pushcutTask = (async () => {
+    try {
+      const { PushcutService } = await import("@/lib/pushcut/service.server");
+      const pushcutResult = await PushcutService.sendEvent({
+        userId,
+        event: "sale_approved",
+        dedupeKey: `pushcut:sale_approved:${sale.id}`,
+        text: bodyText,
+        data: {
+          brl_value: brlValue,
+          payment_method: method,
+          product_name: productName,
+          customer_name: sale.customer_name,
+        },
       });
+      if (!pushcutResult.ok) {
+        console.warn("[pushcut][sale.approved] not sent", {
+          saleId: sale.id,
+          skipped: pushcutResult.skipped ?? null,
+          status: pushcutResult.status ?? null,
+          error: pushcutResult.error ?? null,
+        });
+      }
+    } catch (e) {
+      console.error("[pushcut][sale.approved] error (suppressed)", e);
     }
-  } catch (e) {
-    console.error("[pushcut][sale.approved] error (suppressed)", e);
-  }
+  })();
+
+  await Promise.race([
+    Promise.allSettled([webPushTask, pushcutTask]),
+    new Promise((resolve) => setTimeout(resolve, 10_000)),
+  ]);
 
   // Silence unused warning for helper kept for non-approved flows.
   void enqueueWebhookEvent;
