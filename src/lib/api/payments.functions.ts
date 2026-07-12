@@ -675,17 +675,71 @@ export const startPayment = createServerFn({ method: "POST" })
       return { success: false, error: "Não foi possível registar a venda." };
     }
     if (tokenResult instanceof Error) {
-      await markSaleTerminalFailure({
+      // NÃO falha a venda nem mostra erro ao cliente. Mantém "pending" e agenda
+      // retry em background: busca token novo (com backoff) e dispara a gateway.
+      // O cliente continua vendo o pop-up de PIN e o polling em getSaleStatus
+      // recebe o resultado final quando a gateway responder.
+      console.warn("startPayment token error — deferring to background retry", {
         saleId,
-        status: "failed",
-        reference,
-        reason: "Falha ao autenticar com a gateway. Tenta novamente.",
-        code: "gateway_auth_error",
-      }).catch((e) => console.error("startPayment token failure update error", e));
-      return { success: false, saleId, error: "Falha ao autenticar com a gateway. Tenta novamente." };
+        err: tokenResult.message,
+      });
+      const { waitUntil } = await import("@/lib/runtime-context.server");
+      const bgTask = (async () => {
+        for (let attempt = 1; attempt <= 4; attempt++) {
+          await new Promise((r) => setTimeout(r, 800 * attempt));
+          try {
+            invalidateAccessToken(creds.e2p_client_id);
+            const token = await getAccessToken(creds.e2p_client_id, creds.e2p_client_secret);
+            const localPhone = msisdn.slice(3);
+            const endpoint =
+              data.method === "mpesa"
+                ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
+                : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 240_000);
+            const res = await fetch(endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json; charset=utf-8",
+                Accept: "application/json",
+                Authorization: `Bearer ${token}`,
+                "User-Agent": "NexaPay/1.0",
+              },
+              body: JSON.stringify({
+                client_id: creds.e2p_client_id,
+                amount: String(amount),
+                phone: localPhone,
+                reference,
+                merchant_name: "NexaPay",
+                description: "Pagamento de produto digital",
+              }),
+              signal: ctrl.signal,
+            }).finally(() => clearTimeout(t));
+            const text = await res.text();
+            let json: Record<string, unknown> | null = null;
+            try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+            const transactionId = readGatewayTransactionId(json);
+            const finalStatus = normalizeGatewayStatus(json, res.ok);
+            if (finalStatus === "paid") {
+              await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
+            } else if (finalStatus === "failed" || finalStatus === "expired") {
+              const failure = readGatewayFailureDetails(json, finalStatus);
+              await markSaleTerminalFailure({ saleId, status: finalStatus, transactionId, reference, reason: failure.message, code: failure.code });
+            }
+            return;
+          } catch (e) {
+            console.warn("startPayment background retry failed", { attempt, err: e instanceof Error ? e.message : String(e) });
+          }
+        }
+      })();
+      const scheduled = waitUntil(bgTask.catch(() => {}));
+      if (!scheduled) bgTask.catch(() => {});
+      const accessLink = product.access_link || product.delivery_link || null;
+      return { success: true, saleId, transactionId: null, status: "pending", accessLink: null as string | null | undefined ?? accessLink && null };
     }
     const token = tokenResult;
     mark("sale+token");
+
 
 
     const localPhone = msisdn.slice(3);
