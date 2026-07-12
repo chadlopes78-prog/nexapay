@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS idx_sales_idempotency_key ON public.sales(idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_products_custom_url ON public.products(custom_url) WHERE custom_url IS NOT NULL;

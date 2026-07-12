@@ -138,6 +138,15 @@ function CheckoutPage() {
     if (!pixelId || !product) return;
     try {
       if (!window.fbq) {
+        // C6: preconnect to Facebook before injecting the script
+        if (!document.querySelector('link[data-fb-preconnect]')) {
+          const pre = document.createElement('link');
+          pre.rel = 'preconnect';
+          pre.href = 'https://connect.facebook.net';
+          pre.crossOrigin = '';
+          pre.setAttribute('data-fb-preconnect', '1');
+          document.head.appendChild(pre);
+        }
         const initFB = (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) => {
           if (f.fbq) return;
           n = f.fbq = function () {
@@ -145,7 +154,7 @@ function CheckoutPage() {
           };
           if (!f._fbq) f._fbq = n;
           n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
-          t = b.createElement(e); t.async = !0; t.src = v;
+          t = b.createElement(e); t.async = !0; t.defer = !0; t.src = v;
           s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
         };
         initFB(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
