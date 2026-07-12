@@ -742,40 +742,25 @@ export const startPayment = createServerFn({ method: "POST" })
         };
       });
 
-    const { waitUntil } = await import("@/lib/runtime-context.server");
-    const backgroundTask = processGateway
-      .then((result) => {
-        mark(`gateway (finalStatus=${result.finalStatus})`);
-        return result;
-      })
-      .catch((error) => {
-        console.error("startPayment background gateway error", error);
-      });
-    if (!waitUntil(backgroundTask)) void backgroundTask;
-
-    // Fast path: só espera ~800ms pra capturar erros imediatos do gateway
-    // (wallet inválida, credenciais). Se o gateway aceitou o request e está
-    // aguardando o PIN, retornamos "pending" na hora — o STK push já foi
-    // disparado no telefone. O processGateway continua no waitUntil() e
-    // atualiza a venda quando e2payment fechar.
-    const fastResult = await Promise.race([
-      processGateway,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 800)),
-    ]);
-    mark(`fastResult (${fastResult ? fastResult.finalStatus : "pending"})`);
-
+    // Aguarda o gateway responder antes de devolver ao cliente. O
+    // `waitUntil` em background não é 100% confiável (o worker pode reciclar
+    // antes da e2payment responder), deixando vendas presas em "pending"
+    // mesmo depois do cliente pagar. Como a e2payment já é síncrona (espera
+    // o PIN e devolve paid/failed na mesma resposta), fazer await aqui é o
+    // caminho mais seguro para garantir que a venda seja marcada como paid
+    // e o redirect + notificação disparem.
+    const fastResult = await processGateway;
+    mark(`fastResult (${fastResult.finalStatus})`);
 
     const accessLink = product.access_link || product.delivery_link || null;
-    if (fastResult?.finalStatus === "paid") {
+    if (fastResult.finalStatus === "paid") {
       return { success: true, saleId, transactionId: fastResult.transactionId, status: "paid", accessLink };
     }
-    if (fastResult && (fastResult.finalStatus === "failed" || fastResult.finalStatus === "expired")) {
+    if (fastResult.finalStatus === "failed" || fastResult.finalStatus === "expired") {
       const failure = readGatewayFailureDetails(fastResult.json, fastResult.finalStatus);
       return { success: false, saleId, error: failure.message };
     }
-    // Return the sale id quickly so the checkout can poll status immediately.
-    // The gateway request continues in the worker background and updates the
-    // sale to paid/failed as soon as e2payment returns the real outcome.
     return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
   });
+
 
