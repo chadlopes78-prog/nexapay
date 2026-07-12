@@ -46,7 +46,7 @@ type SaleForConfirmation = {
   failure_reason?: string | null;
   failure_code?: string | null;
   traffic_page_id?: string | null;
-  products?: { name?: string | null } | null;
+  products?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
 function asObject(value: unknown): GatewayPayload {
@@ -472,7 +472,9 @@ async function dispatchApprovedSideEffects(
 
   const { enqueueWebhookEvent, processPendingForUser } =
     await import("@/lib/webhooks/dispatcher.server");
-  const productName = sale.products?.name ?? null;
+  const rawProducts = sale.products;
+  const product = Array.isArray(rawProducts) ? rawProducts[0] ?? null : rawProducts;
+  const productName = product?.name ?? null;
   const payload = {
     sale_id: sale.id,
     product_id: sale.product_id,
@@ -552,14 +554,11 @@ async function dispatchApprovedSideEffects(
     }
     inserted++;
   }
-  if (inserted > 0) {
-    // Fire-and-forget: do not block the payment response on webhook delivery.
-    // pg_cron drains remaining pending rows every minute; stuck "processing"
-    // rows are auto-reset after 30s at the top of this function.
-    await processPendingForUser(userId).catch((err) =>
-      console.error("[webhooks] background deliver failed", err),
-    );
-  }
+  // Processa também retries/dedupes pendentes, mas não deixa webhooks lentos
+  // bloquear Web Push/Pushcut da venda aprovada.
+  const webhookProcessing = processPendingForUser(userId).catch((err) =>
+    console.error("[webhooks] background deliver failed", err),
+  );
   const amountNum = sale.amount != null ? Number(sale.amount) : 0;
   const rawMethod = (sale.payment_method ?? "").toString().toLowerCase();
   const method = rawMethod.includes("emola")
@@ -647,4 +646,9 @@ async function dispatchApprovedSideEffects(
       metadata: { saleId: sale.id, productId: sale.product_id },
     });
   }
+
+  await Promise.race([
+    webhookProcessing,
+    new Promise((resolve) => setTimeout(resolve, inserted > 0 ? 3_000 : 500)),
+  ]);
 }
