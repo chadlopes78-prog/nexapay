@@ -679,6 +679,9 @@ export const startPayment = createServerFn({ method: "POST" })
     const processGateway = gatewayPromise
       .then(async ({ ok, status, json, text }) => {
         console.info("e2payment response", { status, method: data.method, reference, body: text?.slice(0, 400) });
+        // Se o gateway rejeitou por token inválido/expirado, invalida o cache
+        // para a próxima venda buscar um token fresco.
+        if (status === 401 || status === 403) invalidateAccessToken(creds.e2p_client_id);
         const transactionId = readGatewayTransactionId(json);
         const finalStatus = normalizeGatewayStatus(json, ok);
         if (finalStatus === "paid") {
