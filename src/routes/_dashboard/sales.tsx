@@ -554,7 +554,7 @@ function SalesPage() {
                             {STATUS_LABEL[s.status || ""] || STATUS_LABEL[st] || s.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 max-w-[180px] truncate">{justification}</td>
+                        <td className="px-4 py-3 text-xs text-slate-500 max-w-[220px]" title={justification}><span className="line-clamp-2">{justification}</span></td>
                         <td className="px-4 py-3 text-right">
                           <Button variant="ghost" size="sm" onClick={() => setSelected(s)}>
                             <Eye className="h-4 w-4 mr-1" /> Ver
