@@ -140,6 +140,18 @@ export function readGatewayFailureDetails(
 ): GatewayFailureDetails {
   const { rawMessage, combined } = collectGatewayText(input);
 
+  // Bloqueio temporário do próprio número: a operadora ainda tem uma
+  // sessão STK ativa do pedido anterior (ex.: cliente pagou noutra aba).
+  // Só afeta este MSISDN — outros clientes continuam a pagar normalmente.
+  if (/(isdn\s+is\s+in\s+other\s+process|in\s+other\s+process|other\s+process|em\s+outro\s+processo|already\s+in\s+progress)/i.test(combined)) {
+    return {
+      code: "msisdn_busy",
+      message: "Este número tem outro pagamento em curso. Aguarde ~30s e tente novamente.",
+      rawMessage,
+    };
+  }
+
+
   if (/(saldo\s+insuf|insufficient|not\s+enough|sem\s+saldo|funds|balance)/i.test(combined)) {
     return {
       code: "insufficient_funds",
