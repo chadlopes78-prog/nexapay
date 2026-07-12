@@ -51,20 +51,6 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     return;
   }
 
-  const { data: subs } = await supabaseAdmin
-    .from("push_subscriptions")
-    .select("endpoint, p256dh, auth")
-    .eq("user_id", userId);
-
-  if (!subs || subs.length === 0) return;
-
-  try {
-    getVapidDetails();
-  } catch (e) {
-    console.error("[push] VAPID not configured:", e);
-    return;
-  }
-
   const title = payload.title ?? EVENT_TITLES[payload.event] ?? "NexaPay";
   await supabaseAdmin.from("notifications_log").insert({
     user_id: userId,
