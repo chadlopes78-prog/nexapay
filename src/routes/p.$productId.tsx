@@ -205,6 +205,12 @@ function CheckoutPage() {
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (retryCooldownUntil && Date.now() < retryCooldownUntil) {
+      const left = Math.ceil((retryCooldownUntil - Date.now()) / 1000);
+      toast.error(`Aguarda ${left}s antes de tentar de novo — a operadora ainda está a libertar o número.`);
+      return;
+    }
+
     if (!phone || phone.replace(/\D/g, "").length < 9) {
       toast.error("Por favor, insira um número de telefone válido.");
       return;
