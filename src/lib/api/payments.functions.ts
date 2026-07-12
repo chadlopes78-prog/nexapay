@@ -58,7 +58,11 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     const paid = ["paid", "approved", "success", "completed"].includes(raw);
     const failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
     const createdAt = sale.created_at ? new Date(sale.created_at).getTime() : 0;
-    if (!paid && !failed && createdAt > 0 && Date.now() - createdAt > 130_000) {
+    // Só marcamos expirado após 5min sem sinal do gateway (mesmo cutoff do
+    // sweep). O usuário pode demorar >2min pra digitar o PIN — cortar aos
+    // 130s cancela vendas que ainda iam ser aprovadas, impedindo o disparo
+    // da notificação de "venda aprovada".
+    if (!paid && !failed && createdAt > 0 && Date.now() - createdAt > 5 * 60_000) {
       const { markSaleTerminalFailure } = await import("@/lib/payments/confirmation.server");
       await markSaleTerminalFailure({
         saleId: data.saleId,
@@ -74,6 +78,7 @@ export const getSaleStatus = createServerFn({ method: "GET" })
         failureCode: "timeout",
       };
     }
+
     // PostgREST pode devolver `products` como objeto OU array dependendo
     // da inferência de cardinalidade. Normalizamos para os dois casos para
     // garantir que o access_link seja SEMPRE resolvido em vendas pagas.
