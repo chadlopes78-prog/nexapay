@@ -10,9 +10,11 @@ export const Route = createFileRoute("/api/public/hooks/sweep-pending-sales")({
       POST: async () => {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Cutoff: 5 minutos. STK push + PIN humano cabe em ~2min; após 5min
-        // é seguro assumir timeout definitivo.
-        const cutoff = new Date(Date.now() - 5 * 60_000).toISOString();
+        // Cutoff: 6 minutos. A e2payment aguarda ~3-4min pelo PIN e o cliente
+        // pode digitar tarde. Só encerramos vendas que ficaram órfãs (aba
+        // fechada, gateway sem resposta) bem além desse limite.
+        const cutoff = new Date(Date.now() - 6 * 60_000).toISOString();
+
 
         const { data, error } = await supabaseAdmin
           .from("sales")
