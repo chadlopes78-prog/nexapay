@@ -665,12 +665,16 @@ function TransactionDetail({ sale }: { sale: Sale }) {
       <DetailRow label="Referência" value={sale.payment_reference || "—"} mono />
       <DetailRow label="ID da transação" value={sale.transaction_id || sale.id} mono />
       <DetailRow label="Criado em" value={created.toLocaleString("pt-MZ")} />
-      {st === "failed" && (
+      {(st === "failed" || st === "cancelled") && (
         <div className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs text-rose-700">
           <p className="font-semibold mb-1">Justificativa</p>
-          {FAILURE_HINTS[sale.status || ""] || "Sem detalhes retornados pelo provedor."}
+          <p>{justificationFor(sale)}</p>
+          {sale.failure_code && (
+            <p className="mt-1 font-mono text-[10px] text-rose-500">código: {sale.failure_code}</p>
+          )}
         </div>
       )}
+
     </div>
   );
 }
