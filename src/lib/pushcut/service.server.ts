@@ -60,10 +60,13 @@ export const PushcutService = {
       .maybeSingle();
     if (existing?.status === "sent") return { ok: false, skipped: "duplicate" };
     if (existing?.status === "processing") {
+      // Se o lock ficou preso >30s, o Worker anterior morreu antes do fetch
+      // ao Pushcut concluir. Assumimos stale e retentamos imediatamente.
       const createdAt = existing.created_at ? new Date(existing.created_at).getTime() : 0;
-      const isStale = createdAt > 0 && Date.now() - createdAt > 2 * 60_000;
+      const isStale = createdAt > 0 && Date.now() - createdAt > 30_000;
       if (!isStale) return { ok: false, skipped: "processing" };
     }
+
     if (existing?.status === "failed") {
       const updatedAt = existing.updated_at ? new Date(existing.updated_at).getTime() : 0;
       const recentlyFailed = updatedAt > 0 && Date.now() - updatedAt < 30_000;

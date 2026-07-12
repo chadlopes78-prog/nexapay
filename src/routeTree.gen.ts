@@ -30,6 +30,7 @@ import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dash
 import { Route as DashboardCustomersRouteImport } from './routes/_dashboard/customers'
 import { Route as ApiPublicE2paymentWebhookRouteImport } from './routes/api/public/e2payment-webhook'
 import { Route as DashboardReportsTrafficRouteImport } from './routes/_dashboard.reports.traffic'
+import { Route as ApiPublicHooksSweepPushcutRouteImport } from './routes/api/public/hooks/sweep-pushcut'
 import { Route as ApiPublicHooksSweepPendingSalesRouteImport } from './routes/api/public/hooks/sweep-pending-sales'
 import { Route as ApiPublicHooksProcessWebhookQueueRouteImport } from './routes/api/public/hooks/process-webhook-queue'
 
@@ -138,6 +139,12 @@ const DashboardReportsTrafficRoute = DashboardReportsTrafficRouteImport.update({
   path: '/reports/traffic',
   getParentRoute: () => DashboardRoute,
 } as any)
+const ApiPublicHooksSweepPushcutRoute =
+  ApiPublicHooksSweepPushcutRouteImport.update({
+    id: '/api/public/hooks/sweep-pushcut',
+    path: '/api/public/hooks/sweep-pushcut',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSweepPendingSalesRoute =
   ApiPublicHooksSweepPendingSalesRouteImport.update({
     id: '/api/public/hooks/sweep-pending-sales',
@@ -174,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
   '/api/public/hooks/process-webhook-queue': typeof ApiPublicHooksProcessWebhookQueueRoute
   '/api/public/hooks/sweep-pending-sales': typeof ApiPublicHooksSweepPendingSalesRoute
+  '/api/public/hooks/sweep-pushcut': typeof ApiPublicHooksSweepPushcutRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -198,6 +206,7 @@ export interface FileRoutesByTo {
   '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
   '/api/public/hooks/process-webhook-queue': typeof ApiPublicHooksProcessWebhookQueueRoute
   '/api/public/hooks/sweep-pending-sales': typeof ApiPublicHooksSweepPendingSalesRoute
+  '/api/public/hooks/sweep-pushcut': typeof ApiPublicHooksSweepPushcutRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -224,6 +233,7 @@ export interface FileRoutesById {
   '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
   '/api/public/hooks/process-webhook-queue': typeof ApiPublicHooksProcessWebhookQueueRoute
   '/api/public/hooks/sweep-pending-sales': typeof ApiPublicHooksSweepPendingSalesRoute
+  '/api/public/hooks/sweep-pushcut': typeof ApiPublicHooksSweepPushcutRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/api/public/e2payment-webhook'
     | '/api/public/hooks/process-webhook-queue'
     | '/api/public/hooks/sweep-pending-sales'
+    | '/api/public/hooks/sweep-pushcut'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/api/public/e2payment-webhook'
     | '/api/public/hooks/process-webhook-queue'
     | '/api/public/hooks/sweep-pending-sales'
+    | '/api/public/hooks/sweep-pushcut'
   id:
     | '__root__'
     | '/'
@@ -299,6 +311,7 @@ export interface FileRouteTypes {
     | '/api/public/e2payment-webhook'
     | '/api/public/hooks/process-webhook-queue'
     | '/api/public/hooks/sweep-pending-sales'
+    | '/api/public/hooks/sweep-pushcut'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -314,6 +327,7 @@ export interface RootRouteChildren {
   ApiPublicE2paymentWebhookRoute: typeof ApiPublicE2paymentWebhookRoute
   ApiPublicHooksProcessWebhookQueueRoute: typeof ApiPublicHooksProcessWebhookQueueRoute
   ApiPublicHooksSweepPendingSalesRoute: typeof ApiPublicHooksSweepPendingSalesRoute
+  ApiPublicHooksSweepPushcutRoute: typeof ApiPublicHooksSweepPushcutRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -465,6 +479,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardReportsTrafficRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/api/public/hooks/sweep-pushcut': {
+      id: '/api/public/hooks/sweep-pushcut'
+      path: '/api/public/hooks/sweep-pushcut'
+      fullPath: '/api/public/hooks/sweep-pushcut'
+      preLoaderRoute: typeof ApiPublicHooksSweepPushcutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/sweep-pending-sales': {
       id: '/api/public/hooks/sweep-pending-sales'
       path: '/api/public/hooks/sweep-pending-sales'
@@ -528,6 +549,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksProcessWebhookQueueRoute:
     ApiPublicHooksProcessWebhookQueueRoute,
   ApiPublicHooksSweepPendingSalesRoute: ApiPublicHooksSweepPendingSalesRoute,
+  ApiPublicHooksSweepPushcutRoute: ApiPublicHooksSweepPushcutRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
