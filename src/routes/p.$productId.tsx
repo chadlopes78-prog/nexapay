@@ -240,6 +240,7 @@ function CheckoutPage() {
       setPaymentStatusMessage(null);
       setProcessingPayment(false);
       setCancelingPayment(false);
+      setRetryCooldownUntil(Date.now() + RETRY_COOLDOWN_MS);
     };
 
     const startPolling = (saleId: string) => {
