@@ -655,13 +655,13 @@ function CheckoutPage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border-2 border-dashed p-4" style={{ borderColor: `${accent}40`, background: `${accent}08` }}>
-                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  Tempo restante
-                </div>
-                <div className="mt-1 text-4xl font-mono font-extrabold tabular-nums" style={{ color: accent }}>
-                  {String(Math.floor(pinSecondsLeft / 60)).padStart(2, "0")}:
-                  {String(pinSecondsLeft % 60).padStart(2, "0")}
+              <div className="rounded-2xl border-2 border-dashed p-4 flex items-center justify-center gap-3" style={{ borderColor: `${accent}40`, background: `${accent}08` }}>
+                <div
+                  className="h-5 w-5 rounded-full border-2 border-t-transparent animate-spin"
+                  style={{ borderColor: accent, borderTopColor: "transparent" }}
+                />
+                <div className="text-sm font-semibold" style={{ color: accent }}>
+                  A processar pagamento<span className="inline-block animate-pulse">...</span>
                 </div>
               </div>
 
