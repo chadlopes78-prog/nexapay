@@ -27,7 +27,10 @@ export const Route = createFileRoute("/api/public/hooks/sweep-pushcut")({
           await supabaseAdmin.from("pushcut_logs").delete().in("id", stuckIds);
         }
 
-        // 2. Vendas pagas recentes sem log Pushcut correspondente.
+        // 2. Vendas pagas recentes sem log Pushcut confiável correspondente.
+        // O log antigo `pushcut:sale_approved:*` pode ser criado pelo trigger
+        // SQL quando apenas enfileirou pg_net; a via confiável da app usa
+        // `pushcut:app:sale_approved:*`, gravada só depois do fetch real.
         const { data: paidSales } = await supabaseAdmin
           .from("sales")
           .select("id")
@@ -37,7 +40,7 @@ export const Route = createFileRoute("/api/public/hooks/sweep-pushcut")({
 
         let retried = 0;
         for (const s of paidSales ?? []) {
-          const orderId = `pushcut:sale_approved:${s.id}`;
+          const orderId = `pushcut:app:sale_approved:${s.id}`;
           const { data: existing } = await supabaseAdmin
             .from("pushcut_logs")
             .select("status")
