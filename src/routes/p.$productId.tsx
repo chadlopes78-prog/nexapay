@@ -1,6 +1,6 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, memo } from "react";
 import { cancelPayment, startPayment, getSaleStatus, prewarmPaymentGateway, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,7 +69,6 @@ function CheckoutPage() {
   const [cancelingPayment, setCancelingPayment] = useState(false);
   const [showCancelButton, setShowCancelButton] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
-  const [pinSecondsLeft, setPinSecondsLeft] = useState(240);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
@@ -111,17 +110,13 @@ function CheckoutPage() {
   const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola">("mpesa");
   const [bumpAccepted, setBumpAccepted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(600);
+
 
   const bumpPrice = checkout?.order_bump_enabled ? Number(checkout?.order_bump_price ?? 0) : 0;
   const totalPrice = (product?.price ?? 0) + (bumpAccepted ? bumpPrice : 0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const totalPriceFmt = useMemo(() => totalPrice.toLocaleString("pt-MZ"), [totalPrice]);
+  const productPriceFmt = useMemo(() => (product?.price ?? 0).toLocaleString("pt-MZ"), [product?.price]);
+  const bumpPriceFmt = useMemo(() => bumpPrice.toLocaleString("pt-MZ"), [bumpPrice]);
 
   useEffect(() => {
     if (prewarmedProductRef.current === productId) return;
@@ -144,20 +139,7 @@ function CheckoutPage() {
     return () => clearTimeout(t);
   }, [processingPayment]);
 
-  useEffect(() => {
-    if (!processingPayment) return;
-    setPinSecondsLeft(240);
-    const t = setInterval(() => {
-      setPinSecondsLeft((p) => (p > 0 ? p - 1 : 0));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [processingPayment]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -178,43 +160,54 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!pixelId || !product) return;
-    try {
-      if (!window.fbq) {
-        // C6: preconnect to Facebook before injecting the script
-        if (!document.querySelector('link[data-fb-preconnect]')) {
-          const pre = document.createElement('link');
-          pre.rel = 'preconnect';
-          pre.href = 'https://connect.facebook.net';
-          pre.crossOrigin = '';
-          pre.setAttribute('data-fb-preconnect', '1');
-          document.head.appendChild(pre);
-        }
-        const initFB = (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) => {
-          if (f.fbq) return;
-          n = f.fbq = function () {
-            n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+    const run = () => {
+      try {
+        if (!window.fbq) {
+          if (!document.querySelector('link[data-fb-preconnect]')) {
+            const pre = document.createElement('link');
+            pre.rel = 'preconnect';
+            pre.href = 'https://connect.facebook.net';
+            pre.crossOrigin = '';
+            pre.setAttribute('data-fb-preconnect', '1');
+            document.head.appendChild(pre);
+          }
+          const initFB = (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) => {
+            if (f.fbq) return;
+            n = f.fbq = function () {
+              n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
+            t = b.createElement(e); t.async = !0; t.defer = !0; t.src = v;
+            s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
           };
-          if (!f._fbq) f._fbq = n;
-          n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
-          t = b.createElement(e); t.async = !0; t.defer = !0; t.src = v;
-          s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
-        };
-        initFB(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+          initFB(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        }
+        window.fbq('init', pixelId);
+        window.fbq('track', 'PageView');
+        window.fbq('track', 'ViewContent', {
+          content_name: product.name,
+          content_category: product.category,
+          content_ids: [product.id],
+          content_type: 'product',
+          value: product.price,
+          currency: 'MZN'
+        });
+      } catch (e) {
+        console.error('FB Pixel error:', e);
       }
-      window.fbq('init', pixelId);
-      window.fbq('track', 'PageView');
-      window.fbq('track', 'ViewContent', {
-        content_name: product.name,
-        content_category: product.category,
-        content_ids: [product.id],
-        content_type: 'product',
-        value: product.price,
-        currency: 'MZN'
-      });
-    } catch (e) {
-      console.error('FB Pixel error:', e);
-    }
+    };
+    // Defer to idle so pixel never blocks first paint on low-end devices.
+    const w = window as any;
+    const id = w.requestIdleCallback
+      ? w.requestIdleCallback(run, { timeout: 2000 })
+      : window.setTimeout(run, 800);
+    return () => {
+      if (w.cancelIdleCallback && w.requestIdleCallback) w.cancelIdleCallback(id);
+      else window.clearTimeout(id);
+    };
   }, [pixelId, product?.id]);
+
 
   const trackEvent = (event: string) => {
     try {
@@ -394,7 +387,7 @@ function CheckoutPage() {
           <Clock className="h-4 w-4" />
           <span>Oferta especial termina em:</span>
           <span className="font-mono font-bold tabular-nums bg-black/20 px-2 py-0.5 rounded">
-            {formatTime(timeLeft)}
+            <CountdownTimer initialSeconds={600} />
           </span>
         </div>
       </div>
@@ -419,7 +412,7 @@ function CheckoutPage() {
                     {product.name}
                   </h1>
                   <div className="mt-1 text-2xl font-extrabold text-emerald-500 tracking-tight">
-                    Mt {product.price.toLocaleString("pt-MZ")} MZN
+                    Mt {productPriceFmt} MZN
                   </div>
                 </div>
               </div>
@@ -468,7 +461,7 @@ function CheckoutPage() {
                         )}
                         {bumpPrice > 0 && (
                           <p className="mt-1 text-sm font-extrabold text-emerald-600">
-                            + Mt {bumpPrice.toLocaleString("pt-MZ")} MZN
+                            + Mt {bumpPriceFmt} MZN
                           </p>
                         )}
                       </div>
@@ -481,7 +474,7 @@ function CheckoutPage() {
                 <div className="pt-3 mt-2 border-t border-slate-100 flex justify-between items-center">
                   <span className="font-bold text-slate-900">Total:</span>
                   <span className="text-lg font-extrabold text-emerald-500">
-                    Mt {totalPrice.toLocaleString("pt-MZ")} MZN
+                    Mt {totalPriceFmt} MZN
                   </span>
                 </div>
               </div>
@@ -676,7 +669,7 @@ function CheckoutPage() {
                 <p className="text-sm text-slate-600 mt-2 leading-relaxed">
                   Um pop-up foi enviado para <b className="text-slate-900">+258 {phone}</b>.
                   Insira o seu <b>PIN</b> para concluir o pagamento de{" "}
-                  <b style={{ color: accent }}>Mt {product.price.toLocaleString("pt-MZ")}</b>.
+                  <b style={{ color: accent }}>Mt {productPriceFmt}</b>.
                 </p>
               </div>
 
@@ -724,3 +717,14 @@ function CheckoutPage() {
     </div>
   );
 }
+
+const CountdownTimer = memo(function CountdownTimer({ initialSeconds }: { initialSeconds: number }) {
+  const [t, setT] = useState(initialSeconds);
+  useEffect(() => {
+    const id = setInterval(() => setT((p) => (p > 0 ? p - 1 : 0)), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const m = Math.floor(t / 60);
+  const s = t % 60;
+  return <>{`${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`}</>;
+});
