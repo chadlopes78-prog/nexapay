@@ -31,6 +31,13 @@ export const Route = createFileRoute("/p/$productId")({
     const product = loaderData?.product;
     if (!product) return {};
     const image = product.image_url || "";
+    const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || "";
+    const links: Array<Record<string, string>> = [];
+    if (image) links.push({ rel: "preload", as: "image", href: image, fetchpriority: "high" });
+    if (supabaseUrl) {
+      links.push({ rel: "preconnect", href: supabaseUrl, crossorigin: "" });
+      links.push({ rel: "dns-prefetch", href: supabaseUrl });
+    }
     return {
       meta: [
         { title: `${product.name} | NexaPay` },
@@ -38,9 +45,7 @@ export const Route = createFileRoute("/p/$productId")({
         { property: "og:title", content: product.name },
         { property: "og:image", content: image },
       ],
-      links: image
-        ? [{ rel: "preload", as: "image", href: image, fetchpriority: "high" }]
-        : [],
+      links,
     };
   },
   component: CheckoutPage,
