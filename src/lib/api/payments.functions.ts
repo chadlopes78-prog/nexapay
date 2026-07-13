@@ -146,13 +146,29 @@ export const cancelPayment = createServerFn({ method: "POST" })
         };
       }
 
-      await markSaleTerminalFailure({
+      const outcome = await markSaleTerminalFailure({
         saleId: data.saleId,
         status: isTimeout ? "expired" : "failed",
         reference: sale.payment_reference,
         reason,
         code,
       });
+      // Race: entre o SELECT acima e o UPDATE, o webhook da E2Payments pode
+      // ter confirmado o pagamento. A guarda de idempotência em
+      // markSaleTerminalFailure bloqueia o update (becameFailed=false) mas
+      // NÃO devemos devolver "failed" nesse caso — isso levaria o frontend
+      // a invalidar o paymentRunRef e cancelar o redirect da venda aprovada.
+      if (!outcome.becameFailed) {
+        const { data: after } = await supabaseAdmin
+          .from("sales")
+          .select("status")
+          .eq("id", data.saleId)
+          .maybeSingle();
+        const rawAfter = String(after?.status ?? "").toLowerCase();
+        if (["paid", "approved", "success", "completed"].includes(rawAfter)) {
+          return { success: false, error: "Pagamento já confirmado." };
+        }
+      }
       return { success: true, status: "failed" as const, error: reason, failureCode: code };
     }
 
