@@ -706,3 +706,14 @@ function CheckoutPage() {
     </div>
   );
 }
+
+const CountdownTimer = memo(function CountdownTimer({ initialSeconds }: { initialSeconds: number }) {
+  const [t, setT] = useState(initialSeconds);
+  useEffect(() => {
+    const id = setInterval(() => setT((p) => (p > 0 ? p - 1 : 0)), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const m = Math.floor(t / 60);
+  const s = t % 60;
+  return <>{`${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`}</>;
+});
