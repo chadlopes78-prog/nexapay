@@ -364,7 +364,7 @@ function CheckoutPage() {
   if (!product) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-        <Card className="max-w-md w-full text-center p-8 shadow-xl border-none rounded-2xl">
+        <div className="max-w-md w-full text-center p-8 shadow-xl border-none rounded-2xl bg-white">
           <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShieldAlert className="h-8 w-8 text-red-500" />
           </div>
@@ -375,7 +375,7 @@ function CheckoutPage() {
           <Button className="mt-6 w-full h-11 rounded-xl font-bold bg-slate-900 hover:bg-black" asChild>
             <a href="/">Voltar ao início</a>
           </Button>
-        </Card>
+        </div>
       </div>
     );
   }
