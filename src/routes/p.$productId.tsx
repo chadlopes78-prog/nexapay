@@ -376,7 +376,7 @@ function CheckoutPage() {
           <Clock className="h-4 w-4" />
           <span>Oferta especial termina em:</span>
           <span className="font-mono font-bold tabular-nums bg-black/20 px-2 py-0.5 rounded">
-            {formatTime(timeLeft)}
+            <CountdownTimer initialSeconds={600} />
           </span>
         </div>
       </div>
