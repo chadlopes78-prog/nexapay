@@ -649,86 +649,15 @@ function CheckoutPage() {
       </div>
 
       {processingPayment && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 flex items-center justify-center px-4">
-          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden">
-
-            <div
-              className="px-6 py-5 text-white flex items-center gap-3"
-              style={{ background: `linear-gradient(135deg, ${accent} 0%, ${paymentMethod === "mpesa" ? "#B30410" : "#EA580C"} 100%)` }}
-            >
-              <img
-                src={paymentMethod === "mpesa" ? "/mpesa-logo.jpg" : "/emola-logo.jpg"}
-                alt=""
-                className="h-10 w-10 rounded-lg object-cover ring-2 ring-white/40"
-              />
-              <div className="flex-1">
-                <div className="text-xs font-medium opacity-80">Pagamento via</div>
-                <div className="text-lg font-extrabold leading-tight">
-                  {paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}
-                </div>
-              </div>
-              <div className="h-9 w-9 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-            </div>
-
-            <div className="p-6 space-y-5 text-center">
-              <div className="mx-auto h-16 w-16 rounded-full flex items-center justify-center" style={{ background: `${accent}15` }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" className="h-8 w-8">
-                  <rect x="5" y="2" width="14" height="20" rx="2.5" />
-                  <line x1="12" y1="18" x2="12" y2="18" />
-                </svg>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-extrabold text-slate-900">
-                  Confirme no seu telefone
-                </h3>
-                <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-                  Um pop-up foi enviado para <b className="text-slate-900">+258 {phone}</b>.
-                  Insira o seu <b>PIN</b> para concluir o pagamento de{" "}
-                  <b style={{ color: accent }}>Mt {productPriceFmt}</b>.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border-2 border-dashed p-4 flex items-center justify-center gap-3" style={{ borderColor: `${accent}40`, background: `${accent}08` }}>
-                <div
-                  className="h-5 w-5 rounded-full border-2 border-t-transparent animate-spin"
-                  style={{ borderColor: accent, borderTopColor: "transparent" }}
-                />
-                <div className="text-sm font-semibold" style={{ color: accent }}>
-                  A processar pagamento<span className="inline-block animate-pulse">...</span>
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 font-medium flex items-start gap-2 text-left">
-                <ShieldAlert className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <span>
-                  <b>Não feche esta aba.</b> Assim que confirmar o PIN no telefone, o acesso será liberado automaticamente.
-                </span>
-              </div>
-
-              {showCancelButton && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-800 font-medium text-left">
-                    Se já não quer liberar o acesso ou não está mais interessado, clique no botão <b>cancelar</b> abaixo. Ou pode tentar novamente confirmando o PIN no telefone.
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={cancelingPayment}
-                    onClick={handleCancelPayment}
-                    className="h-12 w-full rounded-xl border-red-300 bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-70 animate-[cancel-pulse_1.4s_ease-in-out_infinite]"
-                  >
-                    {cancelingPayment ? "Cancelando..." : "Já cancelei no telefone"}
-                  </Button>
-                </div>
-              )}
-
-              {paymentErrorMessage && (
-                <div className="text-sm font-medium text-red-600">{paymentErrorMessage}</div>
-              )}
-            </div>
-          </div>
-        </div>
+        <PaymentModal
+          paymentMethod={paymentMethod}
+          phone={phone}
+          productPriceFmt={productPriceFmt}
+          showCancelButton={showCancelButton}
+          cancelingPayment={cancelingPayment}
+          paymentErrorMessage={paymentErrorMessage}
+          onCancel={onCancelPayment}
+        />
       )}
     </div>
   );
