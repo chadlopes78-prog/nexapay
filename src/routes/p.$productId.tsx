@@ -467,7 +467,7 @@ function CheckoutPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
                           {/* Seta pequena abanando apontando para o título */}
-                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-orange-500 flex-shrink-0 animate-[bump-arrow_0.8s_ease-in-out_infinite]" fill="currentColor">
+                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-orange-500 flex-shrink-0 motion-safe:animate-[bump-arrow_0.8s_ease-in-out_infinite]" fill="currentColor">
                             <path d="M4 12l6-6v4h10v4H10v4z" transform="rotate(180 12 12)" />
                           </svg>
                           <p className="text-sm font-bold text-slate-900 leading-tight">
