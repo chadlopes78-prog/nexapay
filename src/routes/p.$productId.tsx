@@ -405,7 +405,8 @@ function CheckoutPage() {
               <div className="flex gap-4 items-center pb-4 border-b border-slate-100">
                 <div className="h-20 w-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 ring-1 ring-slate-200">
                   {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                    <img src={product.image_url} alt={product.name} width={80} height={80} decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
+
                   ) : (
                     <div className="w-full h-full grid place-items-center text-slate-300">
                       <Package className="h-8 w-8" />
