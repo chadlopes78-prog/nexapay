@@ -114,13 +114,9 @@ function CheckoutPage() {
 
   const bumpPrice = checkout?.order_bump_enabled ? Number(checkout?.order_bump_price ?? 0) : 0;
   const totalPrice = (product?.price ?? 0) + (bumpAccepted ? bumpPrice : 0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const totalPriceFmt = useMemo(() => totalPrice.toLocaleString("pt-MZ"), [totalPrice]);
+  const productPriceFmt = useMemo(() => (product?.price ?? 0).toLocaleString("pt-MZ"), [product?.price]);
+  const bumpPriceFmt = useMemo(() => bumpPrice.toLocaleString("pt-MZ"), [bumpPrice]);
 
   useEffect(() => {
     if (prewarmedProductRef.current === productId) return;
@@ -143,20 +139,7 @@ function CheckoutPage() {
     return () => clearTimeout(t);
   }, [processingPayment]);
 
-  useEffect(() => {
-    if (!processingPayment) return;
-    setPinSecondsLeft(240);
-    const t = setInterval(() => {
-      setPinSecondsLeft((p) => (p > 0 ? p - 1 : 0));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [processingPayment]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
