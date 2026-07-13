@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect, useRef, useMemo, memo, useCallback } from "react";
 import { cancelPayment, startPayment, getSaleStatus, prewarmPaymentGateway, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
+import { PAYMENT_WAIT_WINDOW_MS } from "@/lib/payments/timing";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
