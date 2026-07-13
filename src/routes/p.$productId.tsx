@@ -450,7 +450,7 @@ function CheckoutPage() {
                         className="mt-1 h-5 w-5 accent-emerald-500 flex-shrink-0"
                       />
                       {checkout?.order_bump_image_url && (
-                        <img src={checkout.order_bump_image_url} alt="" className="h-14 w-14 rounded-lg object-cover border border-slate-200 flex-shrink-0" />
+                        <img src={checkout.order_bump_image_url} alt="" width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 rounded-lg object-cover border border-slate-200 flex-shrink-0" />
                       )}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
