@@ -639,8 +639,9 @@ function CheckoutPage() {
       </div>
 
       {processingPayment && (
-        <div className="fixed inset-0 z-50 backdrop-blur-md bg-slate-900/60 flex items-center justify-center px-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 flex items-center justify-center px-4">
           <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden">
+
             <div
               className="px-6 py-5 text-white flex items-center gap-3"
               style={{ background: `linear-gradient(135deg, ${accent} 0%, ${paymentMethod === "mpesa" ? "#B30410" : "#EA580C"} 100%)` }}
