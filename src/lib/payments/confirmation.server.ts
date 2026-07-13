@@ -251,12 +251,16 @@ export function normalizeGatewayStatus(input: unknown, httpOk = true): Normalize
   ) {
     return "failed";
   }
+  // Gateway devolveu HTTP 200 mas sinalizou `success: false` (ou "false").
+  // Isso cobre cancelamentos da operadora (M-Pesa/e-Mola) cuja `message`
+  // vem em códigos não mapeados (ex.: INS-*, SDS*) ou vazia. Sem esta
+  // regra o status caía em "pending" e o checkout ficava preso em
+  // "Processando pagamento..." até o timeout de 4 min.
   if (
-    successValue === false &&
     httpOk &&
-    /(recus|reject|declin|cancel|fail|erro|expir)/i.test(message)
+    (successValue === false || successText === "false")
   ) {
-    return message.includes("expir") ? "expired" : "failed";
+    return /expir/i.test(message) ? "expired" : "failed";
   }
 
   // HTTP não-OK com qualquer sinal de erro/cancelamento na resposta:
