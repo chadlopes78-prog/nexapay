@@ -442,7 +442,7 @@ function CheckoutPage() {
                 <div className="mt-4 relative">
                   {/* Seta animada apontando para o order bump */}
                   <div className="absolute -top-3 left-6 z-10 flex flex-col items-center pointer-events-none">
-                    <span className="text-[10px] font-extrabold text-orange-600 bg-orange-100 border border-orange-300 rounded-full px-2 py-0.5 shadow-sm animate-pulse">
+                    <span className="text-[10px] font-extrabold text-orange-600 bg-orange-100 border border-orange-300 rounded-full px-2 py-0.5 shadow-sm motion-safe:animate-pulse">
                       OFERTA ESPECIAL
                     </span>
                   </div>
@@ -451,11 +451,8 @@ function CheckoutPage() {
                       "block cursor-pointer rounded-xl border-2 border-dashed p-3 transition-all",
                       bumpAccepted
                         ? "border-emerald-500 bg-emerald-50"
-                        : "border-orange-400 bg-orange-50 hover:bg-orange-100 animate-[bump-wiggle_1.2s_ease-in-out_infinite]",
+                        : "border-orange-400 bg-orange-50 hover:bg-orange-100 motion-safe:animate-[bump-wiggle_1.2s_ease-in-out_infinite]",
                     )}
-                    style={{
-                      // keyframes inline fallback
-                    }}
                   >
                     <div className="flex items-start gap-3">
                       <input
