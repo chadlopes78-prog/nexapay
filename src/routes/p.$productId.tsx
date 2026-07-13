@@ -265,7 +265,7 @@ function CheckoutPage() {
     };
 
     const startPolling = (saleId: string) => {
-      const deadlineAt = Date.now() + 240_000;
+      const deadlineAt = Date.now() + PAYMENT_WAIT_WINDOW_MS;
       const tick = async () => {
         if (settled || paymentRunRef.current !== runId) return;
         if (Date.now() >= deadlineAt) {
@@ -345,10 +345,34 @@ function CheckoutPage() {
 
   const handleCancelPayment = async () => {
     if (!currentSaleId || cancelingPayment) return;
+    const saleIdSnapshot = currentSaleId;
     setCancelingPayment(true);
-    paymentRunRef.current += 1;
+    // Não incrementamos paymentRunRef ainda: se a cobrança já foi aprovada
+    // no exato instante do clique, precisamos deixar o polling em curso
+    // concluir o fluxo de sucesso (finishPaid → redirect).
     try {
-      const result = await cancelPaymentFn({ data: { saleId: currentSaleId, reason: "customer_cancelled" } });
+      const result = await cancelPaymentFn({ data: { saleId: saleIdSnapshot, reason: "customer_cancelled" } });
+
+      // Race: pagamento já foi confirmado pela operadora antes do cancelamento
+      // chegar ao gateway. NÃO invalidar o sucesso — reproduzir o fluxo de
+      // finishPaid usando o accessLink já persistido. Notificações, webhooks
+      // e Pushcut já foram disparados pelo backend na confirmação da venda.
+      if (!result.success && /j[áa]\s+confirmad/i.test(result.error || "")) {
+        try {
+          const s = await statusFn({ data: { saleId: saleIdSnapshot } });
+          if (s.status === "paid") {
+            setCurrentSaleId(null);
+            trackEvent('Purchase');
+            window.location.replace(
+              s.accessLink || `/payment-success?productId=${productId}&saleId=${saleIdSnapshot}`,
+            );
+            return;
+          }
+        } catch { /* fallthrough para mensagem padrão */ }
+      }
+
+      // Só agora invalidamos o run — cancelamento efetivo.
+      paymentRunRef.current += 1;
       setPaymentErrorMessage(result.error || "Pagamento cancelado. Aguarda alguns segundos antes de tentar de novo.");
       setPaymentStatusMessage(null);
       setProcessingPayment(false);
