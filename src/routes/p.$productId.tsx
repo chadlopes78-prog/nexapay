@@ -114,9 +114,9 @@ function CheckoutPage() {
 
   const bumpPrice = checkout?.order_bump_enabled ? Number(checkout?.order_bump_price ?? 0) : 0;
   const totalPrice = (product?.price ?? 0) + (bumpAccepted ? bumpPrice : 0);
-  const totalPriceFmt = useMemo(() => totalPrice.toLocaleString("pt-MZ"), [totalPrice]);
+  const totalPriceFmt = useMemo(() => totalPriceFmt, [totalPrice]);
   const productPriceFmt = useMemo(() => (product?.price ?? 0).toLocaleString("pt-MZ"), [product?.price]);
-  const bumpPriceFmt = useMemo(() => bumpPrice.toLocaleString("pt-MZ"), [bumpPrice]);
+  const bumpPriceFmt = useMemo(() => bumpPriceFmt, [bumpPrice]);
 
   useEffect(() => {
     if (prewarmedProductRef.current === productId) return;
@@ -401,7 +401,7 @@ function CheckoutPage() {
                     {product.name}
                   </h1>
                   <div className="mt-1 text-2xl font-extrabold text-emerald-500 tracking-tight">
-                    Mt {product.price.toLocaleString("pt-MZ")} MZN
+                    Mt {productPriceFmt} MZN
                   </div>
                 </div>
               </div>
@@ -450,7 +450,7 @@ function CheckoutPage() {
                         )}
                         {bumpPrice > 0 && (
                           <p className="mt-1 text-sm font-extrabold text-emerald-600">
-                            + Mt {bumpPrice.toLocaleString("pt-MZ")} MZN
+                            + Mt {bumpPriceFmt} MZN
                           </p>
                         )}
                       </div>
@@ -463,7 +463,7 @@ function CheckoutPage() {
                 <div className="pt-3 mt-2 border-t border-slate-100 flex justify-between items-center">
                   <span className="font-bold text-slate-900">Total:</span>
                   <span className="text-lg font-extrabold text-emerald-500">
-                    Mt {totalPrice.toLocaleString("pt-MZ")} MZN
+                    Mt {totalPriceFmt} MZN
                   </span>
                 </div>
               </div>
@@ -658,7 +658,7 @@ function CheckoutPage() {
                 <p className="text-sm text-slate-600 mt-2 leading-relaxed">
                   Um pop-up foi enviado para <b className="text-slate-900">+258 {phone}</b>.
                   Insira o seu <b>PIN</b> para concluir o pagamento de{" "}
-                  <b style={{ color: accent }}>Mt {product.price.toLocaleString("pt-MZ")}</b>.
+                  <b style={{ color: accent }}>Mt {productPriceFmt}</b>.
                 </p>
               </div>
 
