@@ -263,21 +263,22 @@ export function normalizeGatewayStatus(input: unknown, httpOk = true): Normalize
     return /expir/i.test(message) ? "expired" : "failed";
   }
 
-  // HTTP não-OK com qualquer sinal de erro/cancelamento na resposta:
-  // tratar como falha terminal em vez de "pending" (evita polling infinito
-  // quando o cliente cancela ou não introduz o PIN).
+  // HTTP não-OK (502/503/504/timeout/corpo vazio/etc.) NÃO prova falha do
+  // pagamento — a operadora pode ter recebido e processado. Só marcamos
+  // terminal quando a resposta contém uma mensagem que confirma o estado.
+  // Caso contrário devolvemos "pending" e deixamos o polling reconciliar
+  // com a fonte da verdade (getSaleStatus) até o cutoff central.
   if (!httpOk) {
     const combined = `${message} ${raw} ${combinedSuccessMessage}`;
     if (/expir/i.test(combined)) return "expired";
     if (
-      successValue === false ||
-      /(recus|reject|declin|cancel|fail|erro|invalid|not\s+found|unauthor|forbidden|timeout)/i.test(
+      /(recus|reject|declin|cancel|insufficient|saldo\s+insuficiente|pin\s+incorret|invalid\s+pin|customer\s+did\s+not\s+enter\s+pin|other\s+process|em\s+outro\s+processo)/i.test(
         combined,
-      ) ||
-      combined.trim().length > 0
+      )
     ) {
       return "failed";
     }
+    return "pending";
   }
 
   return "pending";

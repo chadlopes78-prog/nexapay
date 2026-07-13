@@ -62,7 +62,8 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     // sweep). O usuário pode demorar >2min pra digitar o PIN — cortar aos
     // 130s cancela vendas que ainda iam ser aprovadas, impedindo o disparo
     // da notificação de "venda aprovada".
-    if (!paid && !failed && createdAt > 0 && Date.now() - createdAt > 5 * 60_000) {
+    const { PAYMENT_WAIT_WINDOW_MS } = await import("@/lib/payments/timing");
+    if (!paid && !failed && createdAt > 0 && Date.now() - createdAt > PAYMENT_WAIT_WINDOW_MS) {
       const { markSaleTerminalFailure } = await import("@/lib/payments/confirmation.server");
       await markSaleTerminalFailure({
         saleId: data.saleId,
