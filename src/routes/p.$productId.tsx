@@ -114,9 +114,9 @@ function CheckoutPage() {
 
   const bumpPrice = checkout?.order_bump_enabled ? Number(checkout?.order_bump_price ?? 0) : 0;
   const totalPrice = (product?.price ?? 0) + (bumpAccepted ? bumpPrice : 0);
-  const totalPriceFmt = useMemo(() => totalPriceFmt, [totalPrice]);
+  const totalPriceFmt = useMemo(() => totalPrice.toLocaleString("pt-MZ"), [totalPrice]);
   const productPriceFmt = useMemo(() => (product?.price ?? 0).toLocaleString("pt-MZ"), [product?.price]);
-  const bumpPriceFmt = useMemo(() => bumpPriceFmt, [bumpPrice]);
+  const bumpPriceFmt = useMemo(() => bumpPrice.toLocaleString("pt-MZ"), [bumpPrice]);
 
   useEffect(() => {
     if (prewarmedProductRef.current === productId) return;
