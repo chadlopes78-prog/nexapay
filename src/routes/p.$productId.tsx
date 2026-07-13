@@ -530,7 +530,7 @@ function CheckoutPage() {
               </label>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-slate-200 pr-2">
-                  <img src={mozFlag.url} alt="MZ" className="h-3.5 w-5 object-cover rounded-sm" />
+                  <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
                   <span className="text-xs font-semibold text-slate-500">+258</span>
                 </div>
                 <Input
@@ -556,7 +556,7 @@ function CheckoutPage() {
                     paymentMethod === "mpesa" ? "border-[#E30613] shadow-[0_0_0_3px_rgba(227,6,19,0.08)]" : "border-slate-200 hover:border-slate-300",
                   )}
                 >
-                  <img src="/mpesa-logo.jpg" className="h-8 w-8 rounded-md object-cover" alt="M-Pesa" />
+                  <img src="/mpesa-logo.jpg" width={32} height={32} loading="lazy" decoding="async" className="h-8 w-8 rounded-md object-cover" alt="M-Pesa" />
                   <span className="text-sm font-bold text-slate-900">M-Pesa</span>
                   {paymentMethod === "mpesa" && <CheckCircle2 className="absolute top-1.5 right-1.5 h-4 w-4 text-[#E30613] fill-white" />}
                 </button>
@@ -568,7 +568,7 @@ function CheckoutPage() {
                     paymentMethod === "emola" ? "border-orange-500 shadow-[0_0_0_3px_rgba(249,115,22,0.1)]" : "border-slate-200 hover:border-slate-300",
                   )}
                 >
-                  <img src="/emola-logo.jpg" className="h-8 w-8 rounded-md object-cover" alt="e-Mola" />
+                  <img src="/emola-logo.jpg" width={32} height={32} loading="lazy" decoding="async" className="h-8 w-8 rounded-md object-cover" alt="e-Mola" />
                   <span className="text-sm font-bold text-slate-900">e-Mola</span>
                   {paymentMethod === "emola" && <CheckCircle2 className="absolute top-1.5 right-1.5 h-4 w-4 text-orange-500 fill-white" />}
                 </button>
@@ -576,7 +576,7 @@ function CheckoutPage() {
 
               <div className="mt-3 relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-slate-200 pr-2">
-                  <img src={mozFlag.url} alt="MZ" className="h-3.5 w-5 object-cover rounded-sm" />
+                  <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
                   <span className="text-xs font-semibold text-slate-500">+258</span>
                 </div>
                 <Input
