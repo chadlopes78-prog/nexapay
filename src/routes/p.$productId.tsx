@@ -616,10 +616,7 @@ function CheckoutPage() {
               type="submit"
               disabled={processingPayment || retryCooldownLeft > 0}
               className="w-full h-14 text-base font-bold rounded-xl text-white shadow-lg disabled:opacity-70 transition-all active:scale-[0.99] flex items-center justify-center gap-2"
-              style={{
-                background: `linear-gradient(180deg, ${accent} 0%, ${paymentMethod === "mpesa" ? "#B30410" : "#EA580C"} 100%)`,
-                boxShadow: `0 10px 25px -5px ${accent}50`,
-              }}
+              style={submitStyle}
             >
               {processingPayment ? (
                 <>
