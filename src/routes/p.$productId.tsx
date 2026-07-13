@@ -361,6 +361,13 @@ function CheckoutPage() {
     }
   };
 
+  // Ref-based stable callback so memoized PaymentModal doesn't re-render.
+  const handleCancelRef = useRef(handleCancelPayment);
+  handleCancelRef.current = handleCancelPayment;
+  const onCancelPayment = useCallback(() => { void handleCancelRef.current(); }, []);
+
+
+
   if (!product) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
