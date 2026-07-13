@@ -1,6 +1,6 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect, useRef, useMemo, memo } from "react";
+import { useState, useEffect, useRef, useMemo, memo, useCallback } from "react";
 import { cancelPayment, startPayment, getSaleStatus, prewarmPaymentGateway, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { supabase } from "@/integrations/supabase/client";
