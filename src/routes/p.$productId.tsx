@@ -499,7 +499,7 @@ function CheckoutPage() {
 
 
             {product.checkout_banner_url && (
-              <img src={product.checkout_banner_url} alt="Oferta" className="mt-4 w-full rounded-xl border border-slate-200" loading="lazy" />
+              <img src={product.checkout_banner_url} alt="Oferta" className="mt-4 w-full rounded-xl border border-slate-200" loading="lazy" decoding="async" />
             )}
           </div>
 
