@@ -381,6 +381,15 @@ function CheckoutPage() {
   }
 
   const accent = paymentMethod === "mpesa" ? "#E30613" : "#F97316";
+  const accentDark = paymentMethod === "mpesa" ? "#B30410" : "#EA580C";
+  const submitStyle = useMemo(() => ({
+    background: `linear-gradient(180deg, ${accent} 0%, ${accentDark} 100%)`,
+    boxShadow: `0 10px 25px -5px ${accent}50`,
+  }), [accent, accentDark]);
+
+  const onCancelPayment = useCallback(() => { void handleCancelPayment(); }, [handleCancelPayment]);
+
+
   
 
   return (
