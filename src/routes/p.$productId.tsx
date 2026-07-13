@@ -160,43 +160,54 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!pixelId || !product) return;
-    try {
-      if (!window.fbq) {
-        // C6: preconnect to Facebook before injecting the script
-        if (!document.querySelector('link[data-fb-preconnect]')) {
-          const pre = document.createElement('link');
-          pre.rel = 'preconnect';
-          pre.href = 'https://connect.facebook.net';
-          pre.crossOrigin = '';
-          pre.setAttribute('data-fb-preconnect', '1');
-          document.head.appendChild(pre);
-        }
-        const initFB = (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) => {
-          if (f.fbq) return;
-          n = f.fbq = function () {
-            n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+    const run = () => {
+      try {
+        if (!window.fbq) {
+          if (!document.querySelector('link[data-fb-preconnect]')) {
+            const pre = document.createElement('link');
+            pre.rel = 'preconnect';
+            pre.href = 'https://connect.facebook.net';
+            pre.crossOrigin = '';
+            pre.setAttribute('data-fb-preconnect', '1');
+            document.head.appendChild(pre);
+          }
+          const initFB = (f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any) => {
+            if (f.fbq) return;
+            n = f.fbq = function () {
+              n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
+            t = b.createElement(e); t.async = !0; t.defer = !0; t.src = v;
+            s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
           };
-          if (!f._fbq) f._fbq = n;
-          n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
-          t = b.createElement(e); t.async = !0; t.defer = !0; t.src = v;
-          s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
-        };
-        initFB(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+          initFB(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        }
+        window.fbq('init', pixelId);
+        window.fbq('track', 'PageView');
+        window.fbq('track', 'ViewContent', {
+          content_name: product.name,
+          content_category: product.category,
+          content_ids: [product.id],
+          content_type: 'product',
+          value: product.price,
+          currency: 'MZN'
+        });
+      } catch (e) {
+        console.error('FB Pixel error:', e);
       }
-      window.fbq('init', pixelId);
-      window.fbq('track', 'PageView');
-      window.fbq('track', 'ViewContent', {
-        content_name: product.name,
-        content_category: product.category,
-        content_ids: [product.id],
-        content_type: 'product',
-        value: product.price,
-        currency: 'MZN'
-      });
-    } catch (e) {
-      console.error('FB Pixel error:', e);
-    }
+    };
+    // Defer to idle so pixel never blocks first paint on low-end devices.
+    const w = window as any;
+    const id = w.requestIdleCallback
+      ? w.requestIdleCallback(run, { timeout: 2000 })
+      : window.setTimeout(run, 800);
+    return () => {
+      if (w.cancelIdleCallback && w.requestIdleCallback) w.cancelIdleCallback(id);
+      else window.clearTimeout(id);
+    };
   }, [pixelId, product?.id]);
+
 
   const trackEvent = (event: string) => {
     try {
