@@ -105,7 +105,7 @@ function CheckoutPage() {
       if (left === 0) setRetryCooldownUntil(0);
     };
     tick();
-    const id = setInterval(tick, 250);
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [retryCooldownUntil]);
 
