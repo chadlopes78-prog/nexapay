@@ -69,7 +69,6 @@ function CheckoutPage() {
   const [cancelingPayment, setCancelingPayment] = useState(false);
   const [showCancelButton, setShowCancelButton] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
-  const [pinSecondsLeft, setPinSecondsLeft] = useState(240);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
