@@ -390,8 +390,9 @@ export async function markSaleTerminalFailure(options: {
   reference?: string | null;
   reason?: string | null;
   code?: string | null;
-}) {
-  const { saleId, status, transactionId, reference, reason, code } = options;
+  source?: "cancel" | "timeout" | "gateway" | "webhook" | "polling" | "reconcile";
+}): Promise<{ becameFailed: boolean; alreadyPaid?: boolean; currentStatus?: string }> {
+  const { saleId, status, transactionId, reference, reason, code, source = "unknown" as never } = options;
   // Preserve the real terminal reason ("expired" vs "failed") instead of
   // collapsing everything to "failed". Webhooks and UI need to distinguish
   // timeouts from gateway refusals.
@@ -415,7 +416,40 @@ export async function markSaleTerminalFailure(options: {
     .maybeSingle();
 
   if (error) throw error;
-  if (!updated?.user_id) return { becameFailed: false };
+
+  if (!updated) {
+    // UPDATE não afetou nenhuma linha: ou a venda já era terminal, ou não
+    // existe. Re-consulta para distinguir "já pago" (preservar sucesso) de
+    // "já falhado" (idempotente) — evitando corrida onde webhook aprova
+    // milissegundos antes de um cancelamento/timeout/erro de gateway.
+    const current = await fetchSaleById(saleId);
+    const currentStatus = String(current?.status ?? "").toLowerCase();
+    if (["paid", "approved", "success", "completed"].includes(currentStatus)) {
+      console.info("[payments][race] skip terminal failure — sale already paid", {
+        saleId,
+        source,
+        attemptedStatus: finalStatus,
+        currentStatus,
+      });
+      return { becameFailed: false, alreadyPaid: true, currentStatus };
+    }
+    console.info("[payments] terminal failure noop", {
+      saleId,
+      source,
+      attemptedStatus: finalStatus,
+      currentStatus: currentStatus || "not_found",
+    });
+    return { becameFailed: false, currentStatus };
+  }
+
+  if (!updated.user_id) return { becameFailed: false };
+
+  console.info("[payments] sale marked terminal", {
+    saleId,
+    source,
+    newStatus: finalStatus,
+    code: code ?? status,
+  });
 
   void dispatchFailureSideEffects({
     sale: updated,
