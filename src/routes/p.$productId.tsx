@@ -669,12 +669,7 @@ function CheckoutPage() {
               className="w-full h-14 text-base font-bold rounded-xl text-white shadow-lg disabled:opacity-70 transition-all active:scale-[0.99] flex items-center justify-center gap-2"
               style={submitStyle}
             >
-              {processingPayment ? (
-                <>
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Processando...
-                </>
-              ) : retryCooldownLeft > 0 ? (
+              {retryCooldownLeft > 0 ? (
                 <>
                   <Clock className="h-4 w-4" />
                   Aguarda {retryCooldownLeft}s para tentar de novo
