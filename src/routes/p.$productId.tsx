@@ -789,15 +789,6 @@ const PaymentModal = memo(function PaymentModal({
             </p>
           </div>
 
-          <div className="rounded-2xl border-2 border-dashed p-4 flex items-center justify-center gap-3" style={{ borderColor: `${accent}40`, background: `${accent}08` }}>
-            <div
-              className="h-5 w-5 rounded-full border-2 border-t-transparent motion-safe:animate-spin"
-              style={{ borderColor: accent, borderTopColor: "transparent" }}
-            />
-            <div className="text-sm font-semibold" style={{ color: accent }}>
-              A processar pagamento...
-            </div>
-          </div>
 
           <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 font-medium flex items-start gap-2 text-left">
             <ShieldAlert className="h-4 w-4 flex-shrink-0 mt-0.5" />
