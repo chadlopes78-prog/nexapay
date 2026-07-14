@@ -398,7 +398,8 @@ export const prewarmPaymentGateway = createServerFn({ method: "POST" })
 
 async function validateAndLoad(data: z.infer<typeof PaymentInput>) {
   const msisdn = normalizeMozambicanPhone(data.msisdn);
-  if (!/^258\d{9}$/.test(msisdn)) {
+  // Formato final exigido pela E2Payments: 258 + 9 dígitos, começando por 84/85/86/87.
+  if (!/^258(84|85|86|87)\d{7}$/.test(msisdn)) {
     return { error: "Número de telefone inválido. Use o formato 84/85/86/87xxxxxxx." };
   }
   const localPrefix = msisdn.slice(3, 5);
@@ -410,6 +411,7 @@ async function validateAndLoad(data: z.infer<typeof PaymentInput>) {
   }
   return { msisdn };
 }
+
 
 export const initiateSale = createServerFn({ method: "POST" })
   .inputValidator(InitiateInput)
