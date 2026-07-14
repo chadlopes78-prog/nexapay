@@ -279,8 +279,14 @@ function CheckoutPage() {
 
     const startPolling = (saleId: string) => {
       const deadlineAt = Date.now() + PAYMENT_WAIT_WINDOW_MS;
+      let lastStatus: string | null = null;
+      const stopReason = () =>
+        !isMountedRef.current ? "unmount" : paymentRunRef.current !== runId ? "superseded" : "settled";
       const tick = async () => {
-        if (settled || paymentRunRef.current !== runId) return;
+        if (settled || paymentRunRef.current !== runId || !isMountedRef.current) {
+          console.info("[checkout][poll] stopped", { saleId, reason: stopReason() });
+          return;
+        }
         if (Date.now() >= deadlineAt) {
           await cancelPaymentFn({ data: { saleId, reason: "timeout" } }).catch(() => undefined);
           finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
@@ -288,17 +294,25 @@ function CheckoutPage() {
         }
         try {
           const s = await statusFn({ data: { saleId } });
-          if (settled || paymentRunRef.current !== runId) return;
+          if (settled || paymentRunRef.current !== runId || !isMountedRef.current) {
+            console.info("[checkout][poll] stopped after status", { saleId, reason: stopReason() });
+            return;
+          }
+          if (s.status !== lastStatus) {
+            console.info("[checkout][poll] status", { saleId, source: "polling", from: lastStatus, to: s.status });
+            lastStatus = s.status;
+          }
           if (s.status === "paid") return finishPaid(s.accessLink, saleId);
           if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
         } catch { /* transient */ }
-        if (settled || paymentRunRef.current !== runId) return;
+        if (settled || paymentRunRef.current !== runId || !isMountedRef.current) return;
         const fastWindowActive = Date.now() < deadlineAt - 105_000;
         setTimeout(tick, fastWindowActive ? 300 : 1000);
       };
       // Primeira consulta IMEDIATA — sem atraso artificial.
       void tick();
     };
+
 
     try {
       // Stable idempotency key for this click — retries reuse it to avoid double-charging.
