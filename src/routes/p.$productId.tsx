@@ -702,7 +702,7 @@ function CheckoutPage() {
         </div>
       </div>
 
-      {processingPayment && (
+      {processingPayment && showCancelButton && (
         <PaymentModal
           paymentMethod={paymentMethod}
           phone={phone}
