@@ -390,9 +390,9 @@ export async function markSaleTerminalFailure(options: {
   reference?: string | null;
   reason?: string | null;
   code?: string | null;
-  source?: "cancel" | "timeout" | "gateway" | "webhook" | "polling" | "reconcile";
+  source?: string;
 }): Promise<{ becameFailed: boolean; alreadyPaid?: boolean; currentStatus?: string }> {
-  const { saleId, status, transactionId, reference, reason, code, source = "unknown" as never } = options;
+  const { saleId, status, transactionId, reference, reason, code, source = "unknown" } = options;
   // Preserve the real terminal reason ("expired" vs "failed") instead of
   // collapsing everything to "failed". Webhooks and UI need to distinguish
   // timeouts from gateway refusals.
