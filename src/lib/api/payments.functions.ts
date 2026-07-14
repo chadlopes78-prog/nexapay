@@ -237,13 +237,29 @@ export const getPaymentSuccessData = createServerFn({ method: "GET" })
     };
   });
 
+// Normaliza um número moçambicano para o formato exigido pela E2Payments: 258XXXXXXXXX.
+// Aceita as variações comuns que o cliente digita — com espaços, hífens,
+// parênteses, prefixo +258, prefixo 258, prefixo internacional 00258, zero
+// à esquerda (0258...) e até duplicação acidental do país (258258...).
+// Nunca invente dígitos: se sobrar algo fora do padrão, devolve como está
+// para que a validação a jusante rejeite.
 function normalizeMozambicanPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
+  let digits = (value ?? "").replace(/\D/g, "");
+  // Prefixo internacional "00" (ex: 00258...) → remove.
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  // Zeros à esquerda antes do país (ex: 0258...) → remove.
+  digits = digits.replace(/^0+/, "");
+  // País duplicado por engano (ex: 258258841234567) → colapsa.
+  while (digits.startsWith("258258")) digits = digits.slice(3);
+  // Já veio no formato final 258XXXXXXXXX.
   if (digits.startsWith("258") && digits.length === 12) return digits;
+  // Local de 9 dígitos → antepõe o país.
   if (digits.length === 9) return `258${digits}`;
-  if (digits.startsWith("0") && digits.length === 10) return `258${digits.slice(1)}`;
+  // Formato antigo com 0 à frente do local (ex: 0841234567).
+  if (digits.length === 10 && digits.startsWith("0")) return `258${digits.slice(1)}`;
   return digits;
 }
+
 
 type UserCreds = {
   e2p_client_id: string;
