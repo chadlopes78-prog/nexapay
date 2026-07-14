@@ -249,8 +249,9 @@ function normalizeMozambicanPhone(value: string) {
   if (digits.startsWith("00")) digits = digits.slice(2);
   // Zeros à esquerda antes do país (ex: 0258...) → remove.
   digits = digits.replace(/^0+/, "");
-  // País duplicado por engano (ex: 258258841234567) → colapsa.
-  while (digits.startsWith("258258")) digits = digits.slice(3);
+  // País duplicado por engano (ex: 258258841234567) NÃO é colapsado:
+  // deixamos cair na validação para o cliente corrigir o número real.
+
   // Já veio no formato final 258XXXXXXXXX.
   if (digits.startsWith("258") && digits.length === 12) return digits;
   // Local de 9 dígitos → antepõe o país.
