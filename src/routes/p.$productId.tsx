@@ -32,7 +32,11 @@ export const Route = createFileRoute("/p/$productId")({
     if (!product) return {};
     const image = product.image_url || "";
     const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || "";
-    const links: Array<Record<string, string>> = [];
+    const links: Array<Record<string, string>> = [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "anonymous" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" },
+    ];
     if (image) links.push({ rel: "preload", as: "image", href: image, fetchpriority: "high" });
     if (supabaseUrl) {
       links.push({ rel: "preconnect", href: supabaseUrl, crossorigin: "" });
