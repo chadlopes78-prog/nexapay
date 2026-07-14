@@ -442,220 +442,225 @@ function CheckoutPage() {
     );
   }
 
-  const accent = paymentMethod === "mpesa" ? "#E30613" : "#F97316";
-  const accentDark = paymentMethod === "mpesa" ? "#B30410" : "#EA580C";
+  // Paleta Cloud White + azul (redesign minimalist stack). O accent do submit
+  // é SEMPRE azul — não muda com o método selecionado (mantém identidade
+  // "Cloud White"). Cores oficiais M-Pesa/e-Mola aparecem só nos ícones das tiles.
+  const BRAND = "#3b82f6";
+  const BRAND_DARK = "#2563eb";
   const submitStyle = {
-    background: `linear-gradient(180deg, ${accent} 0%, ${accentDark} 100%)`,
-    boxShadow: `0 10px 25px -5px ${accent}50`,
+    background: BRAND,
+    boxShadow: `0 10px 25px -5px ${BRAND}55`,
   };
-
-
-
-
-  
+  const fontHeading = { fontFamily: "'Sora', system-ui, sans-serif" };
+  const fontBody = { fontFamily: "'Manrope', system-ui, sans-serif" };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Top urgency bar */}
-      <div className="w-full bg-gradient-to-r from-red-600 to-red-500 text-white">
-        <div className="mx-auto max-w-6xl px-4 py-2.5 flex items-center justify-center gap-2 text-sm font-medium">
-          <Clock className="h-4 w-4" />
-          <span>Oferta especial termina em:</span>
-          <span className="font-mono font-bold tabular-nums bg-black/20 px-2 py-0.5 rounded">
-            <CountdownTimer initialSeconds={600} />
+    <div
+      className="min-h-screen bg-[#fafbfc] flex items-start sm:items-center justify-center p-4 py-6"
+      style={fontBody}
+    >
+      <div className="w-full max-w-[560px] bg-white rounded-3xl border border-[#e8ecf1] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+        {/* Urgency Timer — sutil, azul */}
+        <div className="bg-[#3b82f6]/5 px-6 py-3 flex items-center justify-center gap-2 border-b border-[#e8ecf1]">
+          <Clock className="h-4 w-4 text-[#3b82f6]" />
+          <span className="text-[#3b82f6] text-sm font-medium">
+            Oferta expira em{" "}
+            <span className="font-mono font-semibold tabular-nums">
+              <CountdownTimer initialSeconds={(checkout?.timer_minutes ?? 10) * 60} />
+            </span>
           </span>
         </div>
-      </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-6 lg:py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
-          {/* LEFT: Product summary */}
-          <div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex gap-4 items-center pb-4 border-b border-slate-100">
-                <div className="h-20 w-20 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 ring-1 ring-slate-200">
+        <div className="p-6 sm:p-8 space-y-7">
+          {/* Order Summary */}
+          <div className="bg-[#fafbfc] rounded-2xl p-5 border border-[#e8ecf1]">
+            <div className="flex justify-between items-center gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-14 w-14 rounded-xl overflow-hidden bg-white flex-shrink-0 ring-1 ring-[#e8ecf1]">
                   {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} width={80} height={80} decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
-
+                    <img src={product.image_url} alt={product.name} width={56} height={56} decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full grid place-items-center text-slate-300">
-                      <Package className="h-8 w-8" />
+                    <div className="w-full h-full grid place-items-center text-[#94a3b8]">
+                      <Package className="h-6 w-6" />
                     </div>
                   )}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-base font-bold text-slate-900 uppercase tracking-tight leading-tight">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wider text-[#94a3b8] font-bold mb-0.5">
+                    Produto Selecionado
+                  </p>
+                  <h1 className="text-base font-bold text-[#1e293b] uppercase tracking-tight leading-tight truncate" style={fontHeading}>
                     {product.name}
                   </h1>
-                  <div className="mt-1 text-2xl font-extrabold text-emerald-500 tracking-tight">
-                    Mt {productPriceFmt} MZN
-                  </div>
                 </div>
               </div>
-
-              {checkout?.order_bump_enabled && (
-                <div className="mt-4 relative">
-                  {/* Seta animada apontando para o order bump */}
-                  <div className="absolute -top-3 left-6 z-10 flex flex-col items-center pointer-events-none">
-                    <span className="text-[10px] font-extrabold text-orange-600 bg-orange-100 border border-orange-300 rounded-full px-2 py-0.5 shadow-sm motion-safe:animate-pulse">
-                      OFERTA ESPECIAL
-                    </span>
-                  </div>
-                  <label
-                    className={cn(
-                      "block cursor-pointer rounded-xl border-2 border-dashed p-3 transition-all",
-                      bumpAccepted
-                        ? "border-emerald-500 bg-emerald-50"
-                        : "border-orange-400 bg-orange-50 hover:bg-orange-100 motion-safe:animate-[bump-wiggle_1.2s_ease-in-out_infinite]",
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={bumpAccepted}
-                        onChange={(e) => setBumpAccepted(e.target.checked)}
-                        className="mt-1 h-5 w-5 accent-emerald-500 flex-shrink-0"
-                      />
-                      {checkout?.order_bump_image_url && (
-                        <img src={checkout.order_bump_image_url} alt="" width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 rounded-lg object-cover border border-slate-200 flex-shrink-0" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          {/* Seta pequena abanando apontando para o título */}
-                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-orange-500 flex-shrink-0 motion-safe:animate-[bump-arrow_0.8s_ease-in-out_infinite]" fill="currentColor">
-                            <path d="M4 12l6-6v4h10v4H10v4z" transform="rotate(180 12 12)" />
-                          </svg>
-                          <p className="text-sm font-bold text-slate-900 leading-tight">
-                            {checkout?.order_bump_title || "Adicione uma oferta especial"}
-                          </p>
-                        </div>
-                        {checkout?.order_bump_description && (
-                          <p className="mt-1 text-xs text-slate-600 leading-snug">{checkout.order_bump_description}</p>
-                        )}
-                        {bumpPrice > 0 && (
-                          <p className="mt-1 text-sm font-extrabold text-emerald-600">
-                            + Mt {bumpPriceFmt} MZN
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              )}
-
-              <div className="pt-4 space-y-2 text-sm">
-                <div className="pt-3 mt-2 border-t border-slate-100 flex justify-between items-center">
-                  <span className="font-bold text-slate-900">Total:</span>
-                  <span className="text-lg font-extrabold text-emerald-500">
-                    Mt {totalPriceFmt} MZN
-                  </span>
-                </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-2xl font-bold text-[#3b82f6] leading-none" style={fontHeading}>
+                  {productPriceFmt}
+                </p>
+                <p className="text-[11px] text-[#94a3b8] mt-1">MZN</p>
               </div>
-
             </div>
 
-
-            {checkout?.social_proof_enabled && (
-              <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-center justify-center gap-2 text-sm text-slate-700">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <span>
-                  <b className="text-emerald-600">{checkout?.social_proof_count ?? 127}</b> {checkout?.social_proof_message || "pessoas já compraram este produto"}
-                </span>
+            {checkout?.order_bump_enabled && (
+              <div className="mt-4">
+                <label
+                  className={cn(
+                    "block cursor-pointer rounded-xl border-2 border-dashed p-3 transition-all",
+                    bumpAccepted
+                      ? "border-[#3b82f6] bg-[#3b82f6]/5"
+                      : "border-[#cbd5e1] bg-white hover:border-[#3b82f6]/40",
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={bumpAccepted}
+                      onChange={(e) => setBumpAccepted(e.target.checked)}
+                      className="mt-1 h-5 w-5 accent-[#3b82f6] flex-shrink-0"
+                    />
+                    {checkout?.order_bump_image_url && (
+                      <img src={checkout.order_bump_image_url} alt="" width={48} height={48} loading="lazy" decoding="async" className="h-12 w-12 rounded-lg object-cover border border-[#e8ecf1] flex-shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-[#1e293b] leading-tight" style={fontHeading}>
+                        {checkout?.order_bump_title || "Adicione uma oferta especial"}
+                      </p>
+                      {checkout?.order_bump_description && (
+                        <p className="mt-1 text-xs text-[#64748b] leading-snug">{checkout.order_bump_description}</p>
+                      )}
+                      {bumpPrice > 0 && (
+                        <p className="mt-1 text-sm font-bold text-[#3b82f6]">
+                          + Mt {bumpPriceFmt} MZN
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </label>
               </div>
             )}
 
-
-            {product.checkout_banner_url && (
-              <img src={product.checkout_banner_url} alt="Oferta" className="mt-4 w-full rounded-xl border border-slate-200" loading="lazy" decoding="async" />
-            )}
+            <div className="pt-4 mt-4 border-t border-[#e8ecf1] flex justify-between items-center">
+              <span className="text-sm font-semibold text-[#64748b]">Total</span>
+              <span className="text-lg font-bold text-[#1e293b]" style={fontHeading}>
+                Mt {totalPriceFmt} MZN
+              </span>
+            </div>
           </div>
 
-          {/* RIGHT: Form */}
-          <form onSubmit={handlePayment} className="space-y-5">
-            <div>
-              <label className="text-sm font-bold text-slate-900 mb-1.5 block">
-                Nome completo <span className="text-red-500">*</span>
-              </label>
-              <Input
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nome completo"
-                className="h-12 rounded-xl border-slate-200 bg-white text-sm"
-              />
+          {checkout?.social_proof_enabled && (
+            <div className="rounded-xl bg-[#3b82f6]/5 border border-[#3b82f6]/15 px-4 py-2.5 flex items-center justify-center gap-2 text-sm text-[#1e293b]">
+              <CheckCircle2 className="h-4 w-4 text-[#3b82f6]" />
+              <span>
+                <b className="text-[#3b82f6]">{checkout?.social_proof_count ?? 127}</b>{" "}
+                {checkout?.social_proof_message || "pessoas já compraram este produto"}
+              </span>
             </div>
+          )}
 
+          {product.checkout_banner_url && (
+            <img src={product.checkout_banner_url} alt="Oferta" className="w-full rounded-2xl border border-[#e8ecf1]" loading="lazy" decoding="async" />
+          )}
 
-
-
-            <div>
-              <label className="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="#25D366">
-                  <path d="M12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413A11.815 11.815 0 0012.05 0"/>
-                </svg>
-                WhatsApp (opcional)
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-slate-200 pr-2">
-                  <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
-                  <span className="text-xs font-semibold text-slate-500">+258</span>
+          {/* Form */}
+          <form onSubmit={handlePayment} className="space-y-6">
+            {/* Dados de Acesso */}
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold text-[#1e293b] uppercase tracking-wide" style={fontHeading}>
+                Dados de Acesso
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#94a3b8] mb-1.5 ml-1">
+                    Nome completo <span className="text-[#3b82f6]">*</span>
+                  </label>
+                  <Input
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Como no seu documento"
+                    className="h-12 rounded-xl border-[#e8ecf1] bg-white text-sm focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6]"
+                  />
                 </div>
-                <Input
-                  inputMode="tel"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="84 000 000 0"
-                  className="h-12 pl-[78px] rounded-xl border-slate-200 bg-white text-sm"
-                />
+                <div>
+                  <label className="block text-xs font-medium text-[#94a3b8] mb-1.5 ml-1">
+                    WhatsApp (opcional)
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-[#e8ecf1] pr-2">
+                      <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
+                      <span className="text-xs font-semibold text-[#64748b]">+258</span>
+                    </div>
+                    <Input
+                      inputMode="tel"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      placeholder="8x xxx xxxx"
+                      className="h-12 pl-[78px] rounded-xl border-[#e8ecf1] bg-white text-sm focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6]"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            </section>
 
-            <div>
-              <label className="text-sm font-bold text-slate-900 mb-2 block">
-                Selecione o método de pagamento <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
+            {/* Método de Pagamento */}
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold text-[#1e293b] uppercase tracking-wide" style={fontHeading}>
+                Método de Pagamento
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => { setPaymentMethod("mpesa"); setPhone(""); }}
                   className={cn(
-                    "relative flex items-center gap-2 p-3 rounded-xl border-2 transition-all bg-white",
-                    paymentMethod === "mpesa" ? "border-[#E30613] shadow-[0_0_0_3px_rgba(227,6,19,0.08)]" : "border-slate-200 hover:border-slate-300",
+                    "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
+                    paymentMethod === "mpesa"
+                      ? "border-[#3b82f6] bg-[#3b82f6]/5"
+                      : "border-[#e8ecf1] hover:border-[#3b82f6]/30",
                   )}
                 >
-                  <img src="/mpesa-logo.jpg" width={32} height={32} loading="lazy" decoding="async" className="h-8 w-8 rounded-md object-cover" alt="M-Pesa" />
-                  <span className="text-sm font-bold text-slate-900">M-Pesa</span>
-                  {paymentMethod === "mpesa" && <CheckCircle2 className="absolute top-1.5 right-1.5 h-4 w-4 text-[#E30613] fill-white" />}
+                  <div className="w-10 h-10 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
+                    <img src="/mpesa-logo.jpg" width={40} height={40} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="M-Pesa" />
+                  </div>
+                  <span className="text-xs font-bold text-[#1e293b]">M-Pesa</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => { setPaymentMethod("emola"); setPhone(""); }}
                   className={cn(
-                    "relative flex items-center gap-2 p-3 rounded-xl border-2 transition-all bg-white",
-                    paymentMethod === "emola" ? "border-orange-500 shadow-[0_0_0_3px_rgba(249,115,22,0.1)]" : "border-slate-200 hover:border-slate-300",
+                    "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
+                    paymentMethod === "emola"
+                      ? "border-[#3b82f6] bg-[#3b82f6]/5"
+                      : "border-[#e8ecf1] hover:border-[#3b82f6]/30",
                   )}
                 >
-                  <img src="/emola-logo.jpg" width={32} height={32} loading="lazy" decoding="async" className="h-8 w-8 rounded-md object-cover" alt="e-Mola" />
-                  <span className="text-sm font-bold text-slate-900">e-Mola</span>
-                  {paymentMethod === "emola" && <CheckCircle2 className="absolute top-1.5 right-1.5 h-4 w-4 text-orange-500 fill-white" />}
+                  <div className="w-10 h-10 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
+                    <img src="/emola-logo.jpg" width={40} height={40} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="e-Mola" />
+                  </div>
+                  <span className="text-xs font-bold text-[#1e293b]">e-Mola</span>
                 </button>
               </div>
 
-              <div className="mt-3 relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-slate-200 pr-2">
-                  <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
-                  <span className="text-xs font-semibold text-slate-500">+258</span>
+              <div>
+                <label className="block text-xs font-medium text-[#94a3b8] mb-1.5 ml-1">
+                  {paymentMethod === "mpesa" ? "Número M-Pesa" : "Número e-Mola"} <span className="text-[#3b82f6]">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-[#e8ecf1] pr-2">
+                    <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
+                    <span className="text-xs font-semibold text-[#64748b]">+258</span>
+                  </div>
+                  <Input
+                    placeholder={paymentMethod === "mpesa" ? "84 / 85 xxx xxxx" : "86 / 87 xxx xxxx"}
+                    required
+                    inputMode="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="h-12 pl-[78px] rounded-xl border-[#e8ecf1] bg-white text-sm focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6]"
+                  />
                 </div>
-                <Input
-                  placeholder={paymentMethod === "mpesa" ? "Número M-Pesa (84/85)" : "Número e-Mola (86/87)"}
-                  required
-                  inputMode="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="h-12 pl-[78px] rounded-xl border-slate-200 bg-white text-sm"
-                />
               </div>
-            </div>
+            </section>
 
             {(paymentStatusMessage || paymentErrorMessage) && (
               <div className={cn(
@@ -667,32 +672,31 @@ function CheckoutPage() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              disabled={processingPayment || retryCooldownLeft > 0}
-              className="w-full h-14 text-base font-bold rounded-xl text-white shadow-lg disabled:opacity-70 transition-all active:scale-[0.99] flex items-center justify-center gap-2"
-              style={submitStyle}
-            >
-              {retryCooldownLeft > 0 ? (
-                <>
-                  <Clock className="h-4 w-4" />
-                  Aguarda {retryCooldownLeft}s para tentar de novo
-                </>
-              ) : (
-                <>
-                  <Lock className="h-4 w-4" />
-                  {buttonLabel}
-                </>
-              )}
-            </Button>
+            <div className="space-y-3 pt-1">
+              <Button
+                type="submit"
+                disabled={processingPayment || retryCooldownLeft > 0}
+                className="w-full h-14 text-base font-bold rounded-2xl text-white disabled:opacity-70 transition-all active:scale-[0.98] flex items-center justify-center gap-2 hover:brightness-110"
+                style={{ ...submitStyle, ...fontHeading }}
+              >
+                {retryCooldownLeft > 0 ? (
+                  <>
+                    <Clock className="h-4 w-4" />
+                    Aguarda {retryCooldownLeft}s para tentar de novo
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4" />
+                    {buttonLabel}
+                  </>
+                )}
+              </Button>
 
-
-
-
-            <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5 text-xs text-slate-600 text-center">
-              Ao clicar em <b>"{buttonLabel}"</b>, você concorda com os{" "}
-              <a href="#" className="text-blue-600 underline">Termos de Uso</a> e{" "}
-              <a href="#" className="text-blue-600 underline">Política de Privacidade</a>.
+              <p className="text-center text-[11px] text-[#94a3b8] leading-relaxed px-2">
+                Ao clicar em <b>"{buttonLabel}"</b>, você concorda com os{" "}
+                <a href="#" className="text-[#3b82f6] hover:underline">Termos de Uso</a> e{" "}
+                <a href="#" className="text-[#3b82f6] hover:underline">Política de Privacidade</a>.
+              </p>
             </div>
           </form>
         </div>
