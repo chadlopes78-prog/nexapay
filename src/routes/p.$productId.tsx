@@ -77,6 +77,18 @@ function CheckoutPage() {
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
+  // Guarda de desmontagem: se o cliente fecha a aba/rota durante o polling,
+  // paramos as próximas iterações sem sobrescrever nenhum estado do backend.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Invalida qualquer polling em curso: o próximo tick vê runId antigo.
+      paymentRunRef.current += 1;
+      console.info("[checkout] polling terminated (unmount)", { at: new Date().toISOString() });
+    };
+  }, []);
   const prewarmedProductRef = useRef<string | null>(null);
   // Cooldown depois de cancelar: a operadora precisa liberar o número
   // (o STK anterior ainda pode estar ativo por alguns segundos). Sem isto
