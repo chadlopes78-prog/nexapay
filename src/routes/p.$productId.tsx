@@ -37,7 +37,9 @@ export const Route = createFileRoute("/p/$productId")({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" },
     ];
-    if (image) links.push({ rel: "preload", as: "image", href: image, fetchpriority: "high" });
+    // Não pré-carregamos a imagem do produto: ela aparece apenas como
+    // thumbnail 56x56 e um preload de alta prioridade competiria com o HTML
+    // do checkout em conexões lentas, atrasando o formulário.
     if (supabaseUrl) {
       links.push({ rel: "preconnect", href: supabaseUrl, crossorigin: "" });
       links.push({ rel: "dns-prefetch", href: supabaseUrl });
