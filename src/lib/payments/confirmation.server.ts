@@ -704,10 +704,21 @@ async function dispatchApprovedSideEffects(
     }
   })();
 
-  // Mantém as tarefas vivas mesmo depois de a resposta HTTP ser enviada.
-  // Sem waitUntil o Worker termina antes do fetch ao Pushcut concluir e a
-  // notificação é perdida (registrada como "processing" ou nem chega a criar
-  // o log). Só aguardamos inline como fallback quando não há runtime context.
+  // Pushcut precisa ser aguardado INLINE. Empiricamente, quando agendado só
+  // via waitUntil, o isolate do Worker é reciclado após a resposta HTTP e o
+  // fetch para pushcut.io é abortado antes de resolver — deixando o log
+  // preso em "processing" e a notificação perdida. Awaiting com cap de 6s
+  // garante entrega (Pushcut costuma responder em ~200-500ms) sem impactar
+  // o redirect. Erros já são engolidos dentro de pushcutTask, então NUNCA
+  // bloqueia a venda aprovada nem o redirect para o link de acesso.
+  const pushcutBounded = Promise.race([
+    pushcutTask,
+    new Promise<void>((resolve) => setTimeout(resolve, 6_000)),
+  ]);
+  await pushcutBounded.catch(() => {});
+
+  // Web Push e webhooks continuam em background — não são críticos para o
+  // vendedor tocar o iPhone imediatamente e podem ser mais lentos.
   const notificationTasks = Promise.allSettled([webPushTask, pushcutTask, webhookProcessing]);
   const { waitUntil: scheduleAfterResponse } = await import("@/lib/runtime-context.server");
   if (!scheduleAfterResponse(notificationTasks)) {
