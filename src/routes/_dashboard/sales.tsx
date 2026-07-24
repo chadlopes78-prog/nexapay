@@ -185,6 +185,27 @@ function SalesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Sale | null>(null);
+  const [clearing, setClearing] = useState(false);
+
+  const handleClearData = async () => {
+    setClearing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) throw new Error("Sessão inválida");
+      const { error } = await supabase
+        .from("sales")
+        .delete()
+        .eq("user_id", session.user.id);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["sales"] });
+      toast.success("Dados de vendas apagados com sucesso");
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao apagar dados");
+    } finally {
+      setClearing(false);
+    }
+  };
+
 
   const { data: sales, isLoading } = useQuery<Sale[]>({
     queryKey: ["sales"],
