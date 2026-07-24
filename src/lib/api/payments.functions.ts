@@ -91,14 +91,11 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     const accessLink = paid ? (product?.access_link || product?.delivery_link || null) : null;
     if (paid) {
       console.info("[getSaleStatus] paid resolved", { saleId: data.saleId, hasAccessLink: !!accessLink });
-      const { confirmSalePayment } = await import("@/lib/payments/confirmation.server");
-      const sideEffectsTask = confirmSalePayment({
-        saleId: data.saleId,
-        reference: sale.payment_reference,
-        triggerPushcut: true,
-      }).catch((error) => console.error("getSaleStatus paid side-effects recovery error", error));
-      const { waitUntil } = await import("@/lib/runtime-context.server");
-      if (!waitUntil(sideEffectsTask)) void sideEffectsTask;
+      // Não re-executamos efeitos de confirmação aqui: a venda já está `paid`
+      // e os side-effects (notificações, webhooks, Pushcut) foram disparados
+      // no momento da transição para pago (startPayment/chargeSale/webhook).
+      // Recuperação idempotente continua a acontecer em /payment-success e
+      // no webhook — repetir a cada tick só gera inserts e logs desnecessários.
     }
     return {
       status: paid ? ("paid" as const) : failed ? ("failed" as const) : ("pending" as const),
