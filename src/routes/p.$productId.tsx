@@ -581,7 +581,19 @@ function CheckoutPage() {
           )}
 
           {product.checkout_banner_url && (
-            <img src={product.checkout_banner_url} alt="Oferta" className="w-full rounded-2xl border border-[#e8ecf1]" loading="lazy" decoding="async" />
+            <img
+              src={product.checkout_banner_url}
+              alt="Oferta"
+              className="w-full rounded-2xl border border-[#e8ecf1] bg-[#f1f5f9]"
+              style={{ aspectRatio: "16 / 9", objectFit: "cover", contentVisibility: "auto" }}
+              loading="lazy"
+              decoding="async"
+              onError={(e) => {
+                // Falha no banner NUNCA pode derrubar o checkout: apenas removemos o elemento.
+                const el = e.currentTarget as HTMLImageElement;
+                el.style.display = "none";
+              }}
+            />
           )}
 
           {/* Form */}
