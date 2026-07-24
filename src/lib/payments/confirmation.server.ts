@@ -704,24 +704,26 @@ async function dispatchApprovedSideEffects(
     }
   })();
 
-  // Pushcut precisa ser aguardado INLINE. Empiricamente, quando agendado só
-  // via waitUntil, o isolate do Worker é reciclado após a resposta HTTP e o
-  // fetch para pushcut.io é abortado antes de resolver — deixando o log
-  // preso em "processing" e a notificação perdida. Awaiting com cap de 6s
-  // garante entrega (Pushcut costuma responder em ~200-500ms) sem impactar
-  // o redirect. Erros já são engolidos dentro de pushcutTask, então NUNCA
-  // bloqueia a venda aprovada nem o redirect para o link de acesso.
+  // Pushcut precisa sobreviver à resposta HTTP. Registamos PRIMEIRO em
+  // waitUntil (para o Worker manter o isolate vivo mesmo se o cliente
+  // abortar a fetch após ver "paid"/redirect) e SÓ DEPOIS fazemos o await
+  // inline curto para tentar entregar antes do redirect quando dá.
+  // A ordem invertida antes causava perda: se o isolate era reciclado
+  // durante o await inline, nunca chegávamos a registar o waitUntil e o
+  // fetch ao Pushcut era abortado deixando o log preso em "processing".
+  const { waitUntil: scheduleAfterResponse } = await import("@/lib/runtime-context.server");
+  const notificationTasks = Promise.allSettled([webPushTask, pushcutTask, webhookProcessing]);
+  const scheduled = scheduleAfterResponse(notificationTasks);
+
   const pushcutBounded = Promise.race([
     pushcutTask,
     new Promise<void>((resolve) => setTimeout(resolve, 6_000)),
   ]);
   await pushcutBounded.catch(() => {});
 
-  // Web Push e webhooks continuam em background — não são críticos para o
-  // vendedor tocar o iPhone imediatamente e podem ser mais lentos.
-  const notificationTasks = Promise.allSettled([webPushTask, pushcutTask, webhookProcessing]);
-  const { waitUntil: scheduleAfterResponse } = await import("@/lib/runtime-context.server");
-  if (!scheduleAfterResponse(notificationTasks)) {
+  if (!scheduled) {
+    // Ambiente sem waitUntil (dev/SSR local): garante que web push + webhook
+    // completam antes de devolver, senão morrem com o handler.
     await notificationTasks;
   }
 
