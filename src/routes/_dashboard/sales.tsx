@@ -362,7 +362,37 @@ function SalesPage() {
                 <SelectItem value="all">Tudo</SelectItem>
               </SelectContent>
             </Select>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  disabled={clearing || !sales?.length}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Limpar dados
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Apagar todos os dados de vendas?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acção é irreversível. Todas as suas vendas (aprovadas, pendentes e falhas) serão permanentemente removidas e as métricas do checkout serão zeradas.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleClearData}
+                    className="bg-rose-600 hover:bg-rose-700"
+                  >
+                    Sim, apagar tudo
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
+
         </div>
 
         {/* Metrics grid */}
