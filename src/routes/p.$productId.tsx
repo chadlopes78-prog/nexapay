@@ -365,8 +365,19 @@ function CheckoutPage() {
           kickPolling(result.saleId);
           if (result.status === "paid") finishPaid(result.accessLink ?? null, result.saleId);
         })
-        .catch((error: any) => {
-          if (!settled && pollingStarted) return;
+        .catch(async (error: any) => {
+          // Erro real ao chamar startPayment (rede/servidor). O polling já
+          // pode estar rodando com um saleId gerado no cliente. Confirmamos
+          // se a venda foi realmente criada antes de encerrar — caso ainda
+          // não exista, mostramos o erro em vez de deixar o cliente preso
+          // em "A processar" até o deadline.
+          if (settled) return;
+          try {
+            const check = await statusFn({ data: { saleId } });
+            if (check.status === "paid") return finishPaid(check.accessLink, saleId);
+            if (check.status === "failed") return finishFailed(check.error || "Pagamento cancelado ou recusado.");
+            if (check.status === "pending") return; // deixa polling continuar
+          } catch { /* ignorar — cai no finishFailed abaixo */ }
           finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
         });
     } catch (error: any) {
