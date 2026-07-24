@@ -116,6 +116,14 @@ function CheckoutPage() {
     };
   }, []);
 
+  // Bloqueia o scroll do fundo enquanto o overlay/modal de processamento está aberto.
+  useEffect(() => {
+    if (!processingPayment) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [processingPayment]);
+
   useEffect(() => {
     if (!retryCooldownUntil) return;
     const tick = () => {
@@ -736,6 +744,12 @@ function CheckoutPage() {
         </div>
       </div>
 
+      {processingPayment && !showCancelButton && (
+        <ProcessingOverlay
+          phase={paymentErrorMessage ? "error" : "processing"}
+        />
+      )}
+
       {processingPayment && showCancelButton && (
         <PaymentModal
           paymentMethod={paymentMethod}
@@ -852,6 +866,38 @@ const PaymentModal = memo(function PaymentModal({
             <div className="text-sm font-medium text-red-600">{paymentErrorMessage}</div>
           )}
         </div>
+      </div>
+    </div>
+  );
+});
+
+const ProcessingOverlay = memo(function ProcessingOverlay({ phase }: { phase: "processing" | "error" }) {
+  // Camada visual pura: NÃO cria pagamento, NÃO chama gateway, NÃO faz polling.
+  // Apenas reflete o estado já controlado por `processingPayment` no pai.
+  if (phase === "error") return null;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pay-overlay-title"
+      aria-describedby="pay-overlay-desc"
+      className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-slate-900/70 backdrop-blur-sm"
+    >
+      <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl p-6 text-center">
+        <div
+          aria-hidden="true"
+          className="mx-auto h-12 w-12 rounded-full border-4 border-slate-200 border-t-[#3b82f6] motion-safe:animate-spin motion-reduce:opacity-70"
+        />
+        <span className="sr-only">A processar pagamento</span>
+        <h2 id="pay-overlay-title" className="mt-5 text-lg font-extrabold text-slate-900" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
+          O seu pagamento está a ser processado. Aguarde.
+        </h2>
+        <p id="pay-overlay-desc" className="mt-2 text-sm text-slate-600 leading-relaxed">
+          Vai aparecer uma opção no seu telemóvel para confirmar o pagamento.
+        </p>
+        <p className="mt-3 text-xs text-slate-500 leading-relaxed">
+          Verifique o seu telemóvel e introduza o PIN para concluir.
+        </p>
       </div>
     </div>
   );
