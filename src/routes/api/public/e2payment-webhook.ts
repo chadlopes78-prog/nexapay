@@ -12,14 +12,28 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
           return new Response("Invalid JSON", { status: 400 });
         }
 
-        // Optional shared-secret verification (header sent by e2payment)
+        // Shared-secret verification. In produção o secret é OBRIGATÓRIO
+        // — sem ele qualquer origem poderia forjar aprovação de venda.
+        // Em dev/preview aceitamos ausência para não bloquear testes locais.
         const expectedSecret = process.env.E2PAYMENT_WEBHOOK_SECRET;
-        if (expectedSecret) {
+        const isProd = process.env.NODE_ENV === "production";
+        if (!expectedSecret) {
+          if (isProd) {
+            console.error("[Webhook] E2PAYMENT_WEBHOOK_SECRET missing in production — rejecting request");
+            return new Response("Server misconfigured", { status: 500 });
+          }
+        } else {
           const sent =
             request.headers.get("x-webhook-secret") ||
             request.headers.get("x-e2payment-secret") ||
             "";
-          if (sent !== expectedSecret) {
+          // Comparação em tempo constante para evitar timing oracle.
+          const a = new TextEncoder().encode(sent);
+          const b = new TextEncoder().encode(expectedSecret);
+          let equal = a.length === b.length;
+          const len = Math.max(a.length, b.length);
+          for (let i = 0; i < len; i++) equal = equal && a[i] === b[i];
+          if (!equal) {
             return new Response("Unauthorized", { status: 401 });
           }
         }

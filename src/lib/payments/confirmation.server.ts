@@ -380,6 +380,25 @@ export async function confirmSalePayment(options: {
     console.error("[payments] approved side-effects failed", err);
   });
 
+  // Diagnóstico: venda aprovada sem link de acesso configurado. O cliente
+  // vai cair no fallback /payment-success e ficar sem o produto. Não bloqueia
+  // a aprovação (dinheiro já foi cobrado), apenas alerta para investigação.
+  try {
+    const { data: prod } = await supabaseAdmin
+      .from("products")
+      .select("id, access_link, delivery_link")
+      .eq("id", updated.product_id ?? "")
+      .maybeSingle();
+    if (prod && !prod.access_link && !prod.delivery_link) {
+      console.error("[payments] paid sale without access/delivery link", {
+        saleId: updated.id,
+        productId: prod.id,
+      });
+    }
+  } catch (e) {
+    console.warn("[payments] link check failed", e);
+  }
+
   return { sale: updated, becamePaid: true };
 }
 

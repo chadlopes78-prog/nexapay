@@ -145,7 +145,17 @@ function ProductsPage() {
       const validSupportPhone = getValidSupportPhone();
       if (!validSupportPhone) return;
 
+      // Um produto ativo precisa ter pelo menos um link para o cliente aceder
+      // ao que comprou. Sem access_link nem delivery_link o checkout aprova mas
+      // o comprador cai numa página vazia.
+      if (!accessLink.trim() && !deliveryLink.trim()) {
+        toast.error("Configure o link de acesso ou o link de entrega antes de ativar o produto.");
+        return;
+      }
+
       let deliveryFileUrl = "";
+
+
 
       if (deliveryFile) {
         const fileExt = deliveryFile.name.split(".").pop();
@@ -279,6 +289,17 @@ function ProductsPage() {
     try {
       const validSupportPhone = getValidSupportPhone();
       if (!validSupportPhone) return;
+
+      // Só bloqueia se o produto está (ou vai continuar) ativo. Produtos
+      // antigos já ativos não são desativados automaticamente aqui — a
+      // regra só vale quando o vendedor edita um produto ativo e apaga
+      // ambos os links.
+      if (editingProduct.status === "active" && !accessLink.trim() && !deliveryLink.trim()) {
+        toast.error("Configure o link de acesso ou o link de entrega antes de ativar o produto.");
+        return;
+      }
+
+
 
       let finalImageUrl = imageUrl;
       if (imageFile) {
