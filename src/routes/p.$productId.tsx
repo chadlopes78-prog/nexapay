@@ -736,6 +736,12 @@ function CheckoutPage() {
         </div>
       </div>
 
+      {processingPayment && !showCancelButton && (
+        <ProcessingOverlay
+          phase={paymentErrorMessage ? "error" : "processing"}
+        />
+      )}
+
       {processingPayment && showCancelButton && (
         <PaymentModal
           paymentMethod={paymentMethod}
