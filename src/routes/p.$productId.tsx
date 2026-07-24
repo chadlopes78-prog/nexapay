@@ -37,7 +37,9 @@ export const Route = createFileRoute("/p/$productId")({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" },
     ];
-    if (image) links.push({ rel: "preload", as: "image", href: image, fetchpriority: "high" });
+    // Não pré-carregamos a imagem do produto: ela aparece apenas como
+    // thumbnail 56x56 e um preload de alta prioridade competiria com o HTML
+    // do checkout em conexões lentas, atrasando o formulário.
     if (supabaseUrl) {
       links.push({ rel: "preconnect", href: supabaseUrl, crossorigin: "" });
       links.push({ rel: "dns-prefetch", href: supabaseUrl });
@@ -487,9 +489,18 @@ function CheckoutPage() {
           <div className="bg-[#fafbfc] rounded-2xl p-5 border border-[#e8ecf1]">
             <div className="flex justify-between items-center gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="h-14 w-14 rounded-xl overflow-hidden bg-white flex-shrink-0 ring-1 ring-[#e8ecf1]">
+                <div className="h-14 w-14 rounded-xl overflow-hidden bg-[#f1f5f9] flex-shrink-0 ring-1 ring-[#e8ecf1]">
                   {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} width={56} height={56} decoding="async" fetchPriority="high" className="w-full h-full object-cover" />
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      width={56}
+                      height={56}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    />
                   ) : (
                     <div className="w-full h-full grid place-items-center text-[#94a3b8]">
                       <Package className="h-6 w-6" />
@@ -570,7 +581,19 @@ function CheckoutPage() {
           )}
 
           {product.checkout_banner_url && (
-            <img src={product.checkout_banner_url} alt="Oferta" className="w-full rounded-2xl border border-[#e8ecf1]" loading="lazy" decoding="async" />
+            <img
+              src={product.checkout_banner_url}
+              alt="Oferta"
+              className="w-full rounded-2xl border border-[#e8ecf1] bg-[#f1f5f9]"
+              style={{ aspectRatio: "16 / 9", objectFit: "cover", contentVisibility: "auto" }}
+              loading="lazy"
+              decoding="async"
+              onError={(e) => {
+                // Falha no banner NUNCA pode derrubar o checkout: apenas removemos o elemento.
+                const el = e.currentTarget as HTMLImageElement;
+                el.style.display = "none";
+              }}
+            />
           )}
 
           {/* Form */}
