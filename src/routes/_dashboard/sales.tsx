@@ -13,6 +13,8 @@ import {
   Wallet,
   Eye,
   Info,
+  Trash2,
+
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +31,18 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import {
   Area,
   AreaChart,
@@ -171,6 +185,27 @@ function SalesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Sale | null>(null);
+  const [clearing, setClearing] = useState(false);
+
+  const handleClearData = async () => {
+    setClearing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) throw new Error("Sessão inválida");
+      const { error } = await supabase
+        .from("sales")
+        .delete()
+        .eq("user_id", session.user.id);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ["sales"] });
+      toast.success("Dados de vendas apagados com sucesso");
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao apagar dados");
+    } finally {
+      setClearing(false);
+    }
+  };
+
 
   const { data: sales, isLoading } = useQuery<Sale[]>({
     queryKey: ["sales"],
@@ -327,7 +362,37 @@ function SalesPage() {
                 <SelectItem value="all">Tudo</SelectItem>
               </SelectContent>
             </Select>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="gap-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  disabled={clearing || !sales?.length}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Limpar dados
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Apagar todos os dados de vendas?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acção é irreversível. Todas as suas vendas (aprovadas, pendentes e falhas) serão permanentemente removidas e as métricas do checkout serão zeradas.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleClearData}
+                    className="bg-rose-600 hover:bg-rose-700"
+                  >
+                    Sim, apagar tudo
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
+
         </div>
 
         {/* Metrics grid */}
