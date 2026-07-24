@@ -116,6 +116,14 @@ function CheckoutPage() {
     };
   }, []);
 
+  // Bloqueia o scroll do fundo enquanto o overlay/modal de processamento está aberto.
+  useEffect(() => {
+    if (!processingPayment) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [processingPayment]);
+
   useEffect(() => {
     if (!retryCooldownUntil) return;
     const tick = () => {
