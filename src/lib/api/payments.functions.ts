@@ -545,7 +545,10 @@ export const chargeSale = createServerFn({ method: "POST" })
     try {
       const token = await getAccessToken(creds.e2p_client_id, creds.e2p_client_secret);
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90_000);
+      // Timeout unificado: mesma janela do PIN usada em startPayment e no
+      // polling — evita cortar a chamada antes de a operadora confirmar.
+      const { PAYMENT_WAIT_WINDOW_MS } = await import("@/lib/payments/timing");
+      const timeoutId = setTimeout(() => controller.abort(), PAYMENT_WAIT_WINDOW_MS);
       const endpoint =
         method === "mpesa"
           ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
