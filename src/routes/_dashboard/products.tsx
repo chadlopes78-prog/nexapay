@@ -290,6 +290,17 @@ function ProductsPage() {
       const validSupportPhone = getValidSupportPhone();
       if (!validSupportPhone) return;
 
+      // Só bloqueia se o produto está (ou vai continuar) ativo. Produtos
+      // antigos já ativos não são desativados automaticamente aqui — a
+      // regra só vale quando o vendedor edita um produto ativo e apaga
+      // ambos os links.
+      if (editingProduct.status === "active" && !accessLink.trim() && !deliveryLink.trim()) {
+        toast.error("Configure o link de acesso ou o link de entrega antes de ativar o produto.");
+        return;
+      }
+
+
+
       let finalImageUrl = imageUrl;
       if (imageFile) {
         finalImageUrl = await uploadProductImage(editingProduct.user_id, imageFile);
