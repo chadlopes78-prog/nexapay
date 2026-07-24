@@ -145,7 +145,17 @@ function ProductsPage() {
       const validSupportPhone = getValidSupportPhone();
       if (!validSupportPhone) return;
 
+      // Um produto ativo precisa ter pelo menos um link para o cliente aceder
+      // ao que comprou. Sem access_link nem delivery_link o checkout aprova mas
+      // o comprador cai numa página vazia.
+      if (!accessLink.trim() && !deliveryLink.trim()) {
+        toast.error("Configure o link de acesso ou o link de entrega antes de ativar o produto.");
+        return;
+      }
+
       let deliveryFileUrl = "";
+
+
 
       if (deliveryFile) {
         const fileExt = deliveryFile.name.split(".").pop();
