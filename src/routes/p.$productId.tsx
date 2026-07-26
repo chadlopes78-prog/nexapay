@@ -499,22 +499,24 @@ function CheckoutPage() {
           <div className="bg-[#fafbfc] rounded-2xl p-5 border border-[#e8ecf1]">
             <div className="flex justify-between items-center gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="h-14 w-14 rounded-xl overflow-hidden bg-[#f1f5f9] flex-shrink-0 ring-1 ring-[#e8ecf1]">
-                  {product.image_url ? (
+                <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-[#f1f5f9] flex-shrink-0 ring-1 ring-[#e8ecf1]">
+                  {/* Placeholder imediato (sem peso): fica por baixo da imagem final */}
+                  <div className="absolute inset-0 grid place-items-center text-[#cbd5e1]">
+                    <Package className="h-6 w-6" />
+                  </div>
+                  {product.image_url && (
                     <img
                       src={product.image_url}
                       alt={product.name}
                       width={56}
                       height={56}
-                      loading="lazy"
+                      loading="eager"
+                      fetchPriority="high"
                       decoding="async"
-                      className="w-full h-full object-cover"
+                      className="relative w-full h-full object-cover opacity-0 transition-opacity duration-200"
+                      onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                     />
-                  ) : (
-                    <div className="w-full h-full grid place-items-center text-[#94a3b8]">
-                      <Package className="h-6 w-6" />
-                    </div>
                   )}
                 </div>
                 <div className="min-w-0">
