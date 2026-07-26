@@ -597,10 +597,12 @@ function CheckoutPage() {
             <img
               src={product.checkout_banner_url}
               alt="Oferta"
-              className="w-full rounded-2xl border border-[#e8ecf1] bg-[#f1f5f9]"
-              style={{ aspectRatio: "16 / 9", objectFit: "cover", contentVisibility: "auto" }}
+              className="w-full rounded-2xl border border-[#e8ecf1] bg-[#f1f5f9] opacity-0 transition-opacity duration-200"
+              style={{ aspectRatio: "16 / 9", objectFit: "cover" }}
               loading="lazy"
               decoding="async"
+              ref={(el) => { if (el?.complete && el.naturalWidth > 0) el.style.opacity = "1"; }}
+              onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
               onError={(e) => {
                 // Falha no banner NUNCA pode derrubar o checkout: apenas removemos o elemento.
                 const el = e.currentTarget as HTMLImageElement;
