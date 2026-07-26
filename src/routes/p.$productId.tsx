@@ -514,6 +514,7 @@ function CheckoutPage() {
                       fetchPriority="high"
                       decoding="async"
                       className="relative w-full h-full object-cover opacity-0 transition-opacity duration-200"
+                      ref={(el) => { if (el?.complete && el.naturalWidth > 0) el.style.opacity = "1"; }}
                       onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                     />
