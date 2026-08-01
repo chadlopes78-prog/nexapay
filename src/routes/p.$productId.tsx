@@ -84,7 +84,9 @@ function CheckoutPage() {
   const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
+  const [paymentFailureCode, setPaymentFailureCode] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
+
   // Guarda de desmontagem: se o cliente fecha a aba/rota durante o polling,
   // paramos as próximas iterações sem sobrescrever nenhum estado do backend.
   const isMountedRef = useRef(true);
