@@ -991,3 +991,50 @@ const ProcessingOverlay = memo(function ProcessingOverlay({ phase }: { phase: "p
     </div>
   );
 });
+
+// Ecrã dedicado ao cancelamento reconhecido pela gateway. Não é mostrado
+// para falhas genéricas de comunicação — essas mantêm a mensagem original.
+const CancelledOverlay = memo(function CancelledOverlay({
+  cooldownLeft,
+  onRetry,
+}: {
+  cooldownLeft: number;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pay-cancelled-title"
+      className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-slate-900/70"
+    >
+      <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl p-6 text-center">
+        <div className="mx-auto h-14 w-14 rounded-full bg-amber-50 flex items-center justify-center">
+          <ShieldAlert className="h-7 w-7 text-amber-500" />
+        </div>
+        <h2
+          id="pay-cancelled-title"
+          className="mt-5 text-lg font-extrabold text-slate-900"
+          style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
+        >
+          Percebemos que cancelaste o pagamento
+        </h2>
+        <p className="mt-2 text-sm text-slate-600">Queres tentar novamente?</p>
+        <Button
+          type="button"
+          disabled={cooldownLeft > 0}
+          onClick={onRetry}
+          className="mt-5 h-12 w-full rounded-xl bg-[#3b82f6] text-sm font-bold text-white hover:bg-[#2f6fe0] disabled:opacity-70"
+        >
+          {cooldownLeft > 0 ? (
+            <>
+              <Clock className="h-4 w-4" /> Aguarda {cooldownLeft}s
+            </>
+          ) : (
+            "Tentar novamente"
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+});
