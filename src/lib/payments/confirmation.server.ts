@@ -282,6 +282,17 @@ export function normalizeGatewayStatus(
     ) {
       return "failed";
     }
+    // Respostas 4xx da gateway (400/401/402/403/422/...) são recusas
+    // definitivas do pedido — inclui o cliente cancelar o pop-up de PIN.
+    // Não faz sentido manter a venda "pending" até o timeout de 4 min.
+    if (
+      typeof httpStatus === "number" &&
+      httpStatus >= 400 &&
+      httpStatus < 500 &&
+      ![408, 409, 425, 429].includes(httpStatus)
+    ) {
+      return "failed";
+    }
     return "pending";
   }
 
