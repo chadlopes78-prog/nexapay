@@ -620,10 +620,10 @@ function CheckoutPage() {
 
           {/* Form */}
           <form onSubmit={handlePayment} className="space-y-6">
-            {/* Dados de Acesso */}
+            {/* Dados do comprador */}
             <section className="space-y-4">
               <h3 className="text-sm font-semibold text-[#1e293b] uppercase tracking-wide" style={fontHeading}>
-                Dados de Acesso
+                Dados do comprador
               </h3>
               <div className="space-y-3">
                 <div>
@@ -638,26 +638,10 @@ function CheckoutPage() {
                     className="h-12 rounded-xl border-[#e8ecf1] bg-white text-sm focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6]"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-[#94a3b8] mb-1.5 ml-1">
-                    WhatsApp (opcional)
-                  </label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-[#e8ecf1] pr-2">
-                      <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
-                      <span className="text-xs font-semibold text-[#64748b]">+258</span>
-                    </div>
-                    <Input
-                      inputMode="tel"
-                      value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
-                      placeholder="8x xxx xxxx"
-                      className="h-12 pl-[78px] rounded-xl border-[#e8ecf1] bg-white text-sm focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6]"
-                    />
-                  </div>
-                </div>
               </div>
             </section>
+
+
 
             {/* Método de Pagamento */}
             <section className="space-y-4">
