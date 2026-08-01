@@ -826,15 +826,15 @@ export const startPayment = createServerFn({ method: "POST" })
         : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
 
     const controller = new AbortController();
-    // 4 minutos: cobre o tempo real que a e2payment aguarda o PIN do cliente.
-    // 75s cortava a chamada antes do gateway confirmar o pagamento, deixando
-    // a venda em "pending" para sempre (e nunca disparando a notificação).
-    const timeoutId = setTimeout(() => controller.abort(), 240_000);
 
+    const { PAYMENT_WAIT_WINDOW_MS } = await import("@/lib/payments/timing");
 
-    // Fire the gateway request immediately. The checkout response returns in
-    // ~2.5s with saleId so the browser can poll status, while this promise keeps
-    // running in the worker background until e2payment closes paid/cancelled.
+    const timeoutId = setTimeout(() => controller.abort(), PAYMENT_WAIT_WINDOW_MS);
+
+    /*
+     * O pedido à gateway começa imediatamente.
+     * O checkout não precisa ficar bloqueado durante toda a espera pelo PIN.
+     */
     const gatewayPromise: Promise<GatewayCallResult> = fetch(endpoint, {
       method: "POST",
       headers: {
@@ -856,68 +856,145 @@ export const startPayment = createServerFn({ method: "POST" })
       .then(async (res) => {
         const text = await res.text();
         let json: Record<string, unknown> | null = null;
-        try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+        try {
+          json = text ? JSON.parse(text) : null;
+        } catch {
+          json = { raw: text };
+        }
         return { ok: res.ok, status: res.status, json, text };
       })
       .finally(() => clearTimeout(timeoutId));
 
+    /*
+     * Esta promise interpreta a resposta final da gateway e actualiza
+     * a venda no Supabase.
+     */
     const processGateway = gatewayPromise
       .then(async ({ ok, status, json, text }) => {
-        console.info("e2payment response", { status, method: data.method, reference, body: text?.slice(0, 400) });
-        // Se o gateway rejeitou por token inválido/expirado, invalida o cache
-        // para a próxima venda buscar um token fresco.
-        if (status === 401 || status === 403) invalidateAccessToken(creds.e2p_client_id);
+        console.info("e2payment response", {
+          status,
+          method: data.method,
+          reference,
+          body: text?.slice(0, 400),
+        });
+
+        if (status === 401 || status === 403) {
+          invalidateAccessToken(creds.e2p_client_id);
+        }
+
         const transactionId = readGatewayTransactionId(json);
         const finalStatus = normalizeGatewayStatus(json, ok, status);
+
         if (finalStatus === "paid") {
-          await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
+          await confirmSalePayment({
+            saleId,
+            transactionId,
+            reference,
+            rawPayload: json,
+            triggerPushcut: true,
+          });
         } else if (finalStatus === "failed" || finalStatus === "expired") {
           const failure = readGatewayFailureDetails(json, finalStatus);
-          await markSaleTerminalFailure({ saleId, status: finalStatus, transactionId, reference, reason: failure.message, code: failure.code });
+          await markSaleTerminalFailure({
+            saleId,
+            status: finalStatus,
+            transactionId,
+            reference,
+            reason: failure.message,
+            code: failure.code,
+          });
         }
+
         return { finalStatus, transactionId, json };
       })
       .catch(async (err) => {
         console.error("startPayment gateway error", err);
+
         const isAbort = err instanceof Error && err.name === "AbortError";
         const message = isAbort
           ? "Tempo expirado sem confirmação no telefone."
           : "Falha de comunicação com a gateway. Tenta novamente.";
+
         await markSaleTerminalFailure({
           saleId,
-          status: "failed",
+          status: isAbort ? "expired" : "failed",
           reference,
           reason: message,
           code: isAbort ? "timeout" : "gateway_unavailable",
-        }).catch((e) => console.error("startPayment failure update error", e));
+        }).catch((error) => {
+          console.error("startPayment failure update error", error);
+        });
+
         return {
-          finalStatus: "failed" as const,
+          finalStatus: isAbort ? ("expired" as const) : ("failed" as const),
           transactionId: null,
           json: { message, code: isAbort ? "timeout" : "gateway_unavailable" },
         };
       });
 
-    const accessLink = product.access_link || product.delivery_link || null;
-    // Contrato crítico do checkout: só respondemos ao cliente depois da
-    // gateway fechar o resultado real do PIN. O pedido ao gateway já foi
-    // enviado acima, então o pop-up STK aparece no telefone enquanto esta
-    // chamada fica aberta. Quando o cliente paga, retornamos "paid" com o
-    // link imediatamente — sem depender de background/waitUntil, que pode
-    // morrer antes de marcar a venda como paga.
-    const gatewayResult = await processGateway;
-    mark(`gatewayResult (${gatewayResult.finalStatus})`);
+    /*
+     * Espera somente 1,5 segundo para capturar respostas imediatas.
+     * Se a gateway continuar à espera do PIN, devolve pending rapidamente.
+     */
+    const immediateResult = await Promise.race([
+      processGateway,
+      new Promise<null>((resolve) => {
+        setTimeout(() => resolve(null), 1_500);
+      }),
+    ]);
 
-    if (gatewayResult.finalStatus === "paid") {
-      mark("returned paid");
-      return { success: true, saleId, transactionId: gatewayResult.transactionId, status: "paid", accessLink };
+    /*
+     * Mantém o processamento da gateway activo depois de o checkout
+     * receber o saleId.
+     */
+    const { waitUntil } = await import("@/lib/runtime-context.server");
+
+    const backgroundTask = processGateway.catch((error) => {
+      console.error("startPayment background processing error", error);
+    });
+
+    const scheduled = waitUntil(backgroundTask);
+    if (!scheduled) {
+      void backgroundTask;
     }
-    if (gatewayResult.finalStatus === "failed" || gatewayResult.finalStatus === "expired") {
-      const failure = readGatewayFailureDetails(gatewayResult.json, gatewayResult.finalStatus);
+
+    const accessLink = product.access_link || product.delivery_link || null;
+
+    if (immediateResult?.finalStatus === "paid") {
+      mark("returned paid");
+      return {
+        success: true,
+        saleId,
+        transactionId: immediateResult.transactionId,
+        status: "paid",
+        accessLink,
+      };
+    }
+
+    if (
+      immediateResult?.finalStatus === "failed" ||
+      immediateResult?.finalStatus === "expired"
+    ) {
+      const failure = readGatewayFailureDetails(
+        immediateResult.json,
+        immediateResult.finalStatus,
+      );
       return { success: false, saleId, error: failure.message };
     }
 
+    /*
+     * A gateway ainda está à espera do PIN.
+     * O checkout recebe o saleId e começa a consultar getSaleStatus.
+     */
     mark("returned pending");
-    return { success: true, saleId, transactionId: null, status: "pending", accessLink: null };
+
+    return {
+      success: true,
+      saleId,
+      transactionId: null,
+      status: "pending",
+      accessLink: null,
+    };
   });
 
 
