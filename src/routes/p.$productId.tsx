@@ -641,7 +641,7 @@ function CheckoutPage() {
               </div>
             </section>
 
-            </section>
+
 
             {/* Método de Pagamento */}
             <section className="space-y-4">
