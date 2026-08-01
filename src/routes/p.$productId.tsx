@@ -244,7 +244,7 @@ function CheckoutPage() {
 
   const trackEvent = (event: string) => {
     try {
-      if (pixelId && window.fbq) {
+      if (pixelId && window.fbq && product) {
         window.fbq('track', event, {
           content_name: product.name, value: product.price, currency: 'MZN',
         });

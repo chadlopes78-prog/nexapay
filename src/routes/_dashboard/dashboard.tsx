@@ -55,7 +55,7 @@ function normalizeSaleStatus(s: string | null | undefined) {
 }
 
 export const Route = createFileRoute("/_dashboard/dashboard")({
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => {
     return {
       tab: (search.tab as string) || "overview",
     };
