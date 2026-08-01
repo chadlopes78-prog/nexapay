@@ -18,6 +18,25 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import mozFlag from "@/assets/moz-flag.png.asset.json";
 
+// Intervalo de consulta do estado da venda enquanto pending (~1,5s).
+const POLL_INTERVAL_MS = 1_500;
+
+// Códigos terminais que representam cancelamento/recusa pelo cliente.
+const CANCELLED_CODES = new Set([
+  "cancelled_by_user",
+  "canceled_by_user",
+  "customer_cancelled",
+  "customer_canceled",
+  "user_cancelled",
+  "cancelled",
+  "canceled",
+  "declined",
+  "refused",
+  "rejected",
+]);
+
+
+
 export const Route = createFileRoute("/p/$productId")({
   loader: async ({ params: { productId } }) => {
     try {
