@@ -669,38 +669,57 @@ function CheckoutPage() {
                   type="button"
                   onClick={() => { setPaymentMethod("mpesa"); setPhone(""); }}
                   className={cn(
-                    "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
+                    "relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
                     paymentMethod === "mpesa"
                       ? "border-[#3b82f6] bg-[#3b82f6]/5"
                       : "border-[#e8ecf1] hover:border-[#3b82f6]/30",
                   )}
                 >
-                  <div className="w-10 h-10 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
-                    <img src="/mpesa-logo.jpg" width={40} height={40} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="M-Pesa" />
+                  {paymentMethod === "mpesa" && (
+                    <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[#3b82f6]" />
+                  )}
+                  <div className="w-11 h-11 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
+                    <img src="/mpesa-logo.jpg" width={44} height={44} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="M-Pesa" />
                   </div>
-                  <span className="text-xs font-bold text-[#1e293b]">M-Pesa</span>
+                  <span className="text-sm font-bold text-[#1e293b]">M-Pesa</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-wider text-[#94a3b8] mt-0.5">Vodacom</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => { setPaymentMethod("emola"); setPhone(""); }}
                   className={cn(
-                    "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
+                    "relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
                     paymentMethod === "emola"
                       ? "border-[#3b82f6] bg-[#3b82f6]/5"
                       : "border-[#e8ecf1] hover:border-[#3b82f6]/30",
                   )}
                 >
-                  <div className="w-10 h-10 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
-                    <img src="/emola-logo.jpg" width={40} height={40} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="e-Mola" />
+                  {paymentMethod === "emola" && (
+                    <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[#3b82f6]" />
+                  )}
+                  <div className="w-11 h-11 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
+                    <img src="/emola-logo.jpg" width={44} height={44} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="e-Mola" />
                   </div>
-                  <span className="text-xs font-bold text-[#1e293b]">e-Mola</span>
+                  <span className="text-sm font-bold text-[#1e293b]">e-Mola</span>
+                  <span className="text-[9px] font-semibold uppercase tracking-wider text-[#94a3b8] mt-0.5">Movitel</span>
                 </button>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-[#94a3b8] mb-1.5 ml-1">
-                  {paymentMethod === "mpesa" ? "Número M-Pesa" : "Número e-Mola"} <span className="text-[#3b82f6]">*</span>
-                </label>
+              {/* Número de pagamento em destaque */}
+              <div className="rounded-2xl border border-[#3b82f6]/20 bg-[#3b82f6]/5 p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-8 w-8 rounded-lg bg-[#3b82f6] grid place-items-center text-white flex-shrink-0">
+                    <Lock className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-[#1e293b]">
+                      Número para fazer o pagamento
+                    </p>
+                    <p className="text-[10px] text-[#64748b]">
+                      {paymentMethod === "mpesa" ? "M-Pesa · 84 ou 85" : "e-Mola · 86 ou 87"}
+                    </p>
+                  </div>
+                </div>
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-[#e8ecf1] pr-2">
                     <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
@@ -712,10 +731,14 @@ function CheckoutPage() {
                     inputMode="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="h-12 pl-[78px] rounded-xl border-[#e8ecf1] bg-white text-sm focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6]"
+                    className="h-13 pl-[78px] rounded-xl border-[#3b82f6]/25 bg-white text-base font-semibold tracking-wide focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6]"
                   />
                 </div>
+                <p className="mt-2 text-[10px] text-[#94a3b8] text-center">
+                  Nunca partilhamos o seu número. Débito seguro e instantâneo.
+                </p>
               </div>
+
             </section>
 
             {(paymentStatusMessage || paymentErrorMessage) && (
