@@ -34,16 +34,16 @@ export const Route = createFileRoute("/p/$productId")({
     const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || "";
     const links: Array<Record<string, string>> = [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "anonymous" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" },
     ];
     // Preload APENAS da imagem principal do produto (acima da dobra).
     // O banner permanece lazy para não competir com o HTML/CSS críticos.
     if (image) {
-      links.push({ rel: "preload", as: "image", href: image, fetchpriority: "high" });
+      links.push({ rel: "preload", as: "image", href: image, fetchPriority: "high" });
     }
     if (supabaseUrl) {
-      links.push({ rel: "preconnect", href: supabaseUrl, crossorigin: "" });
+      links.push({ rel: "preconnect", href: supabaseUrl, crossOrigin: "" });
       links.push({ rel: "dns-prefetch", href: supabaseUrl });
     }
     return {
@@ -244,7 +244,7 @@ function CheckoutPage() {
 
   const trackEvent = (event: string) => {
     try {
-      if (pixelId && window.fbq) {
+      if (pixelId && window.fbq && product) {
         window.fbq('track', event, {
           content_name: product.name, value: product.price, currency: 'MZN',
         });
