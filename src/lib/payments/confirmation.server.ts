@@ -351,6 +351,19 @@ export async function findSaleForGatewayEvent(
   return null;
 }
 
+export async function saveGatewayIdentifiers(options: {
+  saleId: string;
+  transactionId?: string | null;
+  reference?: string | null;
+}) {
+  const update: { transaction_id?: string; payment_reference?: string } = {};
+  if (options.transactionId) update.transaction_id = options.transactionId.slice(0, 200);
+  if (options.reference) update.payment_reference = options.reference.slice(0, 200);
+  if (Object.keys(update).length === 0) return;
+  const { error } = await supabaseAdmin.from("sales").update(update).eq("id", options.saleId);
+  if (error) throw error;
+}
+
 export async function confirmSalePayment(options: {
   saleId: string;
   transactionId?: string | null;

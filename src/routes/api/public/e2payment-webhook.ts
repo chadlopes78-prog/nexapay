@@ -78,7 +78,15 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
           });
         } else if (status === "failed" || status === "expired") {
           const failure = readGatewayFailureDetails(payload, status);
-          console.log("[Webhook] Sale failed:", saleData.id);
+          console.info("[payment-cancellation-debug]", {
+            saleId: saleData.id,
+            source: "webhook",
+            normalizedStatus: status,
+            transactionId,
+            reference,
+            gatewayCode: failure.code,
+            gatewayMessage: failure.rawMessage,
+          });
           await markSaleTerminalFailure({
             saleId: saleData.id,
             status,
@@ -86,6 +94,7 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
             reference,
             reason: failure.message,
             code: failure.code,
+            source: "e2payments_webhook",
           });
         }
 

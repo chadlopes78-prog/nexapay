@@ -50,13 +50,32 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sale } = await supabaseAdmin
       .from("sales")
-      .select("id, status, created_at, payment_reference, failure_reason, failure_code, products(access_link, delivery_link)")
+      .select("id, status, created_at, user_id, payment_method, transaction_id, payment_reference, failure_reason, failure_code, products(access_link, delivery_link)")
       .eq("id", data.saleId)
       .maybeSingle();
     if (!sale) return { status: "not_found" as const, accessLink: null, error: null };
-    const raw = String(sale.status ?? "").toLowerCase();
-    const paid = ["paid", "approved", "success", "completed"].includes(raw);
-    const failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
+    let raw = String(sale.status ?? "").toLowerCase();
+    let paid = ["paid", "approved", "success", "completed"].includes(raw);
+    let failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
+    if (!paid && !failed) {
+      const { reconcilePendingSale } = await import("@/lib/payments/reconciliation.server");
+      const reconciled = await reconcilePendingSale(sale);
+      if (reconciled === "paid" || reconciled === "failed" || reconciled === "expired") {
+        const { data: refreshed } = await supabaseAdmin
+          .from("sales")
+          .select("status, failure_reason, failure_code")
+          .eq("id", data.saleId)
+          .maybeSingle();
+        if (refreshed) {
+          sale.status = refreshed.status;
+          sale.failure_reason = refreshed.failure_reason;
+          sale.failure_code = refreshed.failure_code;
+          raw = String(refreshed.status ?? "").toLowerCase();
+          paid = ["paid", "approved", "success", "completed"].includes(raw);
+          failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
+        }
+      }
+    }
     const createdAt = sale.created_at ? new Date(sale.created_at).getTime() : 0;
     // Só marcamos expirado após 5min sem sinal do gateway (mesmo cutoff do
     // sweep). O usuário pode demorar >2min pra digitar o PIN — cortar aos
@@ -536,6 +555,7 @@ export const chargeSale = createServerFn({ method: "POST" })
       normalizeGatewayStatus,
       readGatewayFailureDetails,
       readGatewayTransactionId,
+      saveGatewayIdentifiers,
     } = await import("@/lib/payments/confirmation.server");
 
     const reference = sale.payment_reference || `PMZ${sale.id.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 20);
@@ -639,6 +659,7 @@ export const startPayment = createServerFn({ method: "POST" })
       normalizeGatewayStatus,
       readGatewayFailureDetails,
       readGatewayTransactionId,
+      saveGatewayIdentifiers,
     } = confirmationMod;
     mark("imports");
 
@@ -796,6 +817,7 @@ export const startPayment = createServerFn({ method: "POST" })
             try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
             const transactionId = readGatewayTransactionId(json);
             const finalStatus = normalizeGatewayStatus(json, res.ok, res.status);
+            await saveGatewayIdentifiers({ saleId, transactionId, reference });
             if (finalStatus === "paid") {
               await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
             } else if (finalStatus === "failed" || finalStatus === "expired") {
@@ -884,6 +906,7 @@ export const startPayment = createServerFn({ method: "POST" })
 
         const transactionId = readGatewayTransactionId(json);
         const finalStatus = normalizeGatewayStatus(json, ok, status);
+        await saveGatewayIdentifiers({ saleId, transactionId, reference });
 
         // Log temporário de diagnóstico de cancelamento (sem tokens/segredos).
         const dbg = (json ?? {}) as Record<string, unknown>;
