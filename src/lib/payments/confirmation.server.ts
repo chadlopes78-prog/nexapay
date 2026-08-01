@@ -199,7 +199,11 @@ export function readGatewayFailureDetails(
   };
 }
 
-export function normalizeGatewayStatus(input: unknown, httpOk = true): NormalizedPaymentStatus {
+export function normalizeGatewayStatus(
+  input: unknown,
+  httpOk = true,
+  httpStatus?: number,
+): NormalizedPaymentStatus {
   const payload = asObject(input);
   const data = nestedObject(payload, "data");
   const successValue = payload.success ?? payload.ok ?? data.success ?? data.ok;
