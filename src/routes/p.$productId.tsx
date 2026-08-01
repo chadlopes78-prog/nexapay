@@ -482,63 +482,81 @@ function CheckoutPage() {
       className="min-h-screen bg-[#fafbfc] flex items-start sm:items-center justify-center p-4 py-6"
       style={fontBody}
     >
-      <div className="w-full max-w-[560px] bg-white rounded-3xl border border-[#e8ecf1] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-        {/* Urgency Timer — sutil, azul */}
-        <div className="bg-[#3b82f6]/5 px-6 py-3 flex items-center justify-center gap-2 border-b border-[#e8ecf1]">
-          <Clock className="h-4 w-4 text-[#3b82f6]" />
-          <span className="text-[#3b82f6] text-sm font-medium">
-            Oferta expira em{" "}
-            <span className="font-mono font-semibold tabular-nums">
-              <CountdownTimer initialSeconds={(checkout?.timer_minutes ?? 10) * 60} />
-            </span>
-          </span>
+      <div className="w-full max-w-[560px] space-y-3">
+        {/* Barra de urgência — alto contraste, estilo checkout de alta conversão */}
+        <div className="rounded-2xl bg-[#ef4444] px-6 py-3.5 text-center text-white shadow-[0_8px_20px_rgba(239,68,68,0.25)]">
+          <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] opacity-90">
+            <Clock className="h-3 w-3" />
+            Oferta expira em
+          </div>
+          <div className="mt-0.5 text-2xl font-extrabold tabular-nums tracking-tight" style={fontHeading}>
+            <CountdownTimer initialSeconds={(checkout?.timer_minutes ?? 10) * 60} />
+          </div>
         </div>
 
-        <div className="p-6 sm:p-8 space-y-7">
-          {/* Order Summary */}
-          <div className="bg-[#fafbfc] rounded-2xl p-5 border border-[#e8ecf1]">
-            <div className="flex justify-between items-center gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-[#f1f5f9] flex-shrink-0 ring-1 ring-[#e8ecf1]">
-                  {/* Placeholder imediato (sem peso): fica por baixo da imagem final */}
-                  <div className="absolute inset-0 grid place-items-center text-[#cbd5e1]">
-                    <Package className="h-6 w-6" />
-                  </div>
-                  {product.image_url && (
-                    <img
-                      src={product.image_url}
-                      alt={product.name}
-                      width={56}
-                      height={56}
-                      loading="eager"
-                      fetchPriority="high"
-                      decoding="async"
-                      className="relative w-full h-full object-cover opacity-0 transition-opacity duration-200"
-                      ref={(el) => { if (el?.complete && el.naturalWidth > 0) el.style.opacity = "1"; }}
-                      onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-[#94a3b8] font-bold mb-0.5">
-                    Produto Selecionado
-                  </p>
-                  <h1 className="text-base font-bold text-[#1e293b] uppercase tracking-tight leading-tight truncate" style={fontHeading}>
-                    {product.name}
-                  </h1>
-                </div>
+        <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#64748b]">
+          <Lock className="h-3.5 w-3.5 text-[#3b82f6]" />
+          Checkout seguro · NexaPay
+        </div>
+
+        <div className="w-full bg-white rounded-3xl border border-[#e8ecf1] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+        <div className="p-5 sm:p-7 space-y-6">
+          {/* Produto em destaque: banner + nome + preço */}
+          <div className="rounded-2xl border border-[#e8ecf1] overflow-hidden bg-white">
+            {product.checkout_banner_url && (
+              <div className="w-full bg-[#f1f5f9]" style={{ aspectRatio: "16 / 9" }}>
+                <img
+                  src={product.checkout_banner_url}
+                  alt="Oferta"
+                  className="w-full h-full object-cover opacity-0 transition-opacity duration-200"
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                  ref={(el) => { if (el?.complete && el.naturalWidth > 0) el.style.opacity = "1"; }}
+                  onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
+                  onError={(e) => {
+                    // Falha no banner NUNCA pode derrubar o checkout: apenas removemos o elemento.
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
               </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-2xl font-bold text-[#3b82f6] leading-none" style={fontHeading}>
-                  {productPriceFmt}
+            )}
+            <div className="p-4 flex items-center gap-3">
+              <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-[#f1f5f9] flex-shrink-0 ring-1 ring-[#e8ecf1]">
+                <div className="absolute inset-0 grid place-items-center text-[#cbd5e1]">
+                  <Package className="h-5 w-5" />
+                </div>
+                {product.image_url && (
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    width={48}
+                    height={48}
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                    className="relative w-full h-full object-cover opacity-0 transition-opacity duration-200"
+                    ref={(el) => { if (el?.complete && el.naturalWidth > 0) el.style.opacity = "1"; }}
+                    onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm font-bold text-[#1e293b] uppercase tracking-tight leading-tight truncate" style={fontHeading}>
+                  {product.name}
+                </h1>
+                <p className="text-2xl font-extrabold text-[#3b82f6] leading-tight" style={fontHeading}>
+                  {productPriceFmt} <span className="text-sm font-bold">MZN</span>
                 </p>
-                <p className="text-[11px] text-[#94a3b8] mt-1">MZN</p>
               </div>
             </div>
+          </div>
 
+          {/* Order bump + total */}
+          <div className="bg-[#fafbfc] rounded-2xl p-5 border border-[#e8ecf1]">
             {checkout?.order_bump_enabled && (
-              <div className="mt-4">
+              <div className="mb-4">
                 <label
                   className={cn(
                     "block cursor-pointer rounded-xl border-2 border-dashed p-3 transition-all",
@@ -575,7 +593,7 @@ function CheckoutPage() {
               </div>
             )}
 
-            <div className="pt-4 mt-4 border-t border-[#e8ecf1] flex justify-between items-center">
+            <div className="flex justify-between items-center">
               <span className="text-sm font-semibold text-[#64748b]">Total</span>
               <span className="text-lg font-bold text-[#1e293b]" style={fontHeading}>
                 Mt {totalPriceFmt} MZN
@@ -584,35 +602,21 @@ function CheckoutPage() {
           </div>
 
           {checkout?.social_proof_enabled && (
-            <div className="rounded-xl bg-[#3b82f6]/5 border border-[#3b82f6]/15 px-4 py-2.5 flex items-center justify-center gap-2 text-sm text-[#1e293b]">
-              <CheckCircle2 className="h-4 w-4 text-[#3b82f6]" />
-              <span>
-                <b className="text-[#3b82f6]">{checkout?.social_proof_count ?? 127}</b>{" "}
-                {checkout?.social_proof_message || "pessoas já compraram este produto"}
+            <div className="rounded-xl bg-[#3b82f6]/5 border border-[#3b82f6]/15 px-4 py-2.5 flex items-center justify-between gap-3 text-[12px] text-[#1e293b]">
+              <span className="flex items-center gap-2 min-w-0">
+                <CheckCircle2 className="h-4 w-4 text-[#3b82f6] flex-shrink-0" />
+                <span className="truncate">
+                  <b className="text-[#3b82f6]">{checkout?.social_proof_count ?? 127}</b>{" "}
+                  {checkout?.social_proof_message || "pessoas já compraram este produto"}
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5 flex-shrink-0 text-[#64748b] font-medium">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                online
               </span>
             </div>
           )}
 
-          {product.checkout_banner_url && (
-            <div
-              className="w-full rounded-2xl border border-[#e8ecf1] bg-[#f1f5f9] overflow-hidden"
-              style={{ aspectRatio: "16 / 9" }}
-            >
-              <img
-                src={product.checkout_banner_url}
-                alt="Oferta"
-                className="w-full h-full object-cover opacity-0 transition-opacity duration-200"
-                loading="lazy"
-                decoding="async"
-                ref={(el) => { if (el?.complete && el.naturalWidth > 0) el.style.opacity = "1"; }}
-                onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = "1"; }}
-                onError={(e) => {
-                  // Falha no banner NUNCA pode derrubar o checkout: apenas removemos o elemento.
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            </div>
-          )}
 
           {/* Form */}
           <form onSubmit={handlePayment} className="space-y-6">
