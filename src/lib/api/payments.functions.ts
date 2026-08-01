@@ -885,6 +885,20 @@ export const startPayment = createServerFn({ method: "POST" })
         const transactionId = readGatewayTransactionId(json);
         const finalStatus = normalizeGatewayStatus(json, ok, status);
 
+        // Log temporário de diagnóstico de cancelamento (sem tokens/segredos).
+        const dbg = (json ?? {}) as Record<string, unknown>;
+        const dbgData = (dbg.data && typeof dbg.data === "object" ? dbg.data : {}) as Record<string, unknown>;
+        console.info("[payment-cancellation-debug]", {
+          saleId,
+          httpStatus: status,
+          normalizedStatus: finalStatus,
+          transactionId,
+          gatewayStatus: dbg.status ?? dbg.payment_status ?? dbgData.status ?? null,
+          gatewayCode: dbg.code ?? dbg.response_code ?? dbgData.code ?? null,
+          gatewayMessage: String(dbg.message ?? dbg.error ?? dbgData.message ?? "").slice(0, 200) || null,
+        });
+
+
         if (finalStatus === "paid") {
           await confirmSalePayment({
             saleId,
