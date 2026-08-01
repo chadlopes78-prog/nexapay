@@ -252,8 +252,8 @@ function CheckoutPage() {
     } catch (e) { console.error(e); }
   };
 
-  const handlePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePayment = async (e?: React.FormEvent) => {
+    e?.preventDefault();
 
     if (retryCooldownUntil && Date.now() < retryCooldownUntil) {
       const left = Math.ceil((retryCooldownUntil - Date.now()) / 1000);
@@ -269,6 +269,7 @@ function CheckoutPage() {
     setProcessingPayment(true);
     setCancelingPayment(false);
     setPaymentErrorMessage(null);
+    setPaymentFailureCode(null);
     setPaymentStatusMessage(`Pedido enviado para ${paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}. Confirme no seu telefone.`);
     trackEvent('InitiateCheckout');
 
@@ -282,11 +283,12 @@ function CheckoutPage() {
       trackEvent('Purchase');
       window.location.replace(link || `/payment-success?productId=${productId}&saleId=${saleId}`);
     };
-    const finishFailed = (msg: string) => {
+    const finishFailed = (msg: string, code?: string | null) => {
       if (settled || paymentRunRef.current !== runId) return;
       settled = true;
       setCurrentSaleId(null);
       setPaymentErrorMessage(msg);
+      setPaymentFailureCode(code ?? null);
       setPaymentStatusMessage(null);
       setProcessingPayment(false);
       setCancelingPayment(false);
@@ -305,7 +307,7 @@ function CheckoutPage() {
         }
         if (Date.now() >= deadlineAt) {
           await cancelPaymentFn({ data: { saleId, reason: "timeout" } }).catch(() => undefined);
-          finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
+          finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?", "timeout");
           return;
         }
         try {
@@ -319,15 +321,27 @@ function CheckoutPage() {
             lastStatus = s.status;
           }
           if (s.status === "paid") return finishPaid(s.accessLink, saleId);
-          if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
+          if (s.status === "failed") {
+            const code = "failureCode" in s ? (s.failureCode ?? null) : null;
+            console.info("[payment-cancellation-debug]", {
+              saleId,
+              source: "polling",
+              normalizedStatus: s.status,
+              gatewayCode: code,
+              gatewayMessage: s.error ?? null,
+            });
+            return finishFailed(s.error || "Pagamento cancelado ou recusado.", code);
+          }
         } catch { /* transient */ }
         if (settled || paymentRunRef.current !== runId || !isMountedRef.current) return;
-        const fastWindowActive = Date.now() < deadlineAt - 105_000;
-        setTimeout(tick, fastWindowActive ? 300 : 1000);
+        // Intervalo fixo de 1,5s enquanto pending — não encurta o tempo total
+        // permitido para o cliente introduzir o PIN (PAYMENT_WAIT_WINDOW_MS).
+        setTimeout(tick, POLL_INTERVAL_MS);
       };
       // Primeira consulta IMEDIATA — sem atraso artificial.
       void tick();
     };
+
 
 
     try {
