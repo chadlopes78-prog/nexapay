@@ -756,7 +756,9 @@ function CheckoutPage() {
             </div>
           </form>
         </div>
+        </div>
       </div>
+
 
       {processingPayment && !showCancelButton && (
         <ProcessingOverlay
