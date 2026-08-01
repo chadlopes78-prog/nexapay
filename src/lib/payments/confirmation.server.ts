@@ -14,13 +14,21 @@ const FAILED_STATUSES = new Set([
   "failed",
   "failure",
   "error",
+  "cancel",
   "cancelled",
   "canceled",
+  "customer_cancelled",
+  "customer_canceled",
+  "cancelled_by_user",
+  "canceled_by_user",
+  "user_cancelled",
+  "user_canceled",
   "rejected",
   "refused",
   "declined",
   "denied",
 ]);
+
 const EXPIRED_STATUSES = new Set(["expired", "timeout", "timed_out"]);
 
 export type NormalizedPaymentStatus = "paid" | "failed" | "expired" | "pending";
