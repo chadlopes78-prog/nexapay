@@ -821,11 +821,19 @@ function CheckoutPage() {
       </div>
 
 
+      {wasCancelledByCustomer && !processingPayment && (
+        <CancelledOverlay
+          cooldownLeft={retryCooldownLeft}
+          onRetry={onRetryPayment}
+        />
+      )}
+
       {processingPayment && !showCancelButton && (
         <ProcessingOverlay
           phase={paymentErrorMessage ? "error" : "processing"}
         />
       )}
+
 
       {processingPayment && showCancelButton && (
         <PaymentModal
