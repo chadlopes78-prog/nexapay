@@ -659,6 +659,7 @@ export const startPayment = createServerFn({ method: "POST" })
       normalizeGatewayStatus,
       readGatewayFailureDetails,
       readGatewayTransactionId,
+      saveGatewayIdentifiers,
     } = confirmationMod;
     mark("imports");
 
