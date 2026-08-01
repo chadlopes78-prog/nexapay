@@ -579,7 +579,7 @@ export const chargeSale = createServerFn({ method: "POST" })
       console.info("e2payment response", { status: res.status, method, reference, body: text?.slice(0, 800) });
 
       const transactionId = readGatewayTransactionId(json);
-      const finalStatus = normalizeGatewayStatus(json, res.ok);
+      const finalStatus = normalizeGatewayStatus(json, res.ok, res.status);
       const p = sale.products as { access_link?: string | null; delivery_link?: string | null } | null;
 
       if (finalStatus === "paid") {
@@ -795,7 +795,7 @@ export const startPayment = createServerFn({ method: "POST" })
             let json: Record<string, unknown> | null = null;
             try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
             const transactionId = readGatewayTransactionId(json);
-            const finalStatus = normalizeGatewayStatus(json, res.ok);
+            const finalStatus = normalizeGatewayStatus(json, res.ok, res.status);
             if (finalStatus === "paid") {
               await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
             } else if (finalStatus === "failed" || finalStatus === "expired") {
@@ -868,7 +868,7 @@ export const startPayment = createServerFn({ method: "POST" })
         // para a próxima venda buscar um token fresco.
         if (status === 401 || status === 403) invalidateAccessToken(creds.e2p_client_id);
         const transactionId = readGatewayTransactionId(json);
-        const finalStatus = normalizeGatewayStatus(json, ok);
+        const finalStatus = normalizeGatewayStatus(json, ok, status);
         if (finalStatus === "paid") {
           await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
         } else if (finalStatus === "failed" || finalStatus === "expired") {

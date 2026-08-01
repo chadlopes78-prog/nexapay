@@ -199,7 +199,11 @@ export function readGatewayFailureDetails(
   };
 }
 
-export function normalizeGatewayStatus(input: unknown, httpOk = true): NormalizedPaymentStatus {
+export function normalizeGatewayStatus(
+  input: unknown,
+  httpOk = true,
+  httpStatus?: number,
+): NormalizedPaymentStatus {
   const payload = asObject(input);
   const data = nestedObject(payload, "data");
   const successValue = payload.success ?? payload.ok ?? data.success ?? data.ok;
@@ -275,6 +279,17 @@ export function normalizeGatewayStatus(input: unknown, httpOk = true): Normalize
       /(recus|reject|declin|cancel|insufficient|saldo\s+insuficiente|pin\s+incorret|invalid\s+pin|customer\s+did\s+not\s+enter\s+pin|other\s+process|em\s+outro\s+processo)/i.test(
         combined,
       )
+    ) {
+      return "failed";
+    }
+    // Respostas 4xx da gateway (400/401/402/403/422/...) são recusas
+    // definitivas do pedido — inclui o cliente cancelar o pop-up de PIN.
+    // Não faz sentido manter a venda "pending" até o timeout de 4 min.
+    if (
+      typeof httpStatus === "number" &&
+      httpStatus >= 400 &&
+      httpStatus < 500 &&
+      ![408, 409, 425, 429].includes(httpStatus)
     ) {
       return "failed";
     }
