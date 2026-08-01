@@ -11,6 +11,9 @@ import {
 
 const E2PAY_BASE_URL = "https://e2payments.explicador.co.mz";
 const HISTORY_LIMIT = 50;
+const RECONCILIATION_INTERVAL_MS = 3_000;
+const lastReconciliationAt = new Map<string, number>();
+const reconciliationInFlight = new Map<string, Promise<"paid" | "failed" | "expired" | "pending" | null>>();
 
 type PendingSale = {
   id: string;
@@ -93,43 +96,53 @@ async function requestHistory(sale: PendingSale) {
 }
 
 export async function reconcilePendingSale(sale: PendingSale) {
-  try {
-    const history = await requestHistory(sale);
-    if (!history) return null;
-    const payment = findMatchingPayment(history, sale);
-    if (!payment) return null;
+  const existing = reconciliationInFlight.get(sale.id);
+  if (existing) return existing;
+  const lastAttempt = lastReconciliationAt.get(sale.id) ?? 0;
+  if (Date.now() - lastAttempt < RECONCILIATION_INTERVAL_MS) return null;
+  lastReconciliationAt.set(sale.id, Date.now());
 
-    const transactionId = readGatewayTransactionId(payment);
-    const reference = readGatewayReference(payment) ?? sale.payment_reference;
-    await saveGatewayIdentifiers({ saleId: sale.id, transactionId, reference });
+  const task = (async () => {
+    try {
+      const history = await requestHistory(sale);
+      if (!history) return null;
+      const payment = findMatchingPayment(history, sale);
+      if (!payment) return null;
 
-    const status = normalizeGatewayStatus(payment, true);
-    if (status === "paid") {
-      await confirmSalePayment({
+      const transactionId = readGatewayTransactionId(payment);
+      const reference = readGatewayReference(payment) ?? sale.payment_reference;
+      await saveGatewayIdentifiers({ saleId: sale.id, transactionId, reference });
+
+      const status = normalizeGatewayStatus(payment, true);
+      if (status === "paid") {
+        await confirmSalePayment({
+          saleId: sale.id,
+          transactionId,
+          reference,
+          rawPayload: payment,
+          triggerPushcut: true,
+        });
+      } else if (status === "failed" || status === "expired") {
+        const failure = readGatewayFailureDetails(payment, status);
+        await markSaleTerminalFailure({
+          saleId: sale.id,
+          status,
+          transactionId,
+          reference,
+          reason: failure.message,
+          code: failure.code,
+          source: "e2payments_history",
+        });
+      }
+      return status;
+    } catch (error) {
+      console.warn("[payments] reconciliation unavailable", {
         saleId: sale.id,
-        transactionId,
-        reference,
-        rawPayload: payment,
-        triggerPushcut: true,
+        error: error instanceof Error ? error.message : String(error),
       });
-    } else if (status === "failed" || status === "expired") {
-      const failure = readGatewayFailureDetails(payment, status);
-      await markSaleTerminalFailure({
-        saleId: sale.id,
-        status,
-        transactionId,
-        reference,
-        reason: failure.message,
-        code: failure.code,
-        source: "e2payments_history",
-      });
+      return null;
     }
-    return status;
-  } catch (error) {
-    console.warn("[payments] reconciliation unavailable", {
-      saleId: sale.id,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
+  })().finally(() => reconciliationInFlight.delete(sale.id));
+  reconciliationInFlight.set(sale.id, task);
+  return task;
 }
