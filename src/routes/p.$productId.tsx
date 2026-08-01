@@ -18,6 +18,25 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import mozFlag from "@/assets/moz-flag.png.asset.json";
 
+// Intervalo de consulta do estado da venda enquanto pending (~1,5s).
+const POLL_INTERVAL_MS = 1_500;
+
+// Códigos terminais que representam cancelamento/recusa pelo cliente.
+const CANCELLED_CODES = new Set([
+  "cancelled_by_user",
+  "canceled_by_user",
+  "customer_cancelled",
+  "customer_canceled",
+  "user_cancelled",
+  "cancelled",
+  "canceled",
+  "declined",
+  "refused",
+  "rejected",
+]);
+
+
+
 export const Route = createFileRoute("/p/$productId")({
   loader: async ({ params: { productId } }) => {
     try {
@@ -84,7 +103,9 @@ function CheckoutPage() {
   const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
   const [paymentStatusMessage, setPaymentStatusMessage] = useState<string | null>(null);
   const [paymentErrorMessage, setPaymentErrorMessage] = useState<string | null>(null);
+  const [paymentFailureCode, setPaymentFailureCode] = useState<string | null>(null);
   const paymentRunRef = useRef(0);
+
   // Guarda de desmontagem: se o cliente fecha a aba/rota durante o polling,
   // paramos as próximas iterações sem sobrescrever nenhum estado do backend.
   const isMountedRef = useRef(true);
@@ -252,8 +273,8 @@ function CheckoutPage() {
     } catch (e) { console.error(e); }
   };
 
-  const handlePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePayment = async (e?: React.FormEvent) => {
+    e?.preventDefault();
 
     if (retryCooldownUntil && Date.now() < retryCooldownUntil) {
       const left = Math.ceil((retryCooldownUntil - Date.now()) / 1000);
@@ -269,6 +290,7 @@ function CheckoutPage() {
     setProcessingPayment(true);
     setCancelingPayment(false);
     setPaymentErrorMessage(null);
+    setPaymentFailureCode(null);
     setPaymentStatusMessage(`Pedido enviado para ${paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}. Confirme no seu telefone.`);
     trackEvent('InitiateCheckout');
 
@@ -282,11 +304,12 @@ function CheckoutPage() {
       trackEvent('Purchase');
       window.location.replace(link || `/payment-success?productId=${productId}&saleId=${saleId}`);
     };
-    const finishFailed = (msg: string) => {
+    const finishFailed = (msg: string, code?: string | null) => {
       if (settled || paymentRunRef.current !== runId) return;
       settled = true;
       setCurrentSaleId(null);
       setPaymentErrorMessage(msg);
+      setPaymentFailureCode(code ?? null);
       setPaymentStatusMessage(null);
       setProcessingPayment(false);
       setCancelingPayment(false);
@@ -305,7 +328,7 @@ function CheckoutPage() {
         }
         if (Date.now() >= deadlineAt) {
           await cancelPaymentFn({ data: { saleId, reason: "timeout" } }).catch(() => undefined);
-          finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?");
+          finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?", "timeout");
           return;
         }
         try {
@@ -319,15 +342,27 @@ function CheckoutPage() {
             lastStatus = s.status;
           }
           if (s.status === "paid") return finishPaid(s.accessLink, saleId);
-          if (s.status === "failed") return finishFailed(s.error || "Pagamento cancelado ou recusado.");
+          if (s.status === "failed") {
+            const code = "failureCode" in s ? (s.failureCode ?? null) : null;
+            console.info("[payment-cancellation-debug]", {
+              saleId,
+              source: "polling",
+              normalizedStatus: s.status,
+              gatewayCode: code,
+              gatewayMessage: s.error ?? null,
+            });
+            return finishFailed(s.error || "Pagamento cancelado ou recusado.", code);
+          }
         } catch { /* transient */ }
         if (settled || paymentRunRef.current !== runId || !isMountedRef.current) return;
-        const fastWindowActive = Date.now() < deadlineAt - 105_000;
-        setTimeout(tick, fastWindowActive ? 300 : 1000);
+        // Intervalo fixo de 1,5s enquanto pending — não encurta o tempo total
+        // permitido para o cliente introduzir o PIN (PAYMENT_WAIT_WINDOW_MS).
+        setTimeout(tick, POLL_INTERVAL_MS);
       };
       // Primeira consulta IMEDIATA — sem atraso artificial.
       void tick();
     };
+
 
 
     try {
@@ -443,6 +478,25 @@ function CheckoutPage() {
   const handleCancelRef = useRef(handleCancelPayment);
   handleCancelRef.current = handleCancelPayment;
   const onCancelPayment = useCallback(() => { void handleCancelRef.current(); }, []);
+
+  // Cancelamento reconhecido pela gateway (não é erro de comunicação).
+  const wasCancelledByCustomer =
+    !!paymentFailureCode && CANCELLED_CODES.has(paymentFailureCode.toLowerCase());
+
+  // Nova tentativa: limpa o estado anterior e cria um pedido totalmente novo
+  // (novo saleId + nova idempotencyKey geradas dentro de handlePayment).
+  const handleRetryRef = useRef<() => void>(() => {});
+  handleRetryRef.current = () => {
+    if (processingPayment) return;
+    setPaymentFailureCode(null);
+    setPaymentErrorMessage(null);
+    setPaymentStatusMessage(null);
+    setCurrentSaleId(null);
+    void handlePayment();
+  };
+  const onRetryPayment = useCallback(() => handleRetryRef.current(), []);
+
+
 
 
 
@@ -767,11 +821,19 @@ function CheckoutPage() {
       </div>
 
 
+      {wasCancelledByCustomer && !processingPayment && (
+        <CancelledOverlay
+          cooldownLeft={retryCooldownLeft}
+          onRetry={onRetryPayment}
+        />
+      )}
+
       {processingPayment && !showCancelButton && (
         <ProcessingOverlay
           phase={paymentErrorMessage ? "error" : "processing"}
         />
       )}
+
 
       {processingPayment && showCancelButton && (
         <PaymentModal
@@ -925,6 +987,53 @@ const ProcessingOverlay = memo(function ProcessingOverlay({ phase }: { phase: "p
           Introduza o PIN nessa aba para concluir a compra.
         </p>
 
+      </div>
+    </div>
+  );
+});
+
+// Ecrã dedicado ao cancelamento reconhecido pela gateway. Não é mostrado
+// para falhas genéricas de comunicação — essas mantêm a mensagem original.
+const CancelledOverlay = memo(function CancelledOverlay({
+  cooldownLeft,
+  onRetry,
+}: {
+  cooldownLeft: number;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pay-cancelled-title"
+      className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-slate-900/70"
+    >
+      <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl p-6 text-center">
+        <div className="mx-auto h-14 w-14 rounded-full bg-amber-50 flex items-center justify-center">
+          <ShieldAlert className="h-7 w-7 text-amber-500" />
+        </div>
+        <h2
+          id="pay-cancelled-title"
+          className="mt-5 text-lg font-extrabold text-slate-900"
+          style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
+        >
+          Percebemos que cancelaste o pagamento
+        </h2>
+        <p className="mt-2 text-sm text-slate-600">Queres tentar novamente?</p>
+        <Button
+          type="button"
+          disabled={cooldownLeft > 0}
+          onClick={onRetry}
+          className="mt-5 h-12 w-full rounded-xl bg-[#3b82f6] text-sm font-bold text-white hover:bg-[#2f6fe0] disabled:opacity-70"
+        >
+          {cooldownLeft > 0 ? (
+            <>
+              <Clock className="h-4 w-4" /> Aguarda {cooldownLeft}s
+            </>
+          ) : (
+            "Tentar novamente"
+          )}
+        </Button>
       </div>
     </div>
   );

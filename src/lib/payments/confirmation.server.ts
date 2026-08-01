@@ -14,13 +14,21 @@ const FAILED_STATUSES = new Set([
   "failed",
   "failure",
   "error",
+  "cancel",
   "cancelled",
   "canceled",
+  "customer_cancelled",
+  "customer_canceled",
+  "cancelled_by_user",
+  "canceled_by_user",
+  "user_cancelled",
+  "user_canceled",
   "rejected",
   "refused",
   "declined",
   "denied",
 ]);
+
 const EXPIRED_STATUSES = new Set(["expired", "timeout", "timed_out"]);
 
 export type NormalizedPaymentStatus = "paid" | "failed" | "expired" | "pending";
@@ -160,7 +168,7 @@ export function readGatewayFailureDetails(
     };
   }
 
-  if (/(customer\s+did\s+not\s+enter\s+pin|did\s+not\s+enter\s+pin|n[aã]o\s+introduziu\s+pin|n[aã]o\s+digitou\s+pin|cancel|cancelad|cancelou|recus|reject|declin|denied)/i.test(combined)) {
+  if (/(customer\s+did\s+not\s+enter\s+pin|did\s+not\s+enter\s+pin|n[aã]o\s+introduziu\s+pin|n[aã]o\s+digitou\s+pin|cancel|cancelad|cancelou|anulad|recus|refus|reject|declin|denied|deny)/i.test(combined)) {
     return {
       code: "cancelled_by_user",
       message: "Pagamento cancelado pelo cliente.",
@@ -249,7 +257,7 @@ export function normalizeGatewayStatus(
   }
   if (httpOk && (successValue === true || successText === "true")) return "paid";
   if (
-    /(customer\s+did\s+not\s+enter\s+pin|pin\s+incorret|recus|reject|declin|cancel|insufficient|saldo\s+insuficiente)/i.test(
+    /(customer\s+did\s+not\s+enter\s+pin|pin\s+incorret|recus|refus|reject|declin|denied|deny|cancel|anulad|insufficient|saldo\s+insuficiente)/i.test(
       `${combinedSuccessMessage} ${raw}`,
     )
   ) {
@@ -276,7 +284,7 @@ export function normalizeGatewayStatus(
     const combined = `${message} ${raw} ${combinedSuccessMessage}`;
     if (/expir/i.test(combined)) return "expired";
     if (
-      /(recus|reject|declin|cancel|insufficient|saldo\s+insuficiente|pin\s+incorret|invalid\s+pin|customer\s+did\s+not\s+enter\s+pin|other\s+process|em\s+outro\s+processo)/i.test(
+      /(recus|refus|reject|declin|denied|cancel|anulad|insufficient|saldo\s+insuficiente|pin\s+incorret|invalid\s+pin|customer\s+did\s+not\s+enter\s+pin|other\s+process|em\s+outro\s+processo)/i.test(
         combined,
       )
     ) {
