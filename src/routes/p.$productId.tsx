@@ -913,14 +913,18 @@ const ProcessingOverlay = memo(function ProcessingOverlay({ phase }: { phase: "p
         />
         <span className="sr-only">A processar pagamento</span>
         <h2 id="pay-overlay-title" className="mt-5 text-lg font-extrabold text-slate-900" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
-          O seu pagamento está a ser processado. Aguarde.
+          Pedido enviado à operadora
         </h2>
-        <p id="pay-overlay-desc" className="mt-2 text-sm text-slate-600 leading-relaxed">
-          Vai aparecer uma opção no seu telemóvel para confirmar o pagamento.
+        <p id="pay-overlay-desc" className="mt-2 text-sm font-semibold text-slate-800 leading-relaxed">
+          Não feche esta página.
+        </p>
+        <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+          Vai receber uma aba no seu telemóvel para confirmar o pagamento.
         </p>
         <p className="mt-3 text-xs text-slate-500 leading-relaxed">
-          Verifique o seu telemóvel e introduza o PIN para concluir.
+          Introduza o PIN nessa aba para concluir a compra.
         </p>
+
       </div>
     </div>
   );
