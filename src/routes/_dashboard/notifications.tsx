@@ -49,7 +49,7 @@ interface Notification {
   created_at: string;
 }
 
-export default function NotificationsPage() {
+function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
