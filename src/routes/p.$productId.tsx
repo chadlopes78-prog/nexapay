@@ -479,6 +479,25 @@ function CheckoutPage() {
   handleCancelRef.current = handleCancelPayment;
   const onCancelPayment = useCallback(() => { void handleCancelRef.current(); }, []);
 
+  // Cancelamento reconhecido pela gateway (não é erro de comunicação).
+  const wasCancelledByCustomer =
+    !!paymentFailureCode && CANCELLED_CODES.has(paymentFailureCode.toLowerCase());
+
+  // Nova tentativa: limpa o estado anterior e cria um pedido totalmente novo
+  // (novo saleId + nova idempotencyKey geradas dentro de handlePayment).
+  const handleRetryRef = useRef<() => void>(() => {});
+  handleRetryRef.current = () => {
+    if (processingPayment) return;
+    setPaymentFailureCode(null);
+    setPaymentErrorMessage(null);
+    setPaymentStatusMessage(null);
+    setCurrentSaleId(null);
+    void handlePayment();
+  };
+  const onRetryPayment = useCallback(() => handleRetryRef.current(), []);
+
+
+
 
 
   if (!product) {
