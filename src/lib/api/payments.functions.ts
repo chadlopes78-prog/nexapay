@@ -44,6 +44,20 @@ type GatewayCallResult = {
   text: string;
 };
 
+// Códigos de falha que representam cancelamento explícito do cliente.
+const CANCELLED_FAILURE_CODES = new Set([
+  "cancelled_by_user",
+  "canceled_by_user",
+  "customer_cancelled",
+  "customer_canceled",
+  "user_cancelled",
+  "user_canceled",
+  "cancelled",
+  "canceled",
+  "rejected",
+  "refused",
+]);
+
 export const getSaleStatus = createServerFn({ method: "GET" })
   .inputValidator((input) => PaymentSuccessInput.parse(input))
   .handler(async ({ data }) => {
@@ -92,9 +106,9 @@ export const getSaleStatus = createServerFn({ method: "GET" })
         code: "timeout",
       }).catch((error) => console.error("getSaleStatus timeout update error", error));
       return {
-        status: "failed" as const,
+        status: "expired" as const,
         accessLink: null,
-        error: "O pedido expirou sem confirmação do PIN.",
+        error: "O tempo para confirmar o pagamento terminou.",
         failureCode: "timeout",
       };
     }
@@ -116,8 +130,20 @@ export const getSaleStatus = createServerFn({ method: "GET" })
       // Recuperação idempotente continua a acontecer em /payment-success e
       // no webhook — repetir a cada tick só gera inserts e logs desnecessários.
     }
+    // Estado terminal específico devolvido ao checkout: "cancelled" (cliente
+    // cancelou/recusou), "failed" (recusa da operadora) ou "expired" (tempo
+    // esgotado). O frontend usa isso para escolher a mensagem correta.
+    const terminalKind: "cancelled" | "expired" | "failed" = ["cancelled", "canceled", "refused", "rejected"].includes(raw)
+      ? "cancelled"
+      : raw === "expired"
+        ? "expired"
+        : ["timeout", "expired"].includes(String(sale.failure_code ?? "").toLowerCase())
+          ? "expired"
+          : CANCELLED_FAILURE_CODES.has(String(sale.failure_code ?? "").toLowerCase())
+            ? "cancelled"
+            : "failed";
     return {
-      status: paid ? ("paid" as const) : failed ? ("failed" as const) : ("pending" as const),
+      status: paid ? ("paid" as const) : failed ? terminalKind : ("pending" as const),
       accessLink,
       error: failed ? (sale.failure_reason || sale.payment_reference || "Pagamento cancelado ou recusado.") : null,
       failureCode: failed ? (sale.failure_code || null) : null,
@@ -164,7 +190,7 @@ export const cancelPayment = createServerFn({ method: "POST" })
 
       const outcome = await markSaleTerminalFailure({
         saleId: data.saleId,
-        status: isTimeout ? "expired" : "failed",
+        status: isTimeout ? "expired" : "cancelled",
         reference: sale.payment_reference,
         reason,
         code,
