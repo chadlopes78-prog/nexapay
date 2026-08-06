@@ -60,7 +60,7 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     if (!paid && !failed) {
       const { reconcilePendingSale } = await import("@/lib/payments/reconciliation.server");
       const reconciled = await reconcilePendingSale(sale);
-      if (reconciled === "paid" || reconciled === "failed" || reconciled === "expired") {
+      if (reconciled === "paid" || reconciled === "failed" || reconciled === "expired" || reconciled === "cancelled") {
         const { data: refreshed } = await supabaseAdmin
           .from("sales")
           .select("status, failure_reason, failure_code")
@@ -606,7 +606,7 @@ export const chargeSale = createServerFn({ method: "POST" })
         await confirmSalePayment({ saleId: sale.id, transactionId, reference, rawPayload: json, triggerPushcut: true });
         return { success: true, saleId: sale.id, transactionId, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
       }
-      if (finalStatus === "failed" || finalStatus === "expired") {
+      if (finalStatus === "failed" || finalStatus === "expired" || finalStatus === "cancelled") {
         const failure = readGatewayFailureDetails(json, finalStatus);
         await markSaleTerminalFailure({ saleId: sale.id, status: finalStatus, transactionId, reference, reason: failure.message, code: failure.code });
         return { success: false, saleId: sale.id, error: failure.message };
@@ -820,7 +820,7 @@ export const startPayment = createServerFn({ method: "POST" })
             await saveGatewayIdentifiers({ saleId, transactionId, reference });
             if (finalStatus === "paid") {
               await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
-            } else if (finalStatus === "failed" || finalStatus === "expired") {
+            } else if (finalStatus === "failed" || finalStatus === "expired" || finalStatus === "cancelled") {
               const failure = readGatewayFailureDetails(json, finalStatus);
               await markSaleTerminalFailure({ saleId, status: finalStatus, transactionId, reference, reason: failure.message, code: failure.code });
             }
@@ -930,7 +930,7 @@ export const startPayment = createServerFn({ method: "POST" })
             rawPayload: json,
             triggerPushcut: true,
           });
-        } else if (finalStatus === "failed" || finalStatus === "expired") {
+        } else if (finalStatus === "failed" || finalStatus === "expired" || finalStatus === "cancelled") {
           const failure = readGatewayFailureDetails(json, finalStatus);
           await markSaleTerminalFailure({
             saleId,
