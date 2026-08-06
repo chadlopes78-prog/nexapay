@@ -44,6 +44,20 @@ type GatewayCallResult = {
   text: string;
 };
 
+// Códigos de falha que representam cancelamento explícito do cliente.
+const CANCELLED_FAILURE_CODES = new Set([
+  "cancelled_by_user",
+  "canceled_by_user",
+  "customer_cancelled",
+  "customer_canceled",
+  "user_cancelled",
+  "user_canceled",
+  "cancelled",
+  "canceled",
+  "rejected",
+  "refused",
+]);
+
 export const getSaleStatus = createServerFn({ method: "GET" })
   .inputValidator((input) => PaymentSuccessInput.parse(input))
   .handler(async ({ data }) => {
@@ -60,7 +74,7 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     if (!paid && !failed) {
       const { reconcilePendingSale } = await import("@/lib/payments/reconciliation.server");
       const reconciled = await reconcilePendingSale(sale);
-      if (reconciled === "paid" || reconciled === "failed" || reconciled === "expired") {
+      if (reconciled === "paid" || reconciled === "failed" || reconciled === "expired" || reconciled === "cancelled") {
         const { data: refreshed } = await supabaseAdmin
           .from("sales")
           .select("status, failure_reason, failure_code")
@@ -92,9 +106,9 @@ export const getSaleStatus = createServerFn({ method: "GET" })
         code: "timeout",
       }).catch((error) => console.error("getSaleStatus timeout update error", error));
       return {
-        status: "failed" as const,
+        status: "expired" as const,
         accessLink: null,
-        error: "O pedido expirou sem confirmação do PIN.",
+        error: "O tempo para confirmar o pagamento terminou.",
         failureCode: "timeout",
       };
     }
@@ -116,8 +130,20 @@ export const getSaleStatus = createServerFn({ method: "GET" })
       // Recuperação idempotente continua a acontecer em /payment-success e
       // no webhook — repetir a cada tick só gera inserts e logs desnecessários.
     }
+    // Estado terminal específico devolvido ao checkout: "cancelled" (cliente
+    // cancelou/recusou), "failed" (recusa da operadora) ou "expired" (tempo
+    // esgotado). O frontend usa isso para escolher a mensagem correta.
+    const terminalKind: "cancelled" | "expired" | "failed" = ["cancelled", "canceled", "refused", "rejected"].includes(raw)
+      ? "cancelled"
+      : raw === "expired"
+        ? "expired"
+        : ["timeout", "expired"].includes(String(sale.failure_code ?? "").toLowerCase())
+          ? "expired"
+          : CANCELLED_FAILURE_CODES.has(String(sale.failure_code ?? "").toLowerCase())
+            ? "cancelled"
+            : "failed";
     return {
-      status: paid ? ("paid" as const) : failed ? ("failed" as const) : ("pending" as const),
+      status: paid ? ("paid" as const) : failed ? terminalKind : ("pending" as const),
       accessLink,
       error: failed ? (sale.failure_reason || sale.payment_reference || "Pagamento cancelado ou recusado.") : null,
       failureCode: failed ? (sale.failure_code || null) : null,
@@ -164,7 +190,7 @@ export const cancelPayment = createServerFn({ method: "POST" })
 
       const outcome = await markSaleTerminalFailure({
         saleId: data.saleId,
-        status: isTimeout ? "expired" : "failed",
+        status: isTimeout ? "expired" : "cancelled",
         reference: sale.payment_reference,
         reason,
         code,
@@ -606,7 +632,7 @@ export const chargeSale = createServerFn({ method: "POST" })
         await confirmSalePayment({ saleId: sale.id, transactionId, reference, rawPayload: json, triggerPushcut: true });
         return { success: true, saleId: sale.id, transactionId, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
       }
-      if (finalStatus === "failed" || finalStatus === "expired") {
+      if (finalStatus === "failed" || finalStatus === "expired" || finalStatus === "cancelled") {
         const failure = readGatewayFailureDetails(json, finalStatus);
         await markSaleTerminalFailure({ saleId: sale.id, status: finalStatus, transactionId, reference, reason: failure.message, code: failure.code });
         return { success: false, saleId: sale.id, error: failure.message };
@@ -820,7 +846,7 @@ export const startPayment = createServerFn({ method: "POST" })
             await saveGatewayIdentifiers({ saleId, transactionId, reference });
             if (finalStatus === "paid") {
               await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
-            } else if (finalStatus === "failed" || finalStatus === "expired") {
+            } else if (finalStatus === "failed" || finalStatus === "expired" || finalStatus === "cancelled") {
               const failure = readGatewayFailureDetails(json, finalStatus);
               await markSaleTerminalFailure({ saleId, status: finalStatus, transactionId, reference, reason: failure.message, code: failure.code });
             }
@@ -930,7 +956,7 @@ export const startPayment = createServerFn({ method: "POST" })
             rawPayload: json,
             triggerPushcut: true,
           });
-        } else if (finalStatus === "failed" || finalStatus === "expired") {
+        } else if (finalStatus === "failed" || finalStatus === "expired" || finalStatus === "cancelled") {
           const failure = readGatewayFailureDetails(json, finalStatus);
           await markSaleTerminalFailure({
             saleId,

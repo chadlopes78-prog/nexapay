@@ -13,7 +13,7 @@ const E2PAY_BASE_URL = "https://e2payments.explicador.co.mz";
 const HISTORY_LIMIT = 50;
 const RECONCILIATION_INTERVAL_MS = 3_000;
 const lastReconciliationAt = new Map<string, number>();
-const reconciliationInFlight = new Map<string, Promise<"paid" | "failed" | "expired" | "pending" | null>>();
+const reconciliationInFlight = new Map<string, Promise<"paid" | "cancelled" | "failed" | "expired" | "pending" | null>>();
 
 type PendingSale = {
   id: string;
@@ -122,7 +122,7 @@ export async function reconcilePendingSale(sale: PendingSale) {
           rawPayload: payment,
           triggerPushcut: true,
         });
-      } else if (status === "failed" || status === "expired") {
+      } else if (status === "failed" || status === "expired" || status === "cancelled") {
         const failure = readGatewayFailureDetails(payment, status);
         await markSaleTerminalFailure({
           saleId: sale.id,

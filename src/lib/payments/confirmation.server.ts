@@ -10,10 +10,8 @@ const PAID_STATUSES = new Set([
   "confirmed",
   "processed",
 ]);
-const FAILED_STATUSES = new Set([
-  "failed",
-  "failure",
-  "error",
+// Cancelamento explícito do cliente/operadora — estado terminal próprio.
+const CANCELLED_STATUSES = new Set([
   "cancel",
   "cancelled",
   "canceled",
@@ -23,15 +21,24 @@ const FAILED_STATUSES = new Set([
   "canceled_by_user",
   "user_cancelled",
   "user_canceled",
+  "aborted",
   "rejected",
   "refused",
+]);
+
+const FAILED_STATUSES = new Set([
+  "failed",
+  "failure",
+  "error",
+  "unsuccessful",
   "declined",
   "denied",
 ]);
 
 const EXPIRED_STATUSES = new Set(["expired", "timeout", "timed_out"]);
 
-export type NormalizedPaymentStatus = "paid" | "failed" | "expired" | "pending";
+export type NormalizedPaymentStatus = "paid" | "cancelled" | "failed" | "expired" | "pending";
+export type TerminalFailureStatus = "cancelled" | "failed" | "expired";
 
 type GatewayPayload = Record<string, unknown>;
 export type GatewayFailureDetails = {
@@ -144,7 +151,7 @@ function collectGatewayText(input: unknown) {
 
 export function readGatewayFailureDetails(
   input: unknown,
-  fallbackStatus: "failed" | "expired" = "failed",
+  fallbackStatus: TerminalFailureStatus = "failed",
 ): GatewayFailureDetails {
   const { rawMessage, combined } = collectGatewayText(input);
 
@@ -234,6 +241,7 @@ export function normalizeGatewayStatus(
 
   if (PAID_STATUSES.has(raw)) return "paid";
   if (EXPIRED_STATUSES.has(raw)) return "expired";
+  if (CANCELLED_STATUSES.has(raw)) return "cancelled";
   if (FAILED_STATUSES.has(raw)) return "failed";
 
   const message = String(
@@ -256,10 +264,14 @@ export function normalizeGatewayStatus(
     return "paid";
   }
   if (httpOk && (successValue === true || successText === "true")) return "paid";
+  const paidOrFailText = `${combinedSuccessMessage} ${raw}`;
   if (
-    /(customer\s+did\s+not\s+enter\s+pin|pin\s+incorret|recus|refus|reject|declin|denied|deny|cancel|anulad|insufficient|saldo\s+insuficiente)/i.test(
-      `${combinedSuccessMessage} ${raw}`,
-    )
+    /(customer\s+did\s+not\s+enter\s+pin|recus|refus|reject|cancel|anulad|abort)/i.test(paidOrFailText)
+  ) {
+    return "cancelled";
+  }
+  if (
+    /(pin\s+incorret|declin|denied|deny|insufficient|saldo\s+insuficiente)/i.test(paidOrFailText)
   ) {
     return "failed";
   }
@@ -272,7 +284,9 @@ export function normalizeGatewayStatus(
     httpOk &&
     (successValue === false || successText === "false")
   ) {
-    return /expir/i.test(message) ? "expired" : "failed";
+    if (/expir|timeout|timed\s*out/i.test(message)) return "expired";
+    if (/recus|refus|reject|cancel|anulad|abort/i.test(message)) return "cancelled";
+    return "failed";
   }
 
   // HTTP não-OK (502/503/504/timeout/corpo vazio/etc.) NÃO prova falha do
@@ -282,9 +296,12 @@ export function normalizeGatewayStatus(
   // com a fonte da verdade (getSaleStatus) até o cutoff central.
   if (!httpOk) {
     const combined = `${message} ${raw} ${combinedSuccessMessage}`;
-    if (/expir/i.test(combined)) return "expired";
+    if (/expir|timeout|timed\s*out/i.test(combined)) return "expired";
+    if (/(recus|refus|reject|cancel|anulad|abort|customer\s+did\s+not\s+enter\s+pin)/i.test(combined)) {
+      return "cancelled";
+    }
     if (
-      /(recus|refus|reject|declin|denied|cancel|anulad|insufficient|saldo\s+insuficiente|pin\s+incorret|invalid\s+pin|customer\s+did\s+not\s+enter\s+pin|other\s+process|em\s+outro\s+processo)/i.test(
+      /(declin|denied|insufficient|saldo\s+insuficiente|pin\s+incorret|invalid\s+pin|other\s+process|em\s+outro\s+processo)/i.test(
         combined,
       )
     ) {
@@ -440,7 +457,7 @@ export async function confirmSalePayment(options: {
 
 export async function markSaleTerminalFailure(options: {
   saleId: string;
-  status: "failed" | "expired";
+  status: TerminalFailureStatus;
   transactionId?: string | null;
   reference?: string | null;
   reason?: string | null;
@@ -451,7 +468,8 @@ export async function markSaleTerminalFailure(options: {
   // Preserve the real terminal reason ("expired" vs "failed") instead of
   // collapsing everything to "failed". Webhooks and UI need to distinguish
   // timeouts from gateway refusals.
-  const finalStatus: "failed" | "expired" = status === "expired" ? "expired" : "failed";
+  const finalStatus: TerminalFailureStatus =
+    status === "expired" ? "expired" : status === "cancelled" ? "cancelled" : "failed";
   const updatePayload = {
     status: finalStatus,
     transaction_id: transactionId ? transactionId.slice(0, 200) : undefined,
@@ -464,7 +482,7 @@ export async function markSaleTerminalFailure(options: {
     .update(updatePayload as never)
     .eq("id", saleId)
     // Idempotency: don't overwrite an already-terminal sale
-    .not("status", "in", "(paid,approved,failed,expired)")
+    .not("status", "in", "(paid,approved,failed,expired,cancelled,canceled)")
     .select(
       "id, status, user_id, product_id, customer_name, customer_phone, amount, payment_method",
     )
@@ -508,7 +526,12 @@ export async function markSaleTerminalFailure(options: {
 
   void dispatchFailureSideEffects({
     sale: updated,
-    event: status === "expired" ? "payment.expired" : "payment.refused",
+    event:
+      status === "expired"
+        ? "payment.expired"
+        : status === "cancelled"
+          ? "sale.cancelled"
+          : "payment.refused",
     finalStatus,
     reason: reason?.slice(0, 200) ?? status,
   }).catch((e) => console.error("[payments] failure side-effects failed", e));
@@ -527,7 +550,7 @@ async function dispatchFailureSideEffects(options: {
     | "amount"
     | "payment_method"
   >;
-  event: "payment.expired" | "payment.refused";
+  event: "payment.expired" | "payment.refused" | "sale.cancelled";
   finalStatus: string;
   reason: string;
 }) {

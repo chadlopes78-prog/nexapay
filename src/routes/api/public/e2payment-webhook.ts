@@ -76,7 +76,7 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
             rawPayload: payload,
             triggerPushcut: true,
           });
-        } else if (status === "failed" || status === "expired") {
+        } else if (status === "failed" || status === "expired" || status === "cancelled") {
           const failure = readGatewayFailureDetails(payload, status);
           console.info("[payment-cancellation-debug]", {
             saleId: saleData.id,
