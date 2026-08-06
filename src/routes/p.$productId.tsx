@@ -327,8 +327,16 @@ function CheckoutPage() {
           return;
         }
         if (Date.now() >= deadlineAt) {
+          // Requisito: antes de marcar como expirado, consultar a gateway
+          // mais uma vez (getSaleStatus reconcilia com a E2Payments).
+          try {
+            const last = await statusFn({ data: { saleId } });
+            if (last.status === "paid") return finishPaid(last.accessLink, saleId);
+            if (last.status === "cancelled") return finishFailed("Pagamento cancelado pelo cliente.", "cancelled_by_user");
+            if (last.status === "failed") return finishFailed(last.error || "Pagamento recusado pela operadora.");
+          } catch { /* segue para expiração */ }
           await cancelPaymentFn({ data: { saleId, reason: "timeout" } }).catch(() => undefined);
-          finishFailed("Não recebemos a confirmação. Cancelaste o pedido ou o tempo expirou. Desejas abandonar esta oportunidade?", "timeout");
+          finishFailed("O tempo para confirmar o pagamento terminou.", "timeout");
           return;
         }
         try {
@@ -470,7 +478,8 @@ function CheckoutPage() {
 
       // Só agora invalidamos o run — cancelamento efetivo.
       paymentRunRef.current += 1;
-      setPaymentErrorMessage(result.error || "Pagamento cancelado. Aguarda alguns segundos antes de tentar de novo.");
+      setPaymentErrorMessage("Pagamento cancelado pelo cliente.");
+      setPaymentFailureCode("cancelled_by_user");
       setPaymentStatusMessage(null);
       setProcessingPayment(false);
       setCurrentSaleId(null);
