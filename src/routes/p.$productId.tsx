@@ -342,7 +342,7 @@ function CheckoutPage() {
             lastStatus = s.status;
           }
           if (s.status === "paid") return finishPaid(s.accessLink, saleId);
-          if (s.status === "failed") {
+          if (s.status === "cancelled" || s.status === "expired" || s.status === "failed") {
             const code = "failureCode" in s ? (s.failureCode ?? null) : null;
             console.info("[payment-cancellation-debug]", {
               saleId,
@@ -351,7 +351,13 @@ function CheckoutPage() {
               gatewayCode: code,
               gatewayMessage: s.error ?? null,
             });
-            return finishFailed(s.error || "Pagamento cancelado ou recusado.", code);
+            const message =
+              s.status === "cancelled"
+                ? "Pagamento cancelado pelo cliente."
+                : s.status === "expired"
+                  ? "O tempo para confirmar o pagamento terminou."
+                  : s.error || "Pagamento recusado pela operadora.";
+            return finishFailed(message, s.status === "cancelled" ? code ?? "cancelled_by_user" : code);
           }
         } catch { /* transient */ }
         if (settled || paymentRunRef.current !== runId || !isMountedRef.current) return;
@@ -422,7 +428,9 @@ function CheckoutPage() {
           try {
             const check = await statusFn({ data: { saleId } });
             if (check.status === "paid") return finishPaid(check.accessLink, saleId);
-            if (check.status === "failed") return finishFailed(check.error || "Pagamento cancelado ou recusado.");
+            if (check.status === "cancelled") return finishFailed("Pagamento cancelado pelo cliente.", "cancelled_by_user");
+            if (check.status === "expired") return finishFailed("O tempo para confirmar o pagamento terminou.", "timeout");
+            if (check.status === "failed") return finishFailed(check.error || "Pagamento recusado pela operadora.");
             if (check.status === "pending") return; // deixa polling continuar
           } catch { /* ignorar — cai no finishFailed abaixo */ }
           finishFailed(error?.message || "Erro inesperado ao processar pagamento.");
