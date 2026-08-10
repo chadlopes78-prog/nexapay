@@ -533,11 +533,25 @@ export async function confirmSalePayment(options: {
 }) {
   const { saleId, transactionId, reference, rawPayload, triggerPushcut = false } = options;
 
-  const updatePayload: { status: string; payment_reference: string; transaction_id?: string } = {
+  const updatePayload: Record<string, unknown> = {
     status: "paid",
     payment_reference: reference ? reference.slice(0, 200) : paymentReferenceForSale(saleId),
+    paid_at: new Date().toISOString(),
+    gateway_raw_status: readGatewayRawStatus(rawPayload),
+    gateway_error_code: readGatewayCode(rawPayload),
+    gateway_message: collectGatewayText(rawPayload).rawMessage?.slice(0, 500) ?? null,
   };
   if (transactionId) updatePayload.transaction_id = transactionId.slice(0, 200);
+
+  logPaymentTransition({
+    saleId,
+    source: "confirmSalePayment",
+    internalStatus: "paid",
+    gatewayStatus: readGatewayRawStatus(rawPayload),
+    gatewayCode: readGatewayCode(rawPayload),
+    gatewayMessage: collectGatewayText(rawPayload).rawMessage,
+    transactionId: transactionId ?? null,
+  });
 
   const { data: updated, error: updateError } = await supabaseAdmin
     .from("sales")
