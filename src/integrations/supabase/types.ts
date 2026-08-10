@@ -746,6 +746,36 @@ export type Database = {
           },
         ]
       }
+      sms_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          message_paid: string
+          sender: string
+          test_phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          message_paid?: string
+          sender?: string
+          test_phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          message_paid?: string
+          sender?: string
+          test_phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       traffic_events: {
         Row: {
           ad_id: string | null
