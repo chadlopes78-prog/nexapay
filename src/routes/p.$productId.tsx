@@ -1075,9 +1075,9 @@ const CancelledOverlay = memo(function CancelledOverlay({
           className="mt-5 text-lg font-extrabold text-slate-900"
           style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
         >
-          Percebemos que cancelaste o pagamento
+          {title}
         </h2>
-        <p className="mt-2 text-sm text-slate-600">Queres tentar novamente?</p>
+        <p className="mt-2 text-sm text-slate-600">{description}</p>
         <Button
           type="button"
           disabled={cooldownLeft > 0}
