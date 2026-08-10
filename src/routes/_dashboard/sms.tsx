@@ -69,6 +69,20 @@ function SmsPage() {
       toast.error(e instanceof Error ? e.message : "Não foi possível guardar."),
   });
 
+  const sendTest = useMutation({
+    mutationFn: () => {
+      // Validação antes de consumir crédito de SMS.
+      if (!testPhone.trim()) throw new Error("Indique o número para teste.");
+      if (!message.trim()) throw new Error("A mensagem não pode estar vazia.");
+      return runTestSms({ data: { phone: testPhone.trim(), message: message.trim() } });
+    },
+    onSuccess: () => toast.success("SMS enviado com sucesso."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível enviar a SMS."),
+  });
+
+
+
   // A integração só é considerada pronta quando o backend tem API Key + endpoint.
   const integrationReady = Boolean(data?.hasApiKey && data?.hasEndpoint);
   const configured = Boolean(data?.exists && integrationReady);
