@@ -358,6 +358,10 @@ export function normalizeGatewayStatus(
   httpOk = true,
   httpStatus?: number,
 ): NormalizedPaymentStatus {
+  // PRIORIDADE 1 — código estruturado (não depende de texto livre).
+  const mappedCode = lookupGatewayCode(input);
+  if (mappedCode) return mappedCode.status;
+
   const payload = asObject(input);
   const data = nestedObject(payload, "data");
   const successValue = payload.success ?? payload.ok ?? data.success ?? data.ok;
