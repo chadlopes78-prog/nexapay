@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getSmsSettings, saveSmsSettings } from "@/lib/api/sms.functions";
+import { getSmsSettings, saveSmsSettings, sendTestSms } from "@/lib/api/sms.functions";
 
 export const Route = createFileRoute("/_dashboard/sms")({
   component: SmsPage,
