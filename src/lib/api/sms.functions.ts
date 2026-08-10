@@ -9,24 +9,43 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * Esta camada é puramente aditiva — não toca em pagamentos, webhooks ou checkout.
  */
 
+export type SmsTemplateItem = { body: string; delay_minutes: number };
+
 export type SmsSettings = {
   user_id: string;
   enabled: boolean;
   sender: string;
   message_paid: string;
   test_phone: string | null;
+  sms_count: number;
+  messages: SmsTemplateItem[];
 };
 
 const DEFAULT_SENDER = "11480";
 const DEFAULT_MESSAGE =
   "Olá {nome}, recebemos o seu pagamento de {valor} MT referente a {produto}. O seu pagamento foi confirmado com sucesso.";
+const MAX_SMS = 5;
+
+function coerceTemplates(raw: unknown, fallback: string, count: number): SmsTemplateItem[] {
+  const list = Array.isArray(raw) ? raw : [];
+  const total = Math.min(Math.max(Number(count) || 1, 1), MAX_SMS);
+  const out: SmsTemplateItem[] = [];
+  for (let i = 0; i < total; i++) {
+    const item = (list[i] ?? {}) as Record<string, unknown>;
+    out.push({
+      body: String(item["body"] ?? (i === 0 ? fallback : "")).slice(0, 800),
+      delay_minutes: i === 0 ? 0 : Math.max(0, Math.round(Number(item["delay_minutes"] ?? 0) || 0)),
+    });
+  }
+  return out;
+}
 
 export const getSmsSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("sms_settings")
-      .select("user_id, enabled, sender, message_paid, test_phone")
+      .select("user_id, enabled, sender, message_paid, test_phone, sms_count, messages")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -35,17 +54,22 @@ export const getSmsSettings = createServerFn({ method: "GET" })
     const hasApiKey = Boolean(process.env["BULKSMS_API_KEY"]);
     const hasEndpoint = Boolean(process.env["BULKSMS_API_URL"]);
 
+    const row = data as (Omit<SmsSettings, "messages"> & { messages: unknown }) | null;
 
     return {
-      settings:
-        (data as SmsSettings | null) ??
-        ({
-          user_id: context.userId,
-          enabled: false,
-          sender: DEFAULT_SENDER,
-          message_paid: DEFAULT_MESSAGE,
-          test_phone: null,
-        } satisfies SmsSettings),
+      settings: {
+        user_id: context.userId,
+        enabled: row?.enabled ?? false,
+        sender: row?.sender ?? DEFAULT_SENDER,
+        message_paid: row?.message_paid ?? DEFAULT_MESSAGE,
+        test_phone: row?.test_phone ?? null,
+        sms_count: Math.min(Math.max(row?.sms_count ?? 1, 1), MAX_SMS),
+        messages: coerceTemplates(
+          row?.messages,
+          row?.message_paid ?? DEFAULT_MESSAGE,
+          row?.sms_count ?? 1,
+        ),
+      } satisfies SmsSettings,
       exists: Boolean(data),
       hasApiKey,
       hasEndpoint,
@@ -59,13 +83,19 @@ export const saveSmsSettings = createServerFn({ method: "POST" })
     sender?: string;
     message_paid?: string;
     test_phone?: string | null;
+    sms_count?: number;
+    messages?: SmsTemplateItem[];
   }) => d)
   .handler(async ({ data, context }) => {
     const sender = String(data.sender ?? DEFAULT_SENDER).trim().slice(0, 20);
     if (!sender) throw new Error("O sender não pode estar vazio.");
 
-    const message = String(data.message_paid ?? DEFAULT_MESSAGE).trim().slice(0, 1000);
-    if (!message) throw new Error("A mensagem não pode estar vazia.");
+    const smsCount = Math.min(Math.max(Math.round(Number(data.sms_count ?? 1) || 1), 1), MAX_SMS);
+    const messages = coerceTemplates(data.messages, String(data.message_paid ?? DEFAULT_MESSAGE), smsCount);
+
+    const primary = (messages[0]?.body ?? "").trim();
+    if (!primary) throw new Error("A mensagem da SMS 1 não pode estar vazia.");
+    messages[0] = { body: primary.slice(0, 800), delay_minutes: 0 };
 
     const testPhone = data.test_phone ? String(data.test_phone).replace(/\D/g, "").slice(0, 15) : null;
 
@@ -76,16 +106,19 @@ export const saveSmsSettings = createServerFn({ method: "POST" })
           user_id: context.userId,
           enabled: data.enabled ?? false,
           sender,
-          message_paid: message,
+          message_paid: primary.slice(0, 1000),
           test_phone: testPhone,
+          sms_count: smsCount,
+          messages: messages as never,
         },
         { onConflict: "user_id" },
       )
-      .select("user_id, enabled, sender, message_paid, test_phone")
+      .select("user_id, enabled, sender, message_paid, test_phone, sms_count, messages")
       .single();
     if (error) throw new Error(error.message);
-    return saved as SmsSettings;
+    return saved as unknown as SmsSettings;
   });
+
 
 /**
  * Normaliza um número moçambicano para o formato +258XXXXXXXXX.
