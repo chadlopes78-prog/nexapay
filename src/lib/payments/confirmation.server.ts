@@ -594,12 +594,19 @@ export async function confirmSalePayment(options: {
   // resposta que informa o checkout de que a venda está paga: a BulkSMS pode
   // demorar segundos. Corre fora do caminho crítico via waitUntil.
   try {
-    const smsTask = (async () => {
-      const { scheduleSalesSms } = await import("@/lib/sms/dispatch.server");
-      await scheduleSalesSms(updated);
-    })().catch((e) => console.error("[sms] agendamento pós-pagamento suprimido", e));
-    const { waitUntil } = await import("@/lib/runtime-context.server");
-    if (!waitUntil(smsTask)) void smsTask;
+    const { enqueueSalesSms, processDueSms } = await import("@/lib/sms/dispatch.server");
+    // O agendamento é apenas uma escrita rápida na BD: tem de ser garantido
+    // aqui, porque tarefas em background podem ser descartadas pelo Worker.
+    const queued = await enqueueSalesSms(updated);
+    if (queued > 0) {
+      // O envio (BulkSMS) pode demorar: sai do caminho crítico, com o cron
+      // `sweep-sms` como rede de segurança caso o isolate seja reciclado.
+      const sendTask = processDueSms(10).catch((e) =>
+        console.error("[sms] envio imediato suprimido", e),
+      );
+      const { waitUntil } = await import("@/lib/runtime-context.server");
+      if (!waitUntil(sendTask)) void sendTask;
+    }
   } catch (e) {
     console.error("[sms] agendamento pós-pagamento suprimido", e);
   }
