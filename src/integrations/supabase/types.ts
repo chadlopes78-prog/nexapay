@@ -776,12 +776,68 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          customer_phone: string
+          error: string | null
+          id: string
+          message: string
+          message_id: string | null
+          sale_id: string
+          scheduled_for: string
+          sent_at: string | null
+          sms_sequence: number
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          customer_phone: string
+          error?: string | null
+          id?: string
+          message: string
+          message_id?: string | null
+          sale_id: string
+          scheduled_for?: string
+          sent_at?: string | null
+          sms_sequence: number
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          customer_phone?: string
+          error?: string | null
+          id?: string
+          message?: string
+          message_id?: string | null
+          sale_id?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          sms_sequence?: number
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sms_settings: {
         Row: {
           created_at: string
           enabled: boolean
           message_paid: string
+          messages: Json
           sender: string
+          sms_count: number
           test_phone: string | null
           updated_at: string
           user_id: string
@@ -790,7 +846,9 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           message_paid?: string
+          messages?: Json
           sender?: string
+          sms_count?: number
           test_phone?: string | null
           updated_at?: string
           user_id: string
@@ -799,7 +857,9 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           message_paid?: string
+          messages?: Json
           sender?: string
+          sms_count?: number
           test_phone?: string | null
           updated_at?: string
           user_id?: string
