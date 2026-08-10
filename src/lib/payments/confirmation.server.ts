@@ -256,6 +256,30 @@ function collectGatewayText(input: unknown) {
   };
 }
 
+/**
+ * Justificativas amigáveis por código interno. A interface mostra este texto;
+ * a resposta original da gateway continua guardada em gateway_message.
+ */
+const JUSTIFICATION_BY_CODE: Record<string, string> = {
+  insufficient_funds: "Saldo insuficiente na conta do cliente.",
+  cancelled_by_user: "Pagamento cancelado pelo cliente.",
+  invalid_pin: "PIN ou autorização do pagamento não foi aceite.",
+  timeout: "A solicitação de pagamento expirou antes da confirmação.",
+  duplicate_transaction: "Já existe um pedido igual em processamento.",
+  invalid_msisdn: "O número de telefone não é válido para esta carteira.",
+  invalid_shortcode: "Configuração da carteira do vendedor inválida.",
+  transaction_failed: "A operadora não concluiu o pagamento.",
+  gateway_internal_error: "Não foi possível comunicar com o serviço de pagamento.",
+  gateway_unavailable: "Não foi possível comunicar com o serviço de pagamento.",
+  gateway_auth_error: "Não foi possível comunicar com o serviço de pagamento.",
+  msisdn_busy: "Este número tem outro pagamento em curso. Aguarde ~30s e tente novamente.",
+};
+
+export function getPaymentJustification(code: string | null | undefined, fallback?: string | null) {
+  const key = String(code ?? "").toLowerCase();
+  return JUSTIFICATION_BY_CODE[key] ?? fallback ?? "Não foi possível concluir o pagamento.";
+}
+
 export function readGatewayFailureDetails(
   input: unknown,
   fallbackStatus: TerminalFailureStatus = "failed",
