@@ -122,14 +122,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
     if (!body) throw new Error("A mensagem não pode estar vazia.");
     if (body.length > 800) throw new Error("A mensagem é demasiado longa (máx. 800 caracteres).");
 
-    // Sender configurado pelo utilizador (default 11480).
-    const { data: settings } = await context.supabase
-      .from("sms_settings")
-      .select("sender")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    const sender = (settings?.sender ?? "11480").trim() || "11480";
-
+    // A BulkSMS Sandbox rejeita o campo "sender"; usa o remetente padrão da operadora.
     let status: "sent" | "failed" = "failed";
     let messageId: string | null = null;
     let errorMsg: string | null = null;
@@ -143,7 +136,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
           "X-API-Key": apiKey,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ to: [phone], body, sender }),
+        body: JSON.stringify({ to: [phone], body }),
         signal: controller.signal,
       }).finally(() => clearTimeout(timer));
 
