@@ -1049,9 +1049,13 @@ const ProcessingOverlay = memo(function ProcessingOverlay({ phase }: { phase: "p
 // Ecrã dedicado ao cancelamento reconhecido pela gateway. Não é mostrado
 // para falhas genéricas de comunicação — essas mantêm a mensagem original.
 const CancelledOverlay = memo(function CancelledOverlay({
+  title,
+  description,
   cooldownLeft,
   onRetry,
 }: {
+  title: string;
+  description: string;
   cooldownLeft: number;
   onRetry: () => void;
 }) {
