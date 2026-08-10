@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import {
+  getE2payBaseUrl,
+  orderedE2payHosts,
+  setE2payBaseUrl,
+} from "@/lib/payments/e2pay-hosts";
 
-const E2PAY_BASE_URL = "https://e2payments.explicador.co.mz";
 
 const PaymentInput = z.object({
   productId: z.string().min(1).max(120),
