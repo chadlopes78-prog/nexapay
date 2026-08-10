@@ -108,6 +108,113 @@ export function readGatewayReference(input: unknown): string | null {
   return value == null ? null : String(value);
 }
 
+/**
+ * Lê o CÓDIGO ESTRUTURADO devolvido pela gateway (prioridade sobre texto).
+ * A E2Payments encaminha os códigos originais das carteiras:
+ *   M-Pesa  -> INS-0, INS-1, INS-6, INS-9, INS-2001, INS-2006, INS-2051 ...
+ *   e-Mola  -> códigos numéricos / strings curtas no campo `code`.
+ */
+export function readGatewayCode(input: unknown): string | null {
+  const payload = asObject(input);
+  const data = nestedObject(payload, "data");
+  const value =
+    payload.code ??
+    payload.error_code ??
+    payload.errorCode ??
+    payload.response_code ??
+    payload.responseCode ??
+    payload.output_ResponseCode ??
+    data.code ??
+    data.error_code ??
+    data.errorCode ??
+    data.response_code ??
+    data.responseCode ??
+    data.output_ResponseCode ??
+    null;
+  const text = value == null ? "" : String(value).trim();
+  return text.length > 0 ? text.slice(0, 80) : null;
+}
+
+/** Estado bruto (sem normalização) devolvido pela gateway, para auditoria. */
+export function readGatewayRawStatus(input: unknown): string | null {
+  const payload = asObject(input);
+  const data = nestedObject(payload, "data");
+  const value =
+    payload.status ??
+    payload.payment_status ??
+    payload.state ??
+    data.status ??
+    data.payment_status ??
+    data.state ??
+    null;
+  const text = value == null ? "" : String(value).trim();
+  return text.length > 0 ? text.slice(0, 120) : null;
+}
+
+/**
+ * Mapa CÓDIGO -> {estado normalizado, código interno}.
+ * Tem prioridade sobre qualquer heurística de texto (requisito: não depender
+ * de `message.includes("cancel")`, porque as mensagens mudam).
+ */
+const GATEWAY_CODE_MAP: Record<string, { status: NormalizedPaymentStatus; code: string }> = {
+  // M-Pesa (Vodacom) — códigos oficiais encaminhados pela E2Payments
+  "ins-0": { status: "paid", code: "success" },
+  "ins-1": { status: "failed", code: "gateway_internal_error" },
+  "ins-5": { status: "cancelled", code: "cancelled_by_user" },
+  "ins-6": { status: "failed", code: "transaction_failed" },
+  "ins-9": { status: "expired", code: "timeout" },
+  "ins-10": { status: "failed", code: "duplicate_transaction" },
+  "ins-13": { status: "failed", code: "invalid_shortcode" },
+  "ins-2001": { status: "failed", code: "invalid_pin" },
+  "ins-2006": { status: "failed", code: "insufficient_funds" },
+  "ins-2051": { status: "failed", code: "invalid_msisdn" },
+  // e-Mola / genéricos
+  "insufficient_funds": { status: "failed", code: "insufficient_funds" },
+  "insufficient_balance": { status: "failed", code: "insufficient_funds" },
+  "cancelled_by_user": { status: "cancelled", code: "cancelled_by_user" },
+  "user_cancelled": { status: "cancelled", code: "cancelled_by_user" },
+  "invalid_pin": { status: "failed", code: "invalid_pin" },
+  "wrong_pin": { status: "failed", code: "invalid_pin" },
+  "timeout": { status: "expired", code: "timeout" },
+  "expired": { status: "expired", code: "timeout" },
+};
+
+export function lookupGatewayCode(input: unknown) {
+  const code = readGatewayCode(input);
+  if (!code) return null;
+  return GATEWAY_CODE_MAP[code.toLowerCase()] ?? null;
+}
+
+/**
+ * Log estruturado e SEGURO das transições de estado (sem PIN, sem tokens,
+ * sem credenciais). É a fonte para descobrirmos os códigos reais que cada
+ * carteira devolve em cancelamento / saldo insuficiente / expiração.
+ */
+export function logPaymentTransition(entry: {
+  saleId: string;
+  source: string;
+  provider?: string | null;
+  internalStatus: string;
+  gatewayStatus?: string | null;
+  gatewayCode?: string | null;
+  gatewayMessage?: string | null;
+  transactionId?: string | null;
+  httpStatus?: number | null;
+}) {
+  console.info("[payment-state]", {
+    timestamp: new Date().toISOString(),
+    sale_id: entry.saleId,
+    source: entry.source,
+    provider: entry.provider ?? null,
+    internal_status: entry.internalStatus,
+    gateway_status: entry.gatewayStatus ?? null,
+    gateway_code: entry.gatewayCode ?? null,
+    gateway_message: entry.gatewayMessage ? String(entry.gatewayMessage).slice(0, 200) : null,
+    transaction_id: entry.transactionId ?? null,
+    http_status: entry.httpStatus ?? null,
+  });
+}
+
 function collectGatewayText(input: unknown) {
   const payload = asObject(input);
   const data = nestedObject(payload, "data");
