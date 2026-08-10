@@ -86,7 +86,8 @@ declare global {
 }
 
 function CheckoutPage() {
-  const startPaymentFn = useServerFn(startPayment);
+  const initiateSaleFn = useServerFn(initiateSale);
+  const chargeSaleFn = useServerFn(chargeSale);
   const statusFn = useServerFn(getSaleStatus);
   const cancelPaymentFn = useServerFn(cancelPayment);
   const prewarmGatewayFn = useServerFn(prewarmPaymentGateway);
