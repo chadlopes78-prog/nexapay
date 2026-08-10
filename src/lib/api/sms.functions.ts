@@ -9,7 +9,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * Esta camada é puramente aditiva — não toca em pagamentos, webhooks ou checkout.
  */
 
-export type SmsTemplateItem = { body: string; delay_minutes: number };
+/** `delay_seconds` é a fonte da verdade; `delay_minutes` fica por compatibilidade. */
+export type SmsTemplateItem = { body: string; delay_minutes: number; delay_seconds: number };
 
 export type SmsSettings = {
   user_id: string;
@@ -32,9 +33,15 @@ function coerceTemplates(raw: unknown, fallback: string, count: number): SmsTemp
   const out: SmsTemplateItem[] = [];
   for (let i = 0; i < total; i++) {
     const item = (list[i] ?? {}) as Record<string, unknown>;
+    const rawSeconds = item["delay_seconds"];
+    const seconds =
+      rawSeconds != null
+        ? Math.max(0, Math.round(Number(rawSeconds) || 0))
+        : Math.max(0, Math.round(Number(item["delay_minutes"] ?? 0) || 0)) * 60;
     out.push({
       body: String(item["body"] ?? (i === 0 ? fallback : "")).slice(0, 800),
-      delay_minutes: i === 0 ? 0 : Math.max(0, Math.round(Number(item["delay_minutes"] ?? 0) || 0)),
+      delay_seconds: Math.min(seconds, 72 * 3600),
+      delay_minutes: Math.round(Math.min(seconds, 72 * 3600) / 60),
     });
   }
   return out;
@@ -95,7 +102,7 @@ export const saveSmsSettings = createServerFn({ method: "POST" })
 
     const primary = (messages[0]?.body ?? "").trim();
     if (!primary) throw new Error("A mensagem da SMS 1 não pode estar vazia.");
-    messages[0] = { body: primary.slice(0, 800), delay_minutes: 0 };
+    messages[0] = { ...messages[0]!, body: primary.slice(0, 800) };
 
     const testPhone = data.test_phone ? String(data.test_phone).replace(/\D/g, "").slice(0, 15) : null;
 

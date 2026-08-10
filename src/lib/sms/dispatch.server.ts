@@ -13,7 +13,7 @@ import { normalizeMozPhoneStrict, sendBulkSms } from "./bulksms.server";
 
 export const MAX_SMS_PER_SALE = 5;
 
-export type SmsTemplate = { body: string; delay_minutes: number };
+export type SmsTemplate = { body: string; delay_seconds: number };
 
 type SaleLike = {
   id: string;
@@ -34,8 +34,12 @@ export function parseTemplates(raw: unknown, fallback: string, count: number): S
   for (let i = 0; i < total; i++) {
     const item = (list[i] ?? {}) as Record<string, unknown>;
     const body = String(item["body"] ?? (i === 0 ? fallback : "")).trim();
-    const delay = i === 0 ? 0 : Math.max(0, Math.round(Number(item["delay_minutes"] ?? 0) || 0));
-    out.push({ body, delay_minutes: delay });
+    const rawSeconds = item["delay_seconds"];
+    const seconds =
+      rawSeconds != null
+        ? Math.max(0, Math.round(Number(rawSeconds) || 0))
+        : Math.max(0, Math.round(Number(item["delay_minutes"] ?? 0) || 0)) * 60;
+    out.push({ body, delay_seconds: Math.min(seconds, 72 * 3600) });
   }
   return out;
 }
@@ -114,7 +118,7 @@ export async function enqueueSalesSms(sale: SaleLike): Promise<number> {
         sms_sequence: seq,
         message: renderTemplate(t.body, vars),
         status: "scheduled",
-        scheduled_for: new Date(now + t.delay_minutes * 60_000).toISOString(),
+        scheduled_for: new Date(now + t.delay_seconds * 1000).toISOString(),
       }));
 
     if (rows.length === 0) return 0;
