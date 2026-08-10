@@ -590,14 +590,20 @@ export async function confirmSalePayment(options: {
     console.error("[payments] approved side-effects failed", err);
   });
 
-  // SMS automática ao comprador — camada aditiva e isolada. Corre apenas na
-  // transição real para "paid" e nunca pode afetar o estado da venda.
+  // SMS automática ao comprador — EFEITO SECUNDÁRIO. Nunca pode atrasar a
+  // resposta que informa o checkout de que a venda está paga: a BulkSMS pode
+  // demorar segundos. Corre fora do caminho crítico via waitUntil.
   try {
-    const { scheduleSalesSms } = await import("@/lib/sms/dispatch.server");
-    await scheduleSalesSms(updated);
+    const smsTask = (async () => {
+      const { scheduleSalesSms } = await import("@/lib/sms/dispatch.server");
+      await scheduleSalesSms(updated);
+    })().catch((e) => console.error("[sms] agendamento pós-pagamento suprimido", e));
+    const { waitUntil } = await import("@/lib/runtime-context.server");
+    if (!waitUntil(smsTask)) void smsTask;
   } catch (e) {
     console.error("[sms] agendamento pós-pagamento suprimido", e);
   }
+
 
 
   // Diagnóstico: venda aprovada sem link de acesso configurado. O cliente
