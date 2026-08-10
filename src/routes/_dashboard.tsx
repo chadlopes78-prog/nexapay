@@ -20,7 +20,9 @@ import {
   Zap,
   AlertCircle,
   Loader2,
-  MessageCircle
+  MessageCircle,
+  MessageSquare
+
 } from "lucide-react";
 
 const isAdminEmail = (email?: string | null) => email === 'chadlopesff@gmail.com';
@@ -242,6 +244,7 @@ function DashboardLayout() {
     { name: "Desempenho do Checkout", icon: CreditCard, path: "/sales" },
     { name: "Recuperação de Vendas", icon: MessageCircle, path: "/recovery" },
     { name: "Integrações", icon: Zap, path: "/integrations" },
+    { name: "SMS", icon: MessageSquare, path: "/sms" },
     ...(profile?.role === 'admin' || isAdminEmail(user?.email) ? [{ name: "Controle do Sistema", icon: ShieldCheck, path: "/admin" }] : []),
     { name: "Configurações", icon: Settings, path: "/settings" },
   ];

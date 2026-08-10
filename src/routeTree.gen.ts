@@ -18,6 +18,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DashboardRouteImport } from './routes/_dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PProductIdRouteImport } from './routes/p.$productId'
+import { Route as DashboardSmsRouteImport } from './routes/_dashboard/sms'
 import { Route as DashboardSettingsRouteImport } from './routes/_dashboard/settings'
 import { Route as DashboardSalesRouteImport } from './routes/_dashboard/sales'
 import { Route as DashboardRecoveryRouteImport } from './routes/_dashboard/recovery'
@@ -77,6 +78,11 @@ const PProductIdRoute = PProductIdRouteImport.update({
   id: '/p/$productId',
   path: '/p/$productId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardSmsRoute = DashboardSmsRouteImport.update({
+  id: '/sms',
+  path: '/sms',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/settings',
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/recovery': typeof DashboardRecoveryRoute
   '/sales': typeof DashboardSalesRoute
   '/settings': typeof DashboardSettingsRoute
+  '/sms': typeof DashboardSmsRoute
   '/p/$productId': typeof PProductIdRoute
   '/reports/traffic': typeof DashboardReportsTrafficRoute
   '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/recovery': typeof DashboardRecoveryRoute
   '/sales': typeof DashboardSalesRoute
   '/settings': typeof DashboardSettingsRoute
+  '/sms': typeof DashboardSmsRoute
   '/p/$productId': typeof PProductIdRoute
   '/reports/traffic': typeof DashboardReportsTrafficRoute
   '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/_dashboard/recovery': typeof DashboardRecoveryRoute
   '/_dashboard/sales': typeof DashboardSalesRoute
   '/_dashboard/settings': typeof DashboardSettingsRoute
+  '/_dashboard/sms': typeof DashboardSmsRoute
   '/p/$productId': typeof PProductIdRoute
   '/_dashboard/reports/traffic': typeof DashboardReportsTrafficRoute
   '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/recovery'
     | '/sales'
     | '/settings'
+    | '/sms'
     | '/p/$productId'
     | '/reports/traffic'
     | '/api/public/e2payment-webhook'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/recovery'
     | '/sales'
     | '/settings'
+    | '/sms'
     | '/p/$productId'
     | '/reports/traffic'
     | '/api/public/e2payment-webhook'
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '/_dashboard/recovery'
     | '/_dashboard/sales'
     | '/_dashboard/settings'
+    | '/_dashboard/sms'
     | '/p/$productId'
     | '/_dashboard/reports/traffic'
     | '/api/public/e2payment-webhook'
@@ -394,6 +406,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/p/$productId'
       preLoaderRoute: typeof PProductIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_dashboard/sms': {
+      id: '/_dashboard/sms'
+      path: '/sms'
+      fullPath: '/sms'
+      preLoaderRoute: typeof DashboardSmsRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/_dashboard/settings': {
       id: '/_dashboard/settings'
@@ -514,6 +533,7 @@ interface DashboardRouteChildren {
   DashboardRecoveryRoute: typeof DashboardRecoveryRoute
   DashboardSalesRoute: typeof DashboardSalesRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardSmsRoute: typeof DashboardSmsRoute
   DashboardReportsTrafficRoute: typeof DashboardReportsTrafficRoute
 }
 
@@ -528,6 +548,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardRecoveryRoute: DashboardRecoveryRoute,
   DashboardSalesRoute: DashboardSalesRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardSmsRoute: DashboardSmsRoute,
   DashboardReportsTrafficRoute: DashboardReportsTrafficRoute,
 }
 
