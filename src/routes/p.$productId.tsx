@@ -873,8 +873,10 @@ function CheckoutPage() {
       </div>
 
 
-      {wasCancelledByCustomer && !processingPayment && (
+      {(wasCancelledByCustomer || failureView) && !processingPayment && (
         <CancelledOverlay
+          title={failureView?.title ?? "Percebemos que cancelaste o pagamento"}
+          description={failureView?.description ?? "Queres tentar novamente?"}
           cooldownLeft={retryCooldownLeft}
           onRetry={onRetryPayment}
         />
