@@ -62,11 +62,22 @@ function renderPreview(template: string): string {
   return out;
 }
 
-type DelayUnit = "minutes" | "hours";
+type DelayUnit = "seconds" | "minutes" | "hours";
 
-function splitDelay(minutes: number): { value: number; unit: DelayUnit } {
-  if (minutes > 0 && minutes % 60 === 0) return { value: minutes / 60, unit: "hours" };
-  return { value: minutes, unit: "minutes" };
+const UNIT_SECONDS: Record<DelayUnit, number> = { seconds: 1, minutes: 60, hours: 3600 };
+
+/** Converte segundos na maior unidade exacta, para exibição no editor. */
+function splitDelay(seconds: number): { value: number; unit: DelayUnit } {
+  if (seconds > 0 && seconds % 3600 === 0) return { value: seconds / 3600, unit: "hours" };
+  if (seconds > 0 && seconds % 60 === 0) return { value: seconds / 60, unit: "minutes" };
+  return { value: seconds, unit: "seconds" };
+}
+
+function describeDelay(seconds: number): string {
+  if (seconds <= 0) return "Imediatamente após a confirmação";
+  const { value, unit } = splitDelay(seconds);
+  const label = unit === "hours" ? "hora" : unit === "minutes" ? "minuto" : "segundo";
+  return `${value} ${label}${value === 1 ? "" : "s"} após a confirmação`;
 }
 
 function SmsPage() {
@@ -85,7 +96,7 @@ function SmsPage() {
   const [testPhone, setTestPhone] = useState("");
   const [smsCount, setSmsCount] = useState(1);
   const [messages, setMessages] = useState<SmsTemplateItem[]>([
-    { body: "", delay_minutes: 0 },
+    { body: "", delay_minutes: 0, delay_seconds: 0 },
   ]);
 
   useEffect(() => {
@@ -97,7 +108,7 @@ function SmsPage() {
     setMessages(
       data.settings.messages.length > 0
         ? data.settings.messages
-        : [{ body: data.settings.message_paid, delay_minutes: 0 }],
+        : [{ body: data.settings.message_paid, delay_minutes: 0, delay_seconds: 0 }],
     );
   }, [data]);
 
@@ -105,14 +116,28 @@ function SmsPage() {
   const visibleMessages = useMemo<SmsTemplateItem[]>(() => {
     const out: SmsTemplateItem[] = [];
     for (let i = 0; i < smsCount; i++) {
-      out.push(messages[i] ?? { body: "", delay_minutes: i === 0 ? 0 : 5 });
+      out.push(
+        messages[i] ?? {
+          body: "",
+          delay_minutes: i === 0 ? 0 : 5,
+          delay_seconds: i === 0 ? 0 : 300,
+        },
+      );
     }
     return out;
   }, [messages, smsCount]);
 
   const updateMessage = (index: number, patch: Partial<SmsTemplateItem>) => {
     setMessages(() =>
-      visibleMessages.map((m, i) => (i === index ? { ...m, ...patch } : m)),
+      visibleMessages.map((m, i) => {
+        if (i !== index) return m;
+        const next = { ...m, ...patch };
+        // `delay_seconds` é a fonte da verdade; mantém `delay_minutes` coerente.
+        if (patch.delay_seconds != null) {
+          next.delay_minutes = Math.round(patch.delay_seconds / 60);
+        }
+        return next;
+      }),
     );
   };
 
@@ -236,17 +261,15 @@ function SmsPage() {
       {/* Mensagens */}
       <section className="space-y-4">
         {visibleMessages.map((msg, index) => {
-          const delay = splitDelay(msg.delay_minutes);
+          const delay = splitDelay(msg.delay_seconds);
           return (
             <div key={index} className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold text-foreground">SMS {index + 1}</h2>
-                {index === 0 ? (
-                  <Badge variant="secondary" className="gap-1.5">
-                    <Clock className="h-3 w-3" />
-                    Imediatamente após confirmação
-                  </Badge>
-                ) : null}
+                <Badge variant="secondary" className="gap-1.5">
+                  <Clock className="h-3 w-3" />
+                  {describeDelay(msg.delay_seconds)}
+                </Badge>
               </div>
 
               <Textarea
@@ -270,33 +293,35 @@ function SmsPage() {
                 ))}
               </div>
 
-              {index > 0 && (
-                <div className="flex flex-wrap items-end gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`sms-delay-${index}`} className="text-xs">
-                      Enviar após
-                    </Label>
-                    <Input
-                      id={`sms-delay-${index}`}
-                      type="number"
-                      min={0}
-                      className="w-28"
-                      value={delay.value}
-                      onChange={(e) =>
-                        updateMessage(index, {
-                          delay_minutes:
-                            Math.max(0, Number(e.target.value) || 0) *
-                            (delay.unit === "hours" ? 60 : 1),
-                        })
-                      }
-                    />
-                  </div>
+              <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                <Label className="text-xs">Quando enviar esta SMS após a compra</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={msg.delay_seconds === 0 ? "default" : "outline"}
+                    onClick={() => updateMessage(index, { delay_seconds: 0 })}
+                  >
+                    Imediatamente
+                  </Button>
+                  <Input
+                    id={`sms-delay-${index}`}
+                    type="number"
+                    min={0}
+                    className="w-24"
+                    value={delay.value}
+                    onChange={(e) =>
+                      updateMessage(index, {
+                        delay_seconds:
+                          Math.max(0, Number(e.target.value) || 0) * UNIT_SECONDS[delay.unit],
+                      })
+                    }
+                  />
                   <Select
                     value={delay.unit}
                     onValueChange={(unit) =>
                       updateMessage(index, {
-                        delay_minutes:
-                          unit === "hours" ? delay.value * 60 : Math.max(1, delay.value),
+                        delay_seconds: delay.value * UNIT_SECONDS[unit as DelayUnit],
                       })
                     }
                   >
@@ -304,12 +329,14 @@ function SmsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="seconds">segundos</SelectItem>
                       <SelectItem value="minutes">minutos</SelectItem>
                       <SelectItem value="hours">horas</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+                <p className="text-xs text-muted-foreground">{describeDelay(msg.delay_seconds)}</p>
+              </div>
 
               <div className="rounded-lg border bg-muted/40 p-3">
                 <p className="text-xs font-medium text-muted-foreground">Pré-visualização</p>
