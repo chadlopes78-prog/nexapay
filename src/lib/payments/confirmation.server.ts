@@ -262,6 +262,14 @@ export function readGatewayFailureDetails(
 ): GatewayFailureDetails {
   const { rawMessage, combined } = collectGatewayText(input);
 
+  // PRIORIDADE 1 — código estruturado devolvido pela gateway.
+  const mapped = lookupGatewayCode(input);
+  if (mapped && mapped.code !== "success") {
+    return { code: mapped.code, message: JUSTIFICATION_BY_CODE[mapped.code] ?? rawMessage?.slice(0, 200) ?? "Não foi possível concluir o pagamento.", rawMessage };
+  }
+
+
+
   // Bloqueio temporário do próprio número: a operadora ainda tem uma
   // sessão STK ativa do pedido anterior (ex.: cliente pagou noutra aba).
   // Só afeta este MSISDN — outros clientes continuam a pagar normalmente.
