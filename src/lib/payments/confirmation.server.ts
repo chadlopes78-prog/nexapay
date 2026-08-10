@@ -590,6 +590,16 @@ export async function confirmSalePayment(options: {
     console.error("[payments] approved side-effects failed", err);
   });
 
+  // SMS automática ao comprador — camada aditiva e isolada. Corre apenas na
+  // transição real para "paid" e nunca pode afetar o estado da venda.
+  try {
+    const { scheduleSalesSms } = await import("@/lib/sms/dispatch.server");
+    await scheduleSalesSms(updated);
+  } catch (e) {
+    console.error("[sms] agendamento pós-pagamento suprimido", e);
+  }
+
+
   // Diagnóstico: venda aprovada sem link de acesso configurado. O cliente
   // vai cair no fallback /payment-success e ficar sem o produto. Não bloqueia
   // a aprovação (dinheiro já foi cobrado), apenas alerta para investigação.
