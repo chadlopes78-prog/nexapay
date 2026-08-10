@@ -20,7 +20,9 @@ import {
   Zap,
   AlertCircle,
   Loader2,
-  MessageCircle
+  MessageCircle,
+  MessageSquare
+
 } from "lucide-react";
 
 const isAdminEmail = (email?: string | null) => email === 'chadlopesff@gmail.com';
