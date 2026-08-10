@@ -33,7 +33,8 @@ export const getSmsSettings = createServerFn({ method: "GET" })
 
     // Apenas booleano — o valor do secret nunca é exposto.
     const hasApiKey = Boolean(process.env["BULKSMS_API_KEY"]);
-    const hasEndpoint = Boolean(process.env["BULKSMS_ENDPOINT"]);
+    const hasEndpoint = Boolean(process.env["BULKSMS_API_URL"]);
+
 
     return {
       settings:
