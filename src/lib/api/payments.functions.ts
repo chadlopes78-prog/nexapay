@@ -978,8 +978,8 @@ export const startPayment = createServerFn({ method: "POST" })
 
         const isAbort = err instanceof Error && err.name === "AbortError";
         const message = isAbort
-          ? "Tempo expirado sem confirmação no telefone."
-          : "Falha de comunicação com a gateway. Tenta novamente.";
+          ? "A solicitação de pagamento expirou antes da confirmação."
+          : "Não foi possível comunicar com o serviço de pagamento.";
 
         await markSaleTerminalFailure({
           saleId,
