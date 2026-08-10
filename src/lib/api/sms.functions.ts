@@ -88,7 +88,7 @@ export const saveSmsSettings = createServerFn({ method: "POST" })
   });
 
 /**
- * Normaliza um número moçambicano para o formato 258XXXXXXXXX.
+ * Normaliza um número moçambicano para o formato +258XXXXXXXXX.
  * Aceita: 841234567 | +258841234567 | 258841234567 | 00258841234567
  */
 export function normalizeMozPhone(raw: string): string | null {
@@ -97,7 +97,7 @@ export function normalizeMozPhone(raw: string): string | null {
   if (digits.startsWith("258")) digits = digits.slice(3);
   digits = digits.replace(/^0+/, "");
   if (!/^(82|83|84|85|86|87)\d{7}$/.test(digits)) return null;
-  return `258${digits}`;
+  return `+258${digits}`;
 }
 
 /**
