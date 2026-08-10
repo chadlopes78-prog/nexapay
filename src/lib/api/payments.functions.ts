@@ -612,8 +612,8 @@ export const chargeSale = createServerFn({ method: "POST" })
       const timeoutId = setTimeout(() => controller.abort(), PAYMENT_WAIT_WINDOW_MS);
       const endpoint =
         method === "mpesa"
-          ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
-          : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
+          ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
+          : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -831,8 +831,8 @@ export const startPayment = createServerFn({ method: "POST" })
             const localPhone = msisdn.slice(3);
             const endpoint =
               data.method === "mpesa"
-                ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
-                : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
+                ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
+                : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), 240_000);
             const res = await fetch(endpoint, {
@@ -885,8 +885,8 @@ export const startPayment = createServerFn({ method: "POST" })
     const localPhone = msisdn.slice(3);
     const endpoint =
       data.method === "mpesa"
-        ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
-        : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
+        ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
+        : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
 
     const controller = new AbortController();
 
