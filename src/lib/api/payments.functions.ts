@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import {
+  getE2payBaseUrl,
+  orderedE2payHosts,
+  setE2payBaseUrl,
+} from "@/lib/payments/e2pay-hosts";
 
-const E2PAY_BASE_URL = "https://e2payments.explicador.co.mz";
 
 const PaymentInput = z.object({
   productId: z.string().min(1).max(120),
@@ -363,52 +367,55 @@ async function getAccessToken(clientId: string, clientSecret: string): Promise<s
     // Tenta até 3 vezes com backoff curto. A e2payment ocasionalmente devolve
     // 5xx/timeout transitório no /oauth/token — sem retry o cliente vê logo
     // "Falha ao autenticar com a gateway" e a venda é marcada como falhada.
+    // Cada tentativa percorre os domínios suportados (legado + mpesaemolatech).
     let lastErr: unknown = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15_000);
-      try {
-        const res = await fetch(`${E2PAY_BASE_URL}/oauth/token`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            "User-Agent": "Mozilla/5.0 (compatible; NexaPay/1.0)",
-          },
-          body: JSON.stringify({
-            grant_type: "client_credentials",
-            client_id: clientId,
-            client_secret: clientSecret,
-          }),
-          signal: controller.signal,
-        });
-        const text = await res.text();
-        let json: Record<string, unknown> | null = null;
-        try { json = text ? JSON.parse(text) : null; } catch { /* noop */ }
+      for (const baseUrl of orderedE2payHosts(clientId)) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15_000);
+        try {
+          const res = await fetch(`${baseUrl}/oauth/token`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              "User-Agent": "Mozilla/5.0 (compatible; NexaPay/1.0)",
+            },
+            body: JSON.stringify({
+              grant_type: "client_credentials",
+              client_id: clientId,
+              client_secret: clientSecret,
+            }),
+            signal: controller.signal,
+          });
+          const text = await res.text();
+          let json: Record<string, unknown> | null = null;
+          try { json = text ? JSON.parse(text) : null; } catch { /* noop */ }
 
-        if (res.ok && json?.access_token) {
-          const rawTtlMs = (Number(json.expires_in) || 3600) * 1000;
-          const ttlMs = Math.min(TOKEN_MAX_TTL_MS, Math.max(TOKEN_MIN_TTL_MS, rawTtlMs));
-          const value = String(json.access_token);
-          tokenCache.set(clientId, { value, expiresAt: Date.now() + ttlMs });
-          return value;
-        }
+          if (res.ok && json?.access_token) {
+            const rawTtlMs = (Number(json.expires_in) || 3600) * 1000;
+            const ttlMs = Math.min(TOKEN_MAX_TTL_MS, Math.max(TOKEN_MIN_TTL_MS, rawTtlMs));
+            const value = String(json.access_token);
+            setE2payBaseUrl(clientId, baseUrl);
+            tokenCache.set(clientId, { value, expiresAt: Date.now() + ttlMs });
+            return value;
+          }
 
-        console.error("e2payment token error", { attempt, status: res.status, body: text?.slice(0, 500) });
-        // 4xx (credenciais inválidas) não adianta retry — aborta já.
-        if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
-          throw new Error(`Falha ao autenticar com e2payment (HTTP ${res.status}).`);
+          console.error("e2payment token error", { attempt, baseUrl, status: res.status, body: text?.slice(0, 500) });
+          // 4xx (credenciais inválidas/host errado): não vale retry neste host,
+          // mas o próximo domínio ainda pode aceitar as mesmas credenciais.
+          lastErr = new Error(`Falha ao autenticar com e2payment (HTTP ${res.status}).`);
+        } catch (err) {
+          lastErr = err;
+          console.warn("e2payment token attempt failed", { attempt, baseUrl, err: err instanceof Error ? err.message : String(err) });
+        } finally {
+          clearTimeout(timeoutId);
         }
-        lastErr = new Error(`Falha ao autenticar com e2payment (HTTP ${res.status}).`);
-      } catch (err) {
-        lastErr = err;
-        console.warn("e2payment token attempt failed", { attempt, err: err instanceof Error ? err.message : String(err) });
-      } finally {
-        clearTimeout(timeoutId);
       }
       if (attempt < 3) await new Promise((r) => setTimeout(r, 400 * attempt));
     }
     throw lastErr instanceof Error ? lastErr : new Error("Falha ao autenticar com e2payment.");
+
   })().finally(() => inflightToken.delete(clientId));
 
 
@@ -605,8 +612,8 @@ export const chargeSale = createServerFn({ method: "POST" })
       const timeoutId = setTimeout(() => controller.abort(), PAYMENT_WAIT_WINDOW_MS);
       const endpoint =
         method === "mpesa"
-          ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
-          : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
+          ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
+          : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -824,8 +831,8 @@ export const startPayment = createServerFn({ method: "POST" })
             const localPhone = msisdn.slice(3);
             const endpoint =
               data.method === "mpesa"
-                ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
-                : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
+                ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
+                : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), 240_000);
             const res = await fetch(endpoint, {
@@ -878,8 +885,8 @@ export const startPayment = createServerFn({ method: "POST" })
     const localPhone = msisdn.slice(3);
     const endpoint =
       data.method === "mpesa"
-        ? `${E2PAY_BASE_URL}/v1/c2b/mpesa-payment/${walletId}`
-        : `${E2PAY_BASE_URL}/v1/c2b/emola-payment/${walletId}`;
+        ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
+        : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
 
     const controller = new AbortController();
 
