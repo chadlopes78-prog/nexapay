@@ -496,9 +496,44 @@ function CheckoutPage() {
   handleCancelRef.current = handleCancelPayment;
   const onCancelPayment = useCallback(() => { void handleCancelRef.current(); }, []);
 
+  // Mensagem dedicada por estado terminal reconhecido pela gateway.
+  // A gateway é a fonte da verdade: o checkout apenas traduz o código.
+  const FAILURE_VIEWS: Record<string, { title: string; description: string }> = {
+    cancelled_by_user: {
+      title: "Percebemos que cancelaste o pagamento",
+      description: "Queres tentar novamente?",
+    },
+    insufficient_funds: {
+      title: "Saldo insuficiente",
+      description: "Não havia saldo suficiente na conta. Carrega a conta e tenta novamente.",
+    },
+    invalid_pin: {
+      title: "PIN não aceite",
+      description: "A autorização do pagamento não foi aceite. Tenta novamente com atenção ao PIN.",
+    },
+    timeout: {
+      title: "Tempo esgotado",
+      description: "A solicitação de pagamento expirou antes da confirmação. Podes tentar novamente.",
+    },
+    msisdn_busy: {
+      title: "Número ocupado",
+      description: "Este número tem outro pagamento em curso. Aguarda alguns segundos e tenta novamente.",
+    },
+    transaction_failed: {
+      title: "Pagamento não concluído",
+      description: "A operadora não concluiu o pagamento. Podes tentar novamente.",
+    },
+    gateway_unavailable: {
+      title: "Serviço indisponível",
+      description: "Não foi possível comunicar com o serviço de pagamento. Tenta novamente.",
+    },
+  };
+  const failureCodeKey = (paymentFailureCode ?? "").toLowerCase();
+  const failureView = FAILURE_VIEWS[failureCodeKey] ?? null;
+
   // Cancelamento reconhecido pela gateway (não é erro de comunicação).
   const wasCancelledByCustomer =
-    !!paymentFailureCode && CANCELLED_CODES.has(paymentFailureCode.toLowerCase());
+    !!paymentFailureCode && CANCELLED_CODES.has(failureCodeKey);
 
   // Nova tentativa: limpa o estado anterior e cria um pedido totalmente novo
   // (novo saleId + nova idempotencyKey geradas dentro de handlePayment).
