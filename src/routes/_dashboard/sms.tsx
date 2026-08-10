@@ -143,15 +143,13 @@ function SmsPage() {
           <Switch id="sms-enabled" checked={enabled} onCheckedChange={setEnabled} />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="sms-sender">Sender</Label>
-          <Input
-            id="sms-sender"
-            value={sender}
-            onChange={(e) => setSender(e.target.value)}
-            placeholder="11480"
-            maxLength={20}
-          />
+        <div className="rounded-lg border bg-muted/40 p-3">
+          <p className="text-xs font-medium text-muted-foreground">
+            Remetente padrão da BulkSMS
+          </p>
+          <p className="text-xs text-muted-foreground/80">
+            O envio de teste utiliza o remetente predefinido da operadora.
+          </p>
         </div>
 
         <div className="space-y-2">
