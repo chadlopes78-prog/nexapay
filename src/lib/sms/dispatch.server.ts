@@ -65,10 +65,10 @@ export function renderTemplate(
  * Agenda as SMS de uma venda aprovada. Seguro para chamar múltiplas vezes.
  * Não lança: qualquer erro é apenas registado.
  */
-export async function scheduleSalesSms(sale: SaleLike): Promise<void> {
+export async function enqueueSalesSms(sale: SaleLike): Promise<number> {
   try {
     const userId = sale.user_id;
-    if (!userId) return;
+    if (!userId) return 0;
 
     const { data: settings } = await supabaseAdmin
       .from("sms_settings")
@@ -76,12 +76,12 @@ export async function scheduleSalesSms(sale: SaleLike): Promise<void> {
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (!settings?.enabled) return;
+    if (!settings?.enabled) return 0;
 
     const phone = normalizeMozPhoneStrict(sale.customer_phone);
     if (!phone) {
       console.warn("[sms] número do comprador inválido — SMS ignorada", { saleId: sale.id });
-      return;
+      return 0;
     }
 
     const rawProducts = sale.products;
@@ -117,7 +117,7 @@ export async function scheduleSalesSms(sale: SaleLike): Promise<void> {
         scheduled_for: new Date(now + t.delay_minutes * 60_000).toISOString(),
       }));
 
-    if (rows.length === 0) return;
+    if (rows.length === 0) return 0;
 
     // ON CONFLICT DO NOTHING via upsert com ignoreDuplicates: a constraint
     // UNIQUE(sale_id, sms_sequence) é a garantia real de não-duplicação.
@@ -126,14 +126,57 @@ export async function scheduleSalesSms(sale: SaleLike): Promise<void> {
       .upsert(rows as never, { onConflict: "sale_id,sms_sequence", ignoreDuplicates: true });
     if (error) {
       console.error("[sms] falha ao agendar SMS", { saleId: sale.id, error: error.message });
-      return;
+      return 0;
     }
 
-    // SMS imediata: tenta agora, sem esperar pelo cron.
-    await processDueSms(10);
+    return rows.length;
   } catch (e) {
-    console.error("[sms] scheduleSalesSms suprimido", e);
+    console.error("[sms] enqueueSalesSms suprimido", e);
+    return 0;
   }
+}
+
+/**
+ * Agenda e tenta enviar imediatamente. Mantido para compatibilidade.
+ */
+export async function scheduleSalesSms(sale: SaleLike): Promise<void> {
+  const queued = await enqueueSalesSms(sale);
+  if (queued > 0) await processDueSms(10);
+}
+
+/**
+ * Rede de segurança: vendas pagas recentes que — por o Worker ter sido
+ * reciclado antes do agendamento — ficaram sem linhas em `sms_outbox`.
+ * Chamado pelo cron. Idempotente graças a UNIQUE(sale_id, sms_sequence).
+ */
+export async function enqueueMissingSalesSms(limit = 25): Promise<number> {
+  let queued = 0;
+  try {
+    const since = new Date(Date.now() - 6 * 60 * 60_000).toISOString();
+    const { data: sales } = await supabaseAdmin
+      .from("sales")
+      .select(
+        "id, user_id, customer_name, customer_phone, amount, payment_method, transaction_id, product_id, products(name)",
+      )
+      .eq("status", "paid")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    for (const sale of sales ?? []) {
+      const { data: existing } = await supabaseAdmin
+        .from("sms_outbox")
+        .select("id")
+        .eq("sale_id", sale.id)
+        .limit(1)
+        .maybeSingle();
+      if (existing) continue;
+      queued += await enqueueSalesSms(sale as SaleLike);
+    }
+  } catch (e) {
+    console.error("[sms] enqueueMissingSalesSms suprimido", e);
+  }
+  return queued;
 }
 
 /**
