@@ -1,7 +1,7 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect, useRef, useMemo, memo, useCallback } from "react";
-import { cancelPayment, startPayment, getSaleStatus, prewarmPaymentGateway, type PaymentResult } from "@/lib/api/payments.functions";
+import { cancelPayment, initiateSale, chargeSale, getSaleStatus, prewarmPaymentGateway, type PaymentResult } from "@/lib/api/payments.functions";
 import { getPublicProduct } from "@/lib/api/product-public.functions";
 import { PAYMENT_WAIT_WINDOW_MS } from "@/lib/payments/timing";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,7 +86,8 @@ declare global {
 }
 
 function CheckoutPage() {
-  const startPaymentFn = useServerFn(startPayment);
+  const initiateSaleFn = useServerFn(initiateSale);
+  const chargeSaleFn = useServerFn(chargeSale);
   const statusFn = useServerFn(getSaleStatus);
   const cancelPaymentFn = useServerFn(cancelPayment);
   const prewarmGatewayFn = useServerFn(prewarmPaymentGateway);
@@ -396,21 +397,31 @@ function CheckoutPage() {
         startPolling(currentSaleId);
       };
 
-      // Uma ÚNICA chamada faz insert + OAuth + gateway em paralelo no servidor.
-      // Isso elimina o segundo round-trip (chargeSale) e a recarga redundante
-      // de venda/credenciais, reduzindo o tempo até o pop-up do PIN aparecer.
-      const paymentPromise = startPaymentFn({
-        data: {
-          productId,
-          method: paymentMethod,
-          msisdn: phone,
-          customerName: name,
-          contactPhone: contactPhone || undefined,
-          trafficPageTrackingId: trafficPageId,
-          idempotencyKey,
-          saleId,
-        },
-      }) as Promise<PaymentResult>;
+      // 1) Cria a venda (rápido). 2) Dispara a cobrança numa chamada
+      // SEPARADA que o browser mantém aberta até a operadora responder.
+      // Motivo: quando a cobrança era feita dentro do startPayment e a
+      // resposta era devolvida ao fim de 1,5s, o resto do trabalho ficava
+      // em background no servidor e era frequentemente descartado — a
+      // venda ficava presa em "pending" mesmo depois de o cliente pagar,
+      // sem marcar como aprovada nem redireccionar.
+      const paymentPromise = (async (): Promise<PaymentResult> => {
+        const init = (await initiateSaleFn({
+          data: {
+            productId,
+            method: paymentMethod,
+            msisdn: phone,
+            customerName: name,
+            contactPhone: contactPhone || undefined,
+            trafficPageTrackingId: trafficPageId,
+            idempotencyKey,
+            saleId,
+          },
+        })) as PaymentResult;
+        if (!init.success) return init;
+        kickPolling(init.saleId);
+        // Esta chamada fica aberta enquanto o cliente introduz o PIN.
+        return (await chargeSaleFn({ data: { saleId: init.saleId } })) as PaymentResult;
+      })();
 
       // Começa a observar imediatamente com o ID já conhecido pelo cliente.
       // As primeiras consultas podem retornar not_found até o insert concluir.
@@ -427,11 +438,9 @@ function CheckoutPage() {
           if (result.status === "paid") finishPaid(result.accessLink ?? null, result.saleId);
         })
         .catch(async (error: any) => {
-          // Erro real ao chamar startPayment (rede/servidor). O polling já
-          // pode estar rodando com um saleId gerado no cliente. Confirmamos
-          // se a venda foi realmente criada antes de encerrar — caso ainda
-          // não exista, mostramos o erro em vez de deixar o cliente preso
-          // em "A processar" até o deadline.
+          // Erro real de rede/servidor. O polling já pode estar a correr com
+          // o saleId gerado no cliente. Confirmamos o estado real antes de
+          // encerrar, para não prender o cliente em "A processar".
           if (settled) return;
           try {
             const check = await statusFn({ data: { saleId } });
