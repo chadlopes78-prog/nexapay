@@ -73,23 +73,28 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     let failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
     if (!paid && !failed) {
       const { reconcilePendingSale } = await import("@/lib/payments/reconciliation.server");
-      const reconciled = await reconcilePendingSale(sale);
-      if (reconciled === "paid" || reconciled === "failed" || reconciled === "expired" || reconciled === "cancelled") {
-        const { data: refreshed } = await supabaseAdmin
-          .from("sales")
-          .select("status, failure_reason, failure_code")
-          .eq("id", data.saleId)
-          .maybeSingle();
-        if (refreshed) {
-          sale.status = refreshed.status;
-          sale.failure_reason = refreshed.failure_reason;
-          sale.failure_code = refreshed.failure_code;
-          raw = String(refreshed.status ?? "").toLowerCase();
-          paid = ["paid", "approved", "success", "completed"].includes(raw);
-          failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
-        }
+      await reconcilePendingSale(sale).catch(() => null);
+      // CAUSA RAIZ da dessincronização: a leitura acima é feita ANTES da
+      // reconciliação (que pode demorar segundos a falar com a E2Payments).
+      // Nesse intervalo o webhook/gateway em background já pode ter gravado
+      // `paid` — mas o handler devolvia o snapshot antigo (`pending`).
+      // Solução: reler SEMPRE o estado real depois da reconciliação,
+      // independentemente do que ela devolveu.
+      const { data: refreshed } = await supabaseAdmin
+        .from("sales")
+        .select("status, failure_reason, failure_code")
+        .eq("id", data.saleId)
+        .maybeSingle();
+      if (refreshed) {
+        sale.status = refreshed.status;
+        sale.failure_reason = refreshed.failure_reason;
+        sale.failure_code = refreshed.failure_code;
+        raw = String(refreshed.status ?? "").toLowerCase();
+        paid = ["paid", "approved", "success", "completed"].includes(raw);
+        failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
       }
     }
+
     const createdAt = sale.created_at ? new Date(sale.created_at).getTime() : 0;
     // Só marcamos expirado após 5min sem sinal do gateway (mesmo cutoff do
     // sweep). O usuário pode demorar >2min pra digitar o PIN — cortar aos
