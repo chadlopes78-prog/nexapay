@@ -37,6 +37,7 @@ function SmsPage() {
   const queryClient = useQueryClient();
   const fetchSettings = useServerFn(getSmsSettings);
   const persistSettings = useServerFn(saveSmsSettings);
+  const runTestSms = useServerFn(sendTestSms);
 
   const { data, isLoading } = useQuery({
     queryKey: ["sms-settings"],
