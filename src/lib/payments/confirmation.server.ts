@@ -633,7 +633,17 @@ export async function markSaleTerminalFailure(options: {
     payment_reference: reference ? reference.slice(0, 200) : undefined,
     failure_reason: reason ? reason.slice(0, 500) : undefined,
     failure_code: code ? code.slice(0, 80) : status,
+    gateway_error_code: code ? code.slice(0, 80) : null,
+    gateway_message: reason ? reason.slice(0, 500) : null,
   };
+  logPaymentTransition({
+    saleId,
+    source,
+    internalStatus: finalStatus,
+    gatewayCode: code ?? null,
+    gatewayMessage: reason ?? null,
+    transactionId: transactionId ?? null,
+  });
   const { data: updated, error } = await supabaseAdmin
     .from("sales")
     .update(updatePayload as never)
