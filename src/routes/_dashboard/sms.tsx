@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getSmsSettings, saveSmsSettings } from "@/lib/api/sms.functions";
+import { getSmsSettings, saveSmsSettings, sendTestSms } from "@/lib/api/sms.functions";
 
 export const Route = createFileRoute("/_dashboard/sms")({
   component: SmsPage,
@@ -37,6 +37,7 @@ function SmsPage() {
   const queryClient = useQueryClient();
   const fetchSettings = useServerFn(getSmsSettings);
   const persistSettings = useServerFn(saveSmsSettings);
+  const runTestSms = useServerFn(sendTestSms);
 
   const { data, isLoading } = useQuery({
     queryKey: ["sms-settings"],
@@ -68,6 +69,20 @@ function SmsPage() {
     onError: (e: unknown) =>
       toast.error(e instanceof Error ? e.message : "Não foi possível guardar."),
   });
+
+  const sendTest = useMutation({
+    mutationFn: () => {
+      // Validação antes de consumir crédito de SMS.
+      if (!testPhone.trim()) throw new Error("Indique o número para teste.");
+      if (!message.trim()) throw new Error("A mensagem não pode estar vazia.");
+      return runTestSms({ data: { phone: testPhone.trim(), message: message.trim() } });
+    },
+    onSuccess: () => toast.success("SMS enviado com sucesso."),
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível enviar a SMS."),
+  });
+
+
 
   // A integração só é considerada pronta quando o backend tem API Key + endpoint.
   const integrationReady = Boolean(data?.hasApiKey && data?.hasEndpoint);
@@ -200,9 +215,18 @@ function SmsPage() {
           />
         </div>
 
-        <Button variant="outline" disabled={!integrationReady} className="w-full sm:w-auto">
-          <Send className="mr-2 h-4 w-4" />
-          Enviar SMS de teste
+        <Button
+          variant="outline"
+          disabled={!integrationReady || sendTest.isPending}
+          onClick={() => sendTest.mutate()}
+          className="w-full sm:w-auto"
+        >
+          {sendTest.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="mr-2 h-4 w-4" />
+          )}
+          {sendTest.isPending ? "A enviar..." : "Enviar SMS de teste"}
         </Button>
 
         {!integrationReady && (
