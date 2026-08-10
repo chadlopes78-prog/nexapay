@@ -200,9 +200,18 @@ function SmsPage() {
           />
         </div>
 
-        <Button variant="outline" disabled={!integrationReady} className="w-full sm:w-auto">
-          <Send className="mr-2 h-4 w-4" />
-          Enviar SMS de teste
+        <Button
+          variant="outline"
+          disabled={!integrationReady || sendTest.isPending}
+          onClick={() => sendTest.mutate()}
+          className="w-full sm:w-auto"
+        >
+          {sendTest.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="mr-2 h-4 w-4" />
+          )}
+          {sendTest.isPending ? "A enviar..." : "Enviar SMS de teste"}
         </Button>
 
         {!integrationReady && (
