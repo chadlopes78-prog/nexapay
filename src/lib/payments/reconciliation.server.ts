@@ -9,7 +9,7 @@ import {
   saveGatewayIdentifiers,
 } from "@/lib/payments/confirmation.server";
 
-const E2PAY_BASE_URL = "https://e2payments.explicador.co.mz";
+import { getE2payBaseUrl, orderedE2payHosts, setE2payBaseUrl } from "@/lib/payments/e2pay-hosts";
 const HISTORY_LIMIT = 50;
 const RECONCILIATION_INTERVAL_MS = 3_000;
 const lastReconciliationAt = new Map<string, number>();
