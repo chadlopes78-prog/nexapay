@@ -64,28 +64,34 @@ async function requestHistory(sale: PendingSale) {
     .maybeSingle();
   if (!credentials?.e2p_client_id || !credentials.e2p_client_secret) return null;
 
-  const tokenResponse = await fetch(`${E2PAY_BASE_URL}/oauth/token`, {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "client_credentials",
-      client_id: credentials.e2p_client_id,
-      client_secret: credentials.e2p_client_secret,
-    }),
-  });
-  if (!tokenResponse.ok) return null;
-  const tokenPayload = asRecord(await tokenResponse.json().catch(() => null));
-  const accessToken = tokenPayload?.access_token;
+  let accessToken: string | null = null;
+  for (const baseUrl of orderedE2payHosts(credentials.e2p_client_id)) {
+    const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "client_credentials",
+        client_id: credentials.e2p_client_id,
+        client_secret: credentials.e2p_client_secret,
+      }),
+    });
+    if (!tokenResponse.ok) continue;
+    const tokenPayload = asRecord(await tokenResponse.json().catch(() => null));
+    if (!tokenPayload?.access_token) continue;
+    accessToken = String(tokenPayload.access_token);
+    setE2payBaseUrl(credentials.e2p_client_id, baseUrl);
+    break;
+  }
   if (!accessToken) return null;
 
   const method = String(sale.payment_method);
   const historyResponse = await fetch(
-    `${E2PAY_BASE_URL}/v1/payments/${method}/get/all/paginate/${HISTORY_LIMIT}`,
+    `${getE2payBaseUrl(credentials.e2p_client_id)}/v1/payments/${method}/get/all/paginate/${HISTORY_LIMIT}`,
     {
       method: "POST",
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${String(accessToken)}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ client_id: credentials.e2p_client_id }),
@@ -94,6 +100,7 @@ async function requestHistory(sale: PendingSale) {
   if (!historyResponse.ok) return null;
   return historyResponse.json().catch(() => null);
 }
+
 
 export async function reconcilePendingSale(sale: PendingSale) {
   const existing = reconciliationInFlight.get(sale.id);
