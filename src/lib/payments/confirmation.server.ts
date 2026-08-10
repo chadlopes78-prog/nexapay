@@ -555,7 +555,7 @@ export async function confirmSalePayment(options: {
 
   const { data: updated, error: updateError } = await supabaseAdmin
     .from("sales")
-    .update(updatePayload)
+    .update(updatePayload as never)
     .eq("id", saleId)
     .neq("status", "paid")
     .select(
