@@ -108,6 +108,113 @@ export function readGatewayReference(input: unknown): string | null {
   return value == null ? null : String(value);
 }
 
+/**
+ * Lê o CÓDIGO ESTRUTURADO devolvido pela gateway (prioridade sobre texto).
+ * A E2Payments encaminha os códigos originais das carteiras:
+ *   M-Pesa  -> INS-0, INS-1, INS-6, INS-9, INS-2001, INS-2006, INS-2051 ...
+ *   e-Mola  -> códigos numéricos / strings curtas no campo `code`.
+ */
+export function readGatewayCode(input: unknown): string | null {
+  const payload = asObject(input);
+  const data = nestedObject(payload, "data");
+  const value =
+    payload.code ??
+    payload.error_code ??
+    payload.errorCode ??
+    payload.response_code ??
+    payload.responseCode ??
+    payload.output_ResponseCode ??
+    data.code ??
+    data.error_code ??
+    data.errorCode ??
+    data.response_code ??
+    data.responseCode ??
+    data.output_ResponseCode ??
+    null;
+  const text = value == null ? "" : String(value).trim();
+  return text.length > 0 ? text.slice(0, 80) : null;
+}
+
+/** Estado bruto (sem normalização) devolvido pela gateway, para auditoria. */
+export function readGatewayRawStatus(input: unknown): string | null {
+  const payload = asObject(input);
+  const data = nestedObject(payload, "data");
+  const value =
+    payload.status ??
+    payload.payment_status ??
+    payload.state ??
+    data.status ??
+    data.payment_status ??
+    data.state ??
+    null;
+  const text = value == null ? "" : String(value).trim();
+  return text.length > 0 ? text.slice(0, 120) : null;
+}
+
+/**
+ * Mapa CÓDIGO -> {estado normalizado, código interno}.
+ * Tem prioridade sobre qualquer heurística de texto (requisito: não depender
+ * de `message.includes("cancel")`, porque as mensagens mudam).
+ */
+const GATEWAY_CODE_MAP: Record<string, { status: NormalizedPaymentStatus; code: string }> = {
+  // M-Pesa (Vodacom) — códigos oficiais encaminhados pela E2Payments
+  "ins-0": { status: "paid", code: "success" },
+  "ins-1": { status: "failed", code: "gateway_internal_error" },
+  "ins-5": { status: "cancelled", code: "cancelled_by_user" },
+  "ins-6": { status: "failed", code: "transaction_failed" },
+  "ins-9": { status: "expired", code: "timeout" },
+  "ins-10": { status: "failed", code: "duplicate_transaction" },
+  "ins-13": { status: "failed", code: "invalid_shortcode" },
+  "ins-2001": { status: "failed", code: "invalid_pin" },
+  "ins-2006": { status: "failed", code: "insufficient_funds" },
+  "ins-2051": { status: "failed", code: "invalid_msisdn" },
+  // e-Mola / genéricos
+  "insufficient_funds": { status: "failed", code: "insufficient_funds" },
+  "insufficient_balance": { status: "failed", code: "insufficient_funds" },
+  "cancelled_by_user": { status: "cancelled", code: "cancelled_by_user" },
+  "user_cancelled": { status: "cancelled", code: "cancelled_by_user" },
+  "invalid_pin": { status: "failed", code: "invalid_pin" },
+  "wrong_pin": { status: "failed", code: "invalid_pin" },
+  "timeout": { status: "expired", code: "timeout" },
+  "expired": { status: "expired", code: "timeout" },
+};
+
+export function lookupGatewayCode(input: unknown) {
+  const code = readGatewayCode(input);
+  if (!code) return null;
+  return GATEWAY_CODE_MAP[code.toLowerCase()] ?? null;
+}
+
+/**
+ * Log estruturado e SEGURO das transições de estado (sem PIN, sem tokens,
+ * sem credenciais). É a fonte para descobrirmos os códigos reais que cada
+ * carteira devolve em cancelamento / saldo insuficiente / expiração.
+ */
+export function logPaymentTransition(entry: {
+  saleId: string;
+  source: string;
+  provider?: string | null;
+  internalStatus: string;
+  gatewayStatus?: string | null;
+  gatewayCode?: string | null;
+  gatewayMessage?: string | null;
+  transactionId?: string | null;
+  httpStatus?: number | null;
+}) {
+  console.info("[payment-state]", {
+    timestamp: new Date().toISOString(),
+    sale_id: entry.saleId,
+    source: entry.source,
+    provider: entry.provider ?? null,
+    internal_status: entry.internalStatus,
+    gateway_status: entry.gatewayStatus ?? null,
+    gateway_code: entry.gatewayCode ?? null,
+    gateway_message: entry.gatewayMessage ? String(entry.gatewayMessage).slice(0, 200) : null,
+    transaction_id: entry.transactionId ?? null,
+    http_status: entry.httpStatus ?? null,
+  });
+}
+
 function collectGatewayText(input: unknown) {
   const payload = asObject(input);
   const data = nestedObject(payload, "data");
@@ -149,11 +256,43 @@ function collectGatewayText(input: unknown) {
   };
 }
 
+/**
+ * Justificativas amigáveis por código interno. A interface mostra este texto;
+ * a resposta original da gateway continua guardada em gateway_message.
+ */
+const JUSTIFICATION_BY_CODE: Record<string, string> = {
+  insufficient_funds: "Saldo insuficiente na conta do cliente.",
+  cancelled_by_user: "Pagamento cancelado pelo cliente.",
+  invalid_pin: "PIN ou autorização do pagamento não foi aceite.",
+  timeout: "A solicitação de pagamento expirou antes da confirmação.",
+  duplicate_transaction: "Já existe um pedido igual em processamento.",
+  invalid_msisdn: "O número de telefone não é válido para esta carteira.",
+  invalid_shortcode: "Configuração da carteira do vendedor inválida.",
+  transaction_failed: "A operadora não concluiu o pagamento.",
+  gateway_internal_error: "Não foi possível comunicar com o serviço de pagamento.",
+  gateway_unavailable: "Não foi possível comunicar com o serviço de pagamento.",
+  gateway_auth_error: "Não foi possível comunicar com o serviço de pagamento.",
+  msisdn_busy: "Este número tem outro pagamento em curso. Aguarde ~30s e tente novamente.",
+};
+
+export function getPaymentJustification(code: string | null | undefined, fallback?: string | null) {
+  const key = String(code ?? "").toLowerCase();
+  return JUSTIFICATION_BY_CODE[key] ?? fallback ?? "Não foi possível concluir o pagamento.";
+}
+
 export function readGatewayFailureDetails(
   input: unknown,
   fallbackStatus: TerminalFailureStatus = "failed",
 ): GatewayFailureDetails {
   const { rawMessage, combined } = collectGatewayText(input);
+
+  // PRIORIDADE 1 — código estruturado devolvido pela gateway.
+  const mapped = lookupGatewayCode(input);
+  if (mapped && mapped.code !== "success") {
+    return { code: mapped.code, message: JUSTIFICATION_BY_CODE[mapped.code] ?? rawMessage?.slice(0, 200) ?? "Não foi possível concluir o pagamento.", rawMessage };
+  }
+
+
 
   // Bloqueio temporário do próprio número: a operadora ainda tem uma
   // sessão STK ativa do pedido anterior (ex.: cliente pagou noutra aba).
@@ -219,6 +358,10 @@ export function normalizeGatewayStatus(
   httpOk = true,
   httpStatus?: number,
 ): NormalizedPaymentStatus {
+  // PRIORIDADE 1 — código estruturado (não depende de texto livre).
+  const mappedCode = lookupGatewayCode(input);
+  if (mappedCode) return mappedCode.status;
+
   const payload = asObject(input);
   const data = nestedObject(payload, "data");
   const successValue = payload.success ?? payload.ok ?? data.success ?? data.ok;
@@ -390,15 +533,29 @@ export async function confirmSalePayment(options: {
 }) {
   const { saleId, transactionId, reference, rawPayload, triggerPushcut = false } = options;
 
-  const updatePayload: { status: string; payment_reference: string; transaction_id?: string } = {
+  const updatePayload: Record<string, unknown> = {
     status: "paid",
     payment_reference: reference ? reference.slice(0, 200) : paymentReferenceForSale(saleId),
+    paid_at: new Date().toISOString(),
+    gateway_raw_status: readGatewayRawStatus(rawPayload),
+    gateway_error_code: readGatewayCode(rawPayload),
+    gateway_message: collectGatewayText(rawPayload).rawMessage?.slice(0, 500) ?? null,
   };
   if (transactionId) updatePayload.transaction_id = transactionId.slice(0, 200);
 
+  logPaymentTransition({
+    saleId,
+    source: "confirmSalePayment",
+    internalStatus: "paid",
+    gatewayStatus: readGatewayRawStatus(rawPayload),
+    gatewayCode: readGatewayCode(rawPayload),
+    gatewayMessage: collectGatewayText(rawPayload).rawMessage,
+    transactionId: transactionId ?? null,
+  });
+
   const { data: updated, error: updateError } = await supabaseAdmin
     .from("sales")
-    .update(updatePayload)
+    .update(updatePayload as never)
     .eq("id", saleId)
     .neq("status", "paid")
     .select(
@@ -476,7 +633,17 @@ export async function markSaleTerminalFailure(options: {
     payment_reference: reference ? reference.slice(0, 200) : undefined,
     failure_reason: reason ? reason.slice(0, 500) : undefined,
     failure_code: code ? code.slice(0, 80) : status,
+    gateway_error_code: code ? code.slice(0, 80) : null,
+    gateway_message: reason ? reason.slice(0, 500) : null,
   };
+  logPaymentTransition({
+    saleId,
+    source,
+    internalStatus: finalStatus,
+    gatewayCode: code ?? null,
+    gatewayMessage: reason ?? null,
+    transactionId: transactionId ?? null,
+  });
   const { data: updated, error } = await supabaseAdmin
     .from("sales")
     .update(updatePayload as never)

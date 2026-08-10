@@ -664,8 +664,12 @@ export type Database = {
           customer_phone: string | null
           failure_code: string | null
           failure_reason: string | null
+          gateway_error_code: string | null
+          gateway_message: string | null
+          gateway_raw_status: string | null
           id: string
           idempotency_key: string | null
+          paid_at: string | null
           payment_method: string | null
           payment_reference: string | null
           product_id: string | null
@@ -682,8 +686,12 @@ export type Database = {
           customer_phone?: string | null
           failure_code?: string | null
           failure_reason?: string | null
+          gateway_error_code?: string | null
+          gateway_message?: string | null
+          gateway_raw_status?: string | null
           id?: string
           idempotency_key?: string | null
+          paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
           product_id?: string | null
@@ -700,8 +708,12 @@ export type Database = {
           customer_phone?: string | null
           failure_code?: string | null
           failure_reason?: string | null
+          gateway_error_code?: string | null
+          gateway_message?: string | null
+          gateway_raw_status?: string | null
           id?: string
           idempotency_key?: string | null
+          paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
           product_id?: string | null
