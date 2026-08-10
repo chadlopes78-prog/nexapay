@@ -142,10 +142,13 @@ export const getSaleStatus = createServerFn({ method: "GET" })
           : CANCELLED_FAILURE_CODES.has(String(sale.failure_code ?? "").toLowerCase())
             ? "cancelled"
             : "failed";
+    const { getPaymentJustification } = await import("@/lib/payments/confirmation.server");
     return {
       status: paid ? ("paid" as const) : failed ? terminalKind : ("pending" as const),
       accessLink,
-      error: failed ? (sale.failure_reason || sale.payment_reference || "Pagamento cancelado ou recusado.") : null,
+      error: failed
+        ? getPaymentJustification(sale.failure_code, sale.failure_reason || "Pagamento cancelado ou recusado.")
+        : null,
       failureCode: failed ? (sale.failure_code || null) : null,
     };
   });
