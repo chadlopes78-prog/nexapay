@@ -57,8 +57,13 @@ export function WebhooksSection() {
   const { data: products } = useQuery({
     queryKey: ["webhook-products"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
       const { data, error } = await supabase
-        .from("products").select("id, name").order("name");
+        .from("products")
+        .select("id, name")
+        .eq("user_id", user.id)
+        .order("name");
       if (error) throw error;
       return (data ?? []) as Product[];
     },
@@ -67,9 +72,12 @@ export function WebhooksSection() {
   const { data: hooks } = useQuery({
     queryKey: ["webhooks"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
       const { data, error } = await supabase
         .from("webhook_endpoints")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Endpoint[];
@@ -79,9 +87,12 @@ export function WebhooksSection() {
   const { data: deliveries } = useQuery({
     queryKey: ["webhook-deliveries"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
       const { data, error } = await supabase
         .from("webhook_deliveries")
         .select("id, webhook_id, event, status, attempts, response_code, response_body, error, payload, created_at")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;

@@ -13,6 +13,12 @@ import {
   ShieldAlert,
   Package,
   Clock,
+  Smartphone,
+  Loader2,
+  XCircle,
+  RefreshCw,
+  ShieldCheck,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -140,14 +146,6 @@ function CheckoutPage() {
     };
   }, []);
 
-  // Bloqueia o scroll do fundo enquanto o overlay/modal de processamento está aberto.
-  useEffect(() => {
-    if (!processingPayment) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, [processingPayment]);
-
   useEffect(() => {
     if (!retryCooldownUntil) return;
     const tick = () => {
@@ -186,11 +184,10 @@ function CheckoutPage() {
       setShowCancelButton(false);
       return;
     }
-    // Só mostra "Já cancelei no telefone" DEPOIS de 60s — tempo médio do
-    // cliente destravar o telefone, ler a notificação STK/PIN e digitar
-    // os dígitos. Antes disso o botão apareceria ainda com o pop-up do PIN
-    // aberto e confundiria o cliente.
-    const t = setTimeout(() => setShowCancelButton(true), 60000);
+    // Mostra "Já cancelei no telefone" após 20s — suficiente para o PIN
+    // aparecer, mas curto o suficiente para não prender o cliente se
+    // cancelou ou mudou de ideia.
+    const t = setTimeout(() => setShowCancelButton(true), 20000);
     return () => clearTimeout(t);
   }, [processingPayment]);
 
@@ -887,14 +884,34 @@ function CheckoutPage() {
                     placeholder={paymentMethod === "mpesa" ? "84 / 85 xxx xxxx" : "86 / 87 xxx xxxx"}
                     required
                     inputMode="tel"
+                    disabled={processingPayment}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="h-13 pl-[78px] rounded-xl border-[var(--brand-25)] bg-white text-base font-semibold tracking-wide focus-visible:ring-2 focus-visible:ring-[var(--brand-20)] focus-visible:border-[var(--brand)]"
+                    className="h-13 pl-[78px] rounded-xl border-[var(--brand-25)] bg-white text-base font-semibold tracking-wide focus-visible:ring-2 focus-visible:ring-[var(--brand-20)] focus-visible:border-[var(--brand)] disabled:opacity-70 disabled:cursor-not-allowed"
                   />
                 </div>
-                <p className="mt-2 text-[10px] text-[#94a3b8] text-center">
-                  Nunca partilhamos o seu número. Débito seguro e instantâneo.
-                </p>
+
+                {/* Status inteligente integrado — substitui o overlay desfocado */}
+                {(processingPayment || paymentErrorMessage) && (
+                  <PaymentStatusCard
+                    processing={processingPayment}
+                    error={paymentErrorMessage}
+                    failureCode={paymentFailureCode}
+                    showCancelButton={showCancelButton}
+                    cancelingPayment={cancelingPayment}
+                    paymentMethod={paymentMethod}
+                    phone={phone}
+                    onCancel={onCancelPayment}
+                    onRetry={onRetryPayment}
+                    retryCooldownLeft={retryCooldownLeft}
+                  />
+                )}
+
+                {!processingPayment && !paymentErrorMessage && (
+                  <p className="mt-2 text-[10px] text-[#94a3b8] text-center">
+                    Nunca partilhamos o seu número. Débito seguro e instantâneo.
+                  </p>
+                )}
               </div>
 
             </section>
@@ -951,33 +968,6 @@ function CheckoutPage() {
       </div>
 
 
-      {(wasCancelledByCustomer || failureView) && !processingPayment && (
-        <CancelledOverlay
-          title={failureView?.title ?? "Percebemos que cancelaste o pagamento"}
-          description={failureView?.description ?? "Queres tentar novamente?"}
-          cooldownLeft={retryCooldownLeft}
-          onRetry={onRetryPayment}
-        />
-      )}
-
-      {processingPayment && !showCancelButton && (
-        <ProcessingOverlay
-          phase={paymentErrorMessage ? "error" : "processing"}
-        />
-      )}
-
-
-      {processingPayment && showCancelButton && (
-        <PaymentModal
-          paymentMethod={paymentMethod}
-          phone={phone}
-          productPriceFmt={productPriceFmt}
-          showCancelButton={showCancelButton}
-          cancelingPayment={cancelingPayment}
-          paymentErrorMessage={paymentErrorMessage}
-          onCancel={onCancelPayment}
-        />
-      )}
     </div>
   );
 }
@@ -993,184 +983,138 @@ const CountdownTimer = memo(function CountdownTimer({ initialSeconds }: { initia
   return <>{`${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`}</>;
 });
 
-type PaymentModalProps = {
-  paymentMethod: "mpesa" | "emola";
-  phone: string;
-  productPriceFmt: string;
+type PaymentStatusCardProps = {
+  processing: boolean;
+  error: string | null;
+  failureCode: string | null;
   showCancelButton: boolean;
   cancelingPayment: boolean;
-  paymentErrorMessage: string | null;
+  paymentMethod: "mpesa" | "emola";
+  phone: string;
   onCancel: () => void;
+  onRetry: () => void;
+  retryCooldownLeft: number;
 };
 
-const PaymentModal = memo(function PaymentModal({
-  paymentMethod,
-  phone,
-  productPriceFmt,
+// Card de status integrado abaixo do número de telefone. Substitui os
+// overlays desfocados, mantendo o cliente no mesmo contexto visual e
+// reduzindo a fricção de cancelamento.
+const PaymentStatusCard = memo(function PaymentStatusCard({
+  processing,
+  error,
+  failureCode,
   showCancelButton,
   cancelingPayment,
-  paymentErrorMessage,
+  paymentMethod,
+  phone,
   onCancel,
-}: PaymentModalProps) {
-  const accent = paymentMethod === "mpesa" ? "#E30613" : "#F97316";
-  const accentDark = paymentMethod === "mpesa" ? "#B30410" : "#EA580C";
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden">
-        <div
-          className="px-6 py-5 text-white flex items-center gap-3"
-          style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accentDark} 100%)` }}
-        >
-          <img
-            src={paymentMethod === "mpesa" ? "/mpesa-logo.jpg" : "/emola-logo.jpg"}
-            alt=""
-            width={40}
-            height={40}
-            decoding="async"
-            className="h-10 w-10 rounded-lg object-cover ring-2 ring-white/40"
-          />
-          <div className="flex-1">
-            <div className="text-xs font-medium opacity-80">Pagamento via</div>
-            <div className="text-lg font-extrabold leading-tight">
-              {paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola"}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-5 text-center">
-          <div className="mx-auto h-16 w-16 rounded-full flex items-center justify-center" style={{ background: `${accent}15` }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" className="h-8 w-8">
-              <rect x="5" y="2" width="14" height="20" rx="2.5" />
-              <line x1="12" y1="18" x2="12" y2="18" />
-            </svg>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-extrabold text-slate-900">Confirme no seu telefone</h3>
-            <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-              Um pop-up foi enviado para <b className="text-slate-900">+258 {phone}</b>.
-              Insira o seu <b>PIN</b> para concluir o pagamento de{" "}
-              <b style={{ color: accent }}>Mt {productPriceFmt}</b>.
-            </p>
-          </div>
-
-
-          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 font-medium flex items-start gap-2 text-left">
-            <ShieldAlert className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <span>
-              <b>Não feche esta aba.</b> Assim que confirmar o PIN no telefone, o acesso será liberado automaticamente.
-            </span>
-          </div>
-
-          {showCancelButton && (
-            <div className="space-y-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
-              <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-xs text-red-800 font-medium text-left">
-                Se já não quer liberar o acesso ou não está mais interessado, clique no botão <b>cancelar</b> abaixo. Ou pode tentar novamente confirmando o PIN no telefone.
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={cancelingPayment}
-                onClick={onCancel}
-                className="h-12 w-full rounded-xl border-red-300 bg-red-50 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-70 motion-safe:animate-[cancel-pulse_1.4s_ease-in-out_infinite]"
-              >
-                {cancelingPayment ? "Cancelando..." : "Já cancelei no telefone"}
-              </Button>
-            </div>
-          )}
-
-          {paymentErrorMessage && (
-            <div className="text-sm font-medium text-red-600">{paymentErrorMessage}</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-const ProcessingOverlay = memo(function ProcessingOverlay({ phase }: { phase: "processing" | "error" }) {
-  // Camada visual pura: NÃO cria pagamento, NÃO chama gateway, NÃO faz polling.
-  // Apenas reflete o estado já controlado por `processingPayment` no pai.
-  if (phase === "error") return null;
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="pay-overlay-title"
-      aria-describedby="pay-overlay-desc"
-      className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-slate-900/70 backdrop-blur-sm"
-    >
-      <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl p-6 text-center">
-        <div
-          aria-hidden="true"
-          className="mx-auto h-12 w-12 rounded-full border-4 border-slate-200 border-t-[var(--brand)] motion-safe:animate-spin motion-reduce:opacity-70"
-        />
-        <span className="sr-only">A processar pagamento</span>
-        <h2 id="pay-overlay-title" className="mt-5 text-lg font-extrabold text-slate-900" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
-          Pedido enviado à operadora
-        </h2>
-        <p id="pay-overlay-desc" className="mt-2 text-sm font-semibold text-slate-800 leading-relaxed">
-          Não feche esta página.
-        </p>
-        <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-          Vai receber uma aba no seu telemóvel para confirmar o pagamento.
-        </p>
-        <p className="mt-3 text-xs text-slate-500 leading-relaxed">
-          Introduza o PIN nessa aba para concluir a compra.
-        </p>
-
-      </div>
-    </div>
-  );
-});
-
-// Ecrã dedicado ao cancelamento reconhecido pela gateway. Não é mostrado
-// para falhas genéricas de comunicação — essas mantêm a mensagem original.
-const CancelledOverlay = memo(function CancelledOverlay({
-  title,
-  description,
-  cooldownLeft,
   onRetry,
-}: {
-  title: string;
-  description: string;
-  cooldownLeft: number;
-  onRetry: () => void;
-}) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="pay-cancelled-title"
-      className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-slate-900/70"
-    >
-      <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl p-6 text-center">
-        <div className="mx-auto h-14 w-14 rounded-full bg-amber-50 flex items-center justify-center">
-          <ShieldAlert className="h-7 w-7 text-amber-500" />
+  retryCooldownLeft,
+}: PaymentStatusCardProps) {
+  const methodLabel = paymentMethod === "mpesa" ? "M-Pesa" : "e-Mola";
+  const failureCodeKey = (failureCode ?? "").toLowerCase();
+  const wasCancelled = CANCELLED_CODES.has(failureCodeKey);
+
+  if (processing && !error) {
+    return (
+      <div className="mt-3 rounded-2xl border border-[var(--brand-20)] bg-white p-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="relative h-10 w-10 shrink-0 rounded-xl bg-[var(--brand-5)] grid place-items-center overflow-hidden">
+            <Smartphone className="h-5 w-5 text-[var(--brand)]" />
+            <span className="absolute bottom-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 motion-safe:animate-pulse" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-[#1e293b]">
+              Confirme no seu telefone
+            </p>
+            <p className="mt-1 text-xs text-[#64748b] leading-relaxed">
+              Pedido enviado via <b>{methodLabel}</b> para <b>+258 {phone}</b>.
+              Não feche esta página. Introduza o PIN na aba que vai receber para concluir a compra.
+            </p>
+
+            {showCancelButton && (
+              <div className="mt-3 space-y-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
+                <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] text-amber-800 font-medium flex items-start gap-2">
+                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                  <span>
+                    Se já não quer continuar ou cancelou no telefone, clique em <b>Cancelar pedido</b>.
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={cancelingPayment}
+                  onClick={onCancel}
+                  className="h-10 w-full rounded-xl border-red-300 bg-red-50 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-70"
+                >
+                  {cancelingPayment ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      A cancelar...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                      Já cancelei no telefone
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-        <h2
-          id="pay-cancelled-title"
-          className="mt-5 text-lg font-extrabold text-slate-900"
-          style={{ fontFamily: "'Sora', system-ui, sans-serif" }}
-        >
-          {title}
-        </h2>
-        <p className="mt-2 text-sm text-slate-600">{description}</p>
-        <Button
-          type="button"
-          disabled={cooldownLeft > 0}
-          onClick={onRetry}
-          className="mt-5 h-12 w-full rounded-xl bg-[var(--brand)] text-sm font-bold text-white hover:bg-[#2f6fe0] disabled:opacity-70"
-        >
-          {cooldownLeft > 0 ? (
-            <>
-              <Clock className="h-4 w-4" /> Aguarda {cooldownLeft}s
-            </>
-          ) : (
-            "Tentar novamente"
-          )}
-        </Button>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (error) {
+    const isCancelled = wasCancelled;
+    return (
+      <div className={cn(
+        "mt-3 rounded-2xl border p-4 shadow-sm",
+        isCancelled ? "border-amber-200 bg-amber-50" : "border-red-200 bg-red-50"
+      )}>
+        <div className="flex items-start gap-3">
+          <div className={cn(
+            "h-10 w-10 shrink-0 rounded-xl grid place-items-center",
+            isCancelled ? "bg-amber-100" : "bg-red-100"
+          )}>
+            {isCancelled ? (
+              <ShieldAlert className="h-5 w-5 text-amber-600" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-600" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className={cn("text-sm font-bold", isCancelled ? "text-amber-900" : "text-red-900")}>
+              {isCancelled ? "Pagamento cancelado" : "Não foi possível prosseguir"}
+            </p>
+            <p className={cn("mt-1 text-xs leading-relaxed", isCancelled ? "text-amber-800" : "text-red-700")}>
+              {error}
+            </p>
+            <Button
+              type="button"
+              disabled={retryCooldownLeft > 0}
+              onClick={onRetry}
+              className="mt-3 h-10 w-full rounded-xl bg-[var(--brand)] text-xs font-bold text-white hover:bg-[#2f6fe0] disabled:opacity-70"
+            >
+              {retryCooldownLeft > 0 ? (
+                <>
+                  <Clock className="h-3.5 w-3.5 mr-1.5" />
+                  Aguarda {retryCooldownLeft}s
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                  Tentar novamente
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 });

@@ -51,9 +51,12 @@ export function TrafficAnalysis() {
   const { data: pages, isLoading: isLoadingPages } = useQuery({
     queryKey: ["traffic-pages"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
       const { data, error } = await supabase
         .from("traffic_pages")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -64,14 +67,20 @@ export function TrafficAnalysis() {
   const { data: events, isLoading: isLoadingEvents } = useQuery({
     queryKey: ["traffic-events"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const pageIds = pages?.map((p) => p.id).filter(Boolean) ?? [];
+      if (pageIds.length === 0) return [];
       const { data, error } = await supabase
         .from("traffic_events")
         .select("*")
+        .in("page_id", pageIds)
         .order("created_at", { ascending: true });
       
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!pages && pages.length > 0,
   });
 
   const createPageMutation = useMutation({
