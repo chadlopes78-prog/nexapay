@@ -177,19 +177,13 @@ function CheckoutPage() {
     void prewarmGatewayFn({ data: { productId } }).catch(() => undefined);
   }, [prewarmGatewayFn, productId]);
 
-  // Contador puramente visual (feedback ao usuário).
-  // NÃO controla nem atrasa a chamada à API de pagamento.
+  // O cancelamento feito pelo cliente no pop-up da operadora é detectado
+  // automaticamente pelo backend (reconciliação com a gateway), por isso
+  // nenhuma ação manual é oferecida durante o processamento.
   useEffect(() => {
-    if (!processingPayment) {
-      setShowCancelButton(false);
-      return;
-    }
-    // Mostra "Já cancelei no telefone" após 20s — suficiente para o PIN
-    // aparecer, mas curto o suficiente para não prender o cliente se
-    // cancelou ou mudou de ideia.
-    const t = setTimeout(() => setShowCancelButton(true), 20000);
-    return () => clearTimeout(t);
+    if (!processingPayment) setShowCancelButton(false);
   }, [processingPayment]);
+
 
 
 
@@ -623,10 +617,10 @@ function CheckoutPage() {
 
   return (
     <div
-      className="min-h-screen bg-[#fafbfc] flex items-start sm:items-center justify-center p-4 py-6"
+      className="min-h-screen bg-[#fafbfc] flex items-start sm:items-center justify-center p-3 py-5"
       style={{ ...fontBody, ...brandVars }}
     >
-      <div className="w-full max-w-[560px] space-y-3">
+      <div className="w-full max-w-[520px] space-y-2.5">
         {logoUrl && (
           <div className="flex justify-center">
             <img
@@ -642,7 +636,7 @@ function CheckoutPage() {
         {/* Barra de urgência — alto contraste, estilo checkout de alta conversão */}
         {timerEnabled && (
           <div
-            className="rounded-2xl px-6 py-3.5 text-center text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)]"
+            className="rounded-2xl px-5 py-2.5 text-center text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)]"
             style={{ backgroundColor: TIMER_COLOR }}
           >
             <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] opacity-90">
@@ -661,7 +655,7 @@ function CheckoutPage() {
         </div>
 
         <div className="w-full bg-white rounded-3xl border border-[#e8ecf1] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-        <div className="p-5 sm:p-7 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4">
           {(checkoutTitle || checkoutSubtitle) && (
             <div className="text-center space-y-1">
               {checkoutTitle && (
@@ -692,7 +686,7 @@ function CheckoutPage() {
                 />
               </div>
             )}
-            <div className="p-4 flex items-center gap-3">
+            <div className="p-3.5 flex items-center gap-3">
               <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-[#f1f5f9] flex-shrink-0 ring-1 ring-[#e8ecf1]">
                 <div className="absolute inset-0 grid place-items-center text-[#cbd5e1]">
                   <Package className="h-5 w-5" />
@@ -725,7 +719,7 @@ function CheckoutPage() {
           </div>
 
           {/* Order bump + total */}
-          <div className="bg-[#fafbfc] rounded-2xl p-5 border border-[#e8ecf1]">
+          <div className="bg-[#fafbfc] rounded-2xl p-4 border border-[#e8ecf1]">
             {checkout?.order_bump_enabled && (
               <div className="mb-4">
                 <label
@@ -790,9 +784,9 @@ function CheckoutPage() {
 
 
           {/* Form */}
-          <form onSubmit={handlePayment} className="space-y-6">
+          <form onSubmit={handlePayment} className="space-y-5">
             {/* Dados do comprador */}
-            <section className="space-y-4">
+            <section className="space-y-3">
               <h3 className="text-sm font-semibold text-[#1e293b] uppercase tracking-wide" style={fontHeading}>
                 Dados do comprador
               </h3>
@@ -815,7 +809,7 @@ function CheckoutPage() {
 
 
             {/* Método de Pagamento */}
-            <section className="space-y-4">
+            <section className="space-y-3">
               <h3 className="text-sm font-semibold text-[#1e293b] uppercase tracking-wide" style={fontHeading}>
                 Método de Pagamento
               </h3>
@@ -824,7 +818,7 @@ function CheckoutPage() {
                   type="button"
                   onClick={() => { setPaymentMethod("mpesa"); setPhone(""); }}
                   className={cn(
-                    "relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
+                    "relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all bg-white",
                     paymentMethod === "mpesa"
                       ? "border-[var(--brand)] bg-[var(--brand-5)]"
                       : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
@@ -843,7 +837,7 @@ function CheckoutPage() {
                   type="button"
                   onClick={() => { setPaymentMethod("emola"); setPhone(""); }}
                   className={cn(
-                    "relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
+                    "relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all bg-white",
                     paymentMethod === "emola"
                       ? "border-[var(--brand)] bg-[var(--brand-5)]"
                       : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
@@ -861,7 +855,7 @@ function CheckoutPage() {
               </div>
 
               {/* Número de pagamento em destaque */}
-              <div className="rounded-2xl border border-[var(--brand-20)] bg-[var(--brand-5)] p-4">
+              <div className="rounded-2xl border border-[var(--brand-20)] bg-[var(--brand-5)] p-3.5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="h-8 w-8 rounded-lg bg-[var(--brand)] grid place-items-center text-white flex-shrink-0">
                     <Lock className="h-4 w-4" />
@@ -897,14 +891,12 @@ function CheckoutPage() {
                     processing={processingPayment}
                     error={paymentErrorMessage}
                     failureCode={paymentFailureCode}
-                    showCancelButton={showCancelButton}
-                    cancelingPayment={cancelingPayment}
                     paymentMethod={paymentMethod}
                     phone={phone}
-                    onCancel={onCancelPayment}
                     onRetry={onRetryPayment}
                     retryCooldownLeft={retryCooldownLeft}
                   />
+
                 )}
 
                 {!processingPayment && !paymentErrorMessage && (
@@ -926,11 +918,11 @@ function CheckoutPage() {
               </div>
             )}
 
-            <div className="space-y-3 pt-1">
+            <div className="space-y-2.5 pt-0.5">
               <Button
                 type="submit"
                 disabled={processingPayment || retryCooldownLeft > 0}
-                className="w-full h-14 text-base font-bold rounded-2xl text-white disabled:opacity-70 transition-all active:scale-[0.98] flex items-center justify-center gap-2 hover:brightness-110"
+                className="w-full h-13 text-base font-bold rounded-2xl text-white disabled:opacity-70 transition-all active:scale-[0.98] flex items-center justify-center gap-2 hover:brightness-110"
                 style={{ ...submitStyle, ...fontHeading }}
               >
                 {retryCooldownLeft > 0 ? (
@@ -987,27 +979,21 @@ type PaymentStatusCardProps = {
   processing: boolean;
   error: string | null;
   failureCode: string | null;
-  showCancelButton: boolean;
-  cancelingPayment: boolean;
   paymentMethod: "mpesa" | "emola";
   phone: string;
-  onCancel: () => void;
   onRetry: () => void;
   retryCooldownLeft: number;
 };
 
-// Card de status integrado abaixo do número de telefone. Substitui os
-// overlays desfocados, mantendo o cliente no mesmo contexto visual e
-// reduzindo a fricção de cancelamento.
+// Card de status integrado abaixo do número de telefone. O cancelamento é
+// detectado automaticamente pelo backend (reconciliação com a gateway), por
+// isso não existe nenhuma ação manual de cancelamento para o cliente.
 const PaymentStatusCard = memo(function PaymentStatusCard({
   processing,
   error,
   failureCode,
-  showCancelButton,
-  cancelingPayment,
   paymentMethod,
   phone,
-  onCancel,
   onRetry,
   retryCooldownLeft,
 }: PaymentStatusCardProps) {
@@ -1017,11 +1003,11 @@ const PaymentStatusCard = memo(function PaymentStatusCard({
 
   if (processing && !error) {
     return (
-      <div className="mt-3 rounded-2xl border border-[var(--brand-20)] bg-white p-4 shadow-sm">
+      <div className="mt-3 rounded-2xl border border-[var(--brand-20)] bg-white p-3.5 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="relative h-10 w-10 shrink-0 rounded-xl bg-[var(--brand-5)] grid place-items-center overflow-hidden">
-            <Smartphone className="h-5 w-5 text-[var(--brand)]" />
-            <span className="absolute bottom-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 motion-safe:animate-pulse" />
+          <div className="relative h-9 w-9 shrink-0 rounded-xl bg-[var(--brand-5)] grid place-items-center overflow-hidden">
+            <Smartphone className="h-4.5 w-4.5 text-[var(--brand)]" />
+            <span className="absolute bottom-1 right-1 h-2 w-2 rounded-full bg-emerald-500 motion-safe:animate-pulse" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-[#1e293b]">
@@ -1031,41 +1017,12 @@ const PaymentStatusCard = memo(function PaymentStatusCard({
               Pedido enviado via <b>{methodLabel}</b> para <b>+258 {phone}</b>.
               Não feche esta página. Introduza o PIN na aba que vai receber para concluir a compra.
             </p>
-
-            {showCancelButton && (
-              <div className="mt-3 space-y-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
-                <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] text-amber-800 font-medium flex items-start gap-2">
-                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                  <span>
-                    Se já não quer continuar ou cancelou no telefone, clique em <b>Cancelar pedido</b>.
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={cancelingPayment}
-                  onClick={onCancel}
-                  className="h-10 w-full rounded-xl border-red-300 bg-red-50 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-70"
-                >
-                  {cancelingPayment ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                      A cancelar...
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-3.5 w-3.5 mr-1.5" />
-                      Já cancelei no telefone
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       </div>
     );
   }
+
 
   if (error) {
     const isCancelled = wasCancelled;
