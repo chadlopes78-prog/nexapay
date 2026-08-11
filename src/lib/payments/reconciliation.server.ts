@@ -114,6 +114,10 @@ async function requestHistory(sale: PendingSale) {
       body: JSON.stringify({ client_id: credentials.e2p_client_id }),
     },
   );
+  if (historyResponse.status === 401 || historyResponse.status === 403) {
+    // Token em cache expirou antes do previsto — descarta para o próximo tick.
+    tokenCache.delete(credentials.e2p_client_id);
+  }
   if (!historyResponse.ok) return null;
   return historyResponse.json().catch(() => null);
 }
