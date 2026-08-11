@@ -87,9 +87,12 @@ export function WebhooksSection() {
   const { data: deliveries } = useQuery({
     queryKey: ["webhook-deliveries"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
       const { data, error } = await supabase
         .from("webhook_deliveries")
         .select("id, webhook_id, event, status, attempts, response_code, response_body, error, payload, created_at")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
