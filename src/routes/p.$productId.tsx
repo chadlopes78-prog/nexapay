@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import mozFlag from "@/assets/moz-flag.png.asset.json";
 
 // Intervalo de consulta do estado da venda enquanto pending (~1,5s).
-const POLL_INTERVAL_MS = 1_500;
+const POLL_INTERVAL_MS = 1_000;
 
 // Códigos terminais que representam cancelamento/recusa pelo cliente.
 const CANCELLED_CODES = new Set([

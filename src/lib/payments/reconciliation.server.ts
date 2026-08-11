@@ -11,7 +11,13 @@ import {
 
 import { getE2payBaseUrl, orderedE2payHosts, setE2payBaseUrl } from "@/lib/payments/e2pay-hosts";
 const HISTORY_LIMIT = 50;
-const RECONCILIATION_INTERVAL_MS = 3_000;
+// Intervalo curto: o cancelamento no pop-up da operadora só é detectado
+// quando o histórico da gateway é consultado. 3s (valor anterior) somava
+// dezenas de segundos de atraso na percepção do cliente.
+const RECONCILIATION_INTERVAL_MS = 1_000;
+// Cache de token por client_id — evita um OAuth round-trip completo
+// (0,5–2s) em cada tick de polling.
+const tokenCache = new Map<string, { value: string; expiresAt: number }>();
 const lastReconciliationAt = new Map<string, number>();
 const reconciliationInFlight = new Map<string, Promise<"paid" | "cancelled" | "failed" | "expired" | "pending" | null>>();
 
@@ -65,22 +71,33 @@ async function requestHistory(sale: PendingSale) {
   if (!credentials?.e2p_client_id || !credentials.e2p_client_secret) return null;
 
   let accessToken: string | null = null;
-  for (const baseUrl of orderedE2payHosts(credentials.e2p_client_id)) {
-    const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
-      method: "POST",
-      headers: { Accept: "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        grant_type: "client_credentials",
-        client_id: credentials.e2p_client_id,
-        client_secret: credentials.e2p_client_secret,
-      }),
-    });
-    if (!tokenResponse.ok) continue;
-    const tokenPayload = asRecord(await tokenResponse.json().catch(() => null));
-    if (!tokenPayload?.access_token) continue;
-    accessToken = String(tokenPayload.access_token);
-    setE2payBaseUrl(credentials.e2p_client_id, baseUrl);
-    break;
+  const cached = tokenCache.get(credentials.e2p_client_id);
+  if (cached && cached.expiresAt > Date.now()) {
+    accessToken = cached.value;
+  }
+  if (!accessToken) {
+    for (const baseUrl of orderedE2payHosts(credentials.e2p_client_id)) {
+      const tokenResponse = await fetch(`${baseUrl}/oauth/token`, {
+        method: "POST",
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          grant_type: "client_credentials",
+          client_id: credentials.e2p_client_id,
+          client_secret: credentials.e2p_client_secret,
+        }),
+      });
+      if (!tokenResponse.ok) continue;
+      const tokenPayload = asRecord(await tokenResponse.json().catch(() => null));
+      if (!tokenPayload?.access_token) continue;
+      accessToken = String(tokenPayload.access_token);
+      const expiresIn = Number(tokenPayload.expires_in);
+      tokenCache.set(credentials.e2p_client_id, {
+        value: accessToken,
+        expiresAt: Date.now() + (Number.isFinite(expiresIn) && expiresIn > 60 ? (expiresIn - 60) * 1000 : 240_000),
+      });
+      setE2payBaseUrl(credentials.e2p_client_id, baseUrl);
+      break;
+    }
   }
   if (!accessToken) return null;
 
@@ -97,6 +114,10 @@ async function requestHistory(sale: PendingSale) {
       body: JSON.stringify({ client_id: credentials.e2p_client_id }),
     },
   );
+  if (historyResponse.status === 401 || historyResponse.status === 403) {
+    // Token em cache expirou antes do previsto — descarta para o próximo tick.
+    tokenCache.delete(credentials.e2p_client_id);
+  }
   if (!historyResponse.ok) return null;
   return historyResponse.json().catch(() => null);
 }
