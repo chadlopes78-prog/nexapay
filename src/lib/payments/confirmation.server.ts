@@ -317,7 +317,12 @@ export function readGatewayFailureDetails(
   }
 
 
-  if (/(saldo\s+insuf|insufficient|not\s+enough|sem\s+saldo|funds|balance)/i.test(combined)) {
+  // Inclui a formulação usada pela e-Mola: "O teu saldo nao e suficiente...".
+  if (
+    /(saldo\s+insuf|insufficient|not\s+enough|sem\s+saldo|funds|balance)/i.test(combined) ||
+    /saldo[^.]{0,40}(n[aã]o\s+(e|é|esta|está)\s+)?sufici/i.test(combined)
+  ) {
+
     return {
       code: "insufficient_funds",
       message: "Saldo insuficiente na conta do cliente.",
