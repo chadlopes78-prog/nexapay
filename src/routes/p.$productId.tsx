@@ -617,10 +617,10 @@ function CheckoutPage() {
 
   return (
     <div
-      className="min-h-screen bg-[#fafbfc] flex items-start sm:items-center justify-center p-4 py-6"
+      className="min-h-screen bg-[#fafbfc] flex items-start sm:items-center justify-center p-3 py-5"
       style={{ ...fontBody, ...brandVars }}
     >
-      <div className="w-full max-w-[560px] space-y-3">
+      <div className="w-full max-w-[520px] space-y-2.5">
         {logoUrl && (
           <div className="flex justify-center">
             <img
@@ -636,7 +636,7 @@ function CheckoutPage() {
         {/* Barra de urgência — alto contraste, estilo checkout de alta conversão */}
         {timerEnabled && (
           <div
-            className="rounded-2xl px-6 py-3.5 text-center text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)]"
+            className="rounded-2xl px-5 py-2.5 text-center text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)]"
             style={{ backgroundColor: TIMER_COLOR }}
           >
             <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] opacity-90">
@@ -655,7 +655,7 @@ function CheckoutPage() {
         </div>
 
         <div className="w-full bg-white rounded-3xl border border-[#e8ecf1] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-        <div className="p-5 sm:p-7 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4">
           {(checkoutTitle || checkoutSubtitle) && (
             <div className="text-center space-y-1">
               {checkoutTitle && (
@@ -686,7 +686,7 @@ function CheckoutPage() {
                 />
               </div>
             )}
-            <div className="p-4 flex items-center gap-3">
+            <div className="p-3.5 flex items-center gap-3">
               <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-[#f1f5f9] flex-shrink-0 ring-1 ring-[#e8ecf1]">
                 <div className="absolute inset-0 grid place-items-center text-[#cbd5e1]">
                   <Package className="h-5 w-5" />
@@ -719,7 +719,7 @@ function CheckoutPage() {
           </div>
 
           {/* Order bump + total */}
-          <div className="bg-[#fafbfc] rounded-2xl p-5 border border-[#e8ecf1]">
+          <div className="bg-[#fafbfc] rounded-2xl p-4 border border-[#e8ecf1]">
             {checkout?.order_bump_enabled && (
               <div className="mb-4">
                 <label
@@ -784,9 +784,9 @@ function CheckoutPage() {
 
 
           {/* Form */}
-          <form onSubmit={handlePayment} className="space-y-6">
+          <form onSubmit={handlePayment} className="space-y-5">
             {/* Dados do comprador */}
-            <section className="space-y-4">
+            <section className="space-y-3">
               <h3 className="text-sm font-semibold text-[#1e293b] uppercase tracking-wide" style={fontHeading}>
                 Dados do comprador
               </h3>
@@ -809,7 +809,7 @@ function CheckoutPage() {
 
 
             {/* Método de Pagamento */}
-            <section className="space-y-4">
+            <section className="space-y-3">
               <h3 className="text-sm font-semibold text-[#1e293b] uppercase tracking-wide" style={fontHeading}>
                 Método de Pagamento
               </h3>
@@ -818,7 +818,7 @@ function CheckoutPage() {
                   type="button"
                   onClick={() => { setPaymentMethod("mpesa"); setPhone(""); }}
                   className={cn(
-                    "relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
+                    "relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all bg-white",
                     paymentMethod === "mpesa"
                       ? "border-[var(--brand)] bg-[var(--brand-5)]"
                       : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
@@ -837,7 +837,7 @@ function CheckoutPage() {
                   type="button"
                   onClick={() => { setPaymentMethod("emola"); setPhone(""); }}
                   className={cn(
-                    "relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
+                    "relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all bg-white",
                     paymentMethod === "emola"
                       ? "border-[var(--brand)] bg-[var(--brand-5)]"
                       : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
@@ -855,7 +855,7 @@ function CheckoutPage() {
               </div>
 
               {/* Número de pagamento em destaque */}
-              <div className="rounded-2xl border border-[var(--brand-20)] bg-[var(--brand-5)] p-4">
+              <div className="rounded-2xl border border-[var(--brand-20)] bg-[var(--brand-5)] p-3.5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="h-8 w-8 rounded-lg bg-[var(--brand)] grid place-items-center text-white flex-shrink-0">
                     <Lock className="h-4 w-4" />
@@ -918,11 +918,11 @@ function CheckoutPage() {
               </div>
             )}
 
-            <div className="space-y-3 pt-1">
+            <div className="space-y-2.5 pt-0.5">
               <Button
                 type="submit"
                 disabled={processingPayment || retryCooldownLeft > 0}
-                className="w-full h-14 text-base font-bold rounded-2xl text-white disabled:opacity-70 transition-all active:scale-[0.98] flex items-center justify-center gap-2 hover:brightness-110"
+                className="w-full h-13 text-base font-bold rounded-2xl text-white disabled:opacity-70 transition-all active:scale-[0.98] flex items-center justify-center gap-2 hover:brightness-110"
                 style={{ ...submitStyle, ...fontHeading }}
               >
                 {retryCooldownLeft > 0 ? (
