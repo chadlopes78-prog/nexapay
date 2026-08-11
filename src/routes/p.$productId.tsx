@@ -968,33 +968,6 @@ function CheckoutPage() {
       </div>
 
 
-      {(wasCancelledByCustomer || failureView) && !processingPayment && (
-        <CancelledOverlay
-          title={failureView?.title ?? "Percebemos que cancelaste o pagamento"}
-          description={failureView?.description ?? "Queres tentar novamente?"}
-          cooldownLeft={retryCooldownLeft}
-          onRetry={onRetryPayment}
-        />
-      )}
-
-      {processingPayment && !showCancelButton && (
-        <ProcessingOverlay
-          phase={paymentErrorMessage ? "error" : "processing"}
-        />
-      )}
-
-
-      {processingPayment && showCancelButton && (
-        <PaymentModal
-          paymentMethod={paymentMethod}
-          phone={phone}
-          productPriceFmt={productPriceFmt}
-          showCancelButton={showCancelButton}
-          cancelingPayment={cancelingPayment}
-          paymentErrorMessage={paymentErrorMessage}
-          onCancel={onCancelPayment}
-        />
-      )}
     </div>
   );
 }
