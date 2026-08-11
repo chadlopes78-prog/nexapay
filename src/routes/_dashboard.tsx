@@ -320,7 +320,7 @@ function DashboardLayout() {
   );
 
   return (
-    <div className="flex min-h-screen bg-slate-50/50">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50/50">
       <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
         <Link to="/dashboard" className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-black border border-slate-800 shadow-sm">
@@ -364,10 +364,10 @@ function DashboardLayout() {
       </aside>
 
       <main className={cn(
-        "flex-1 transition-all duration-300 pt-16 lg:pt-0", 
+        "min-w-0 w-full max-w-full flex-1 overflow-x-hidden transition-all duration-300 pt-16 lg:pt-0",
         isSidebarOpen ? "lg:ml-64" : "lg:ml-20"
       )}>
-        <div className="p-4 md:p-8">
+        <div className="w-full min-w-0 max-w-full p-3 sm:p-4 md:p-8">
           <Suspense fallback={
             <div className="flex h-[400px] w-full items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
