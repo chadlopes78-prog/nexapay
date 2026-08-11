@@ -11,7 +11,13 @@ import {
 
 import { getE2payBaseUrl, orderedE2payHosts, setE2payBaseUrl } from "@/lib/payments/e2pay-hosts";
 const HISTORY_LIMIT = 50;
-const RECONCILIATION_INTERVAL_MS = 3_000;
+// Intervalo curto: o cancelamento no pop-up da operadora só é detectado
+// quando o histórico da gateway é consultado. 3s (valor anterior) somava
+// dezenas de segundos de atraso na percepção do cliente.
+const RECONCILIATION_INTERVAL_MS = 1_000;
+// Cache de token por client_id — evita um OAuth round-trip completo
+// (0,5–2s) em cada tick de polling.
+const tokenCache = new Map<string, { value: string; expiresAt: number }>();
 const lastReconciliationAt = new Map<string, number>();
 const reconciliationInFlight = new Map<string, Promise<"paid" | "cancelled" | "failed" | "expired" | "pending" | null>>();
 
