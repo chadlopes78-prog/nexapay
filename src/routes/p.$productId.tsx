@@ -627,19 +627,36 @@ function CheckoutPage() {
   return (
     <div
       className="min-h-screen bg-[#fafbfc] flex items-start sm:items-center justify-center p-4 py-6"
-      style={fontBody}
+      style={{ ...fontBody, ...brandVars }}
     >
       <div className="w-full max-w-[560px] space-y-3">
+        {logoUrl && (
+          <div className="flex justify-center">
+            <img
+              src={logoUrl}
+              alt="Logótipo"
+              className="h-10 max-w-[180px] object-contain"
+              loading="eager"
+              decoding="async"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+          </div>
+        )}
         {/* Barra de urgência — alto contraste, estilo checkout de alta conversão */}
-        <div className="rounded-2xl bg-[#ef4444] px-6 py-3.5 text-center text-white shadow-[0_8px_20px_rgba(239,68,68,0.25)]">
-          <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] opacity-90">
-            <Clock className="h-3 w-3" />
-            Oferta expira em
+        {timerEnabled && (
+          <div
+            className="rounded-2xl px-6 py-3.5 text-center text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)]"
+            style={{ backgroundColor: TIMER_COLOR }}
+          >
+            <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] opacity-90">
+              <Clock className="h-3 w-3" />
+              {checkout?.timer_message?.trim() || "Oferta expira em"}
+            </div>
+            <div className="mt-0.5 text-2xl font-extrabold tabular-nums tracking-tight" style={fontHeading}>
+              <CountdownTimer initialSeconds={(checkout?.timer_minutes ?? 10) * 60} />
+            </div>
           </div>
-          <div className="mt-0.5 text-2xl font-extrabold tabular-nums tracking-tight" style={fontHeading}>
-            <CountdownTimer initialSeconds={(checkout?.timer_minutes ?? 10) * 60} />
-          </div>
-        </div>
+        )}
 
         <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#64748b]">
           <Lock className="h-3.5 w-3.5 text-[var(--brand)]" />
@@ -648,12 +665,22 @@ function CheckoutPage() {
 
         <div className="w-full bg-white rounded-3xl border border-[#e8ecf1] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
         <div className="p-5 sm:p-7 space-y-6">
+          {(checkoutTitle || checkoutSubtitle) && (
+            <div className="text-center space-y-1">
+              {checkoutTitle && (
+                <h2 className="text-lg font-bold text-[#1e293b]" style={fontHeading}>{checkoutTitle}</h2>
+              )}
+              {checkoutSubtitle && (
+                <p className="text-xs text-[#64748b]">{checkoutSubtitle}</p>
+              )}
+            </div>
+          )}
           {/* Produto em destaque: banner + nome + preço */}
           <div className="rounded-2xl border border-[#e8ecf1] overflow-hidden bg-white">
-            {product.checkout_banner_url && (
+            {bannerUrl && (
               <div className="w-full bg-[#f1f5f9]" style={{ aspectRatio: "16 / 9" }}>
                 <img
-                  src={product.checkout_banner_url}
+                  src={bannerUrl}
                   alt="Oferta"
                   className="w-full h-full object-cover opacity-0 transition-opacity duration-200"
                   loading="eager"
