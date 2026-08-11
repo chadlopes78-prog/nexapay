@@ -210,15 +210,21 @@ function SalesPage() {
   const { data: sales, isLoading } = useQuery<Sale[]>({
     queryKey: ["sales"],
     queryFn: async () => {
+      // Cada utilizador (incluindo admin) vê apenas as suas próprias vendas.
+      const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id;
+      if (!uid) return [];
       const { data, error } = await supabase
         .from("sales")
         .select("*, products(name)")
+        .eq("user_id", uid)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []) as Sale[];
     },
     staleTime: 5_000,
   });
+
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
