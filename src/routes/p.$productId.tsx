@@ -987,27 +987,21 @@ type PaymentStatusCardProps = {
   processing: boolean;
   error: string | null;
   failureCode: string | null;
-  showCancelButton: boolean;
-  cancelingPayment: boolean;
   paymentMethod: "mpesa" | "emola";
   phone: string;
-  onCancel: () => void;
   onRetry: () => void;
   retryCooldownLeft: number;
 };
 
-// Card de status integrado abaixo do número de telefone. Substitui os
-// overlays desfocados, mantendo o cliente no mesmo contexto visual e
-// reduzindo a fricção de cancelamento.
+// Card de status integrado abaixo do número de telefone. O cancelamento é
+// detectado automaticamente pelo backend (reconciliação com a gateway), por
+// isso não existe nenhuma ação manual de cancelamento para o cliente.
 const PaymentStatusCard = memo(function PaymentStatusCard({
   processing,
   error,
   failureCode,
-  showCancelButton,
-  cancelingPayment,
   paymentMethod,
   phone,
-  onCancel,
   onRetry,
   retryCooldownLeft,
 }: PaymentStatusCardProps) {
@@ -1017,11 +1011,11 @@ const PaymentStatusCard = memo(function PaymentStatusCard({
 
   if (processing && !error) {
     return (
-      <div className="mt-3 rounded-2xl border border-[var(--brand-20)] bg-white p-4 shadow-sm">
+      <div className="mt-3 rounded-2xl border border-[var(--brand-20)] bg-white p-3.5 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="relative h-10 w-10 shrink-0 rounded-xl bg-[var(--brand-5)] grid place-items-center overflow-hidden">
-            <Smartphone className="h-5 w-5 text-[var(--brand)]" />
-            <span className="absolute bottom-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 motion-safe:animate-pulse" />
+          <div className="relative h-9 w-9 shrink-0 rounded-xl bg-[var(--brand-5)] grid place-items-center overflow-hidden">
+            <Smartphone className="h-4.5 w-4.5 text-[var(--brand)]" />
+            <span className="absolute bottom-1 right-1 h-2 w-2 rounded-full bg-emerald-500 motion-safe:animate-pulse" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-[#1e293b]">
@@ -1031,41 +1025,12 @@ const PaymentStatusCard = memo(function PaymentStatusCard({
               Pedido enviado via <b>{methodLabel}</b> para <b>+258 {phone}</b>.
               Não feche esta página. Introduza o PIN na aba que vai receber para concluir a compra.
             </p>
-
-            {showCancelButton && (
-              <div className="mt-3 space-y-2 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-300">
-                <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] text-amber-800 font-medium flex items-start gap-2">
-                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                  <span>
-                    Se já não quer continuar ou cancelou no telefone, clique em <b>Cancelar pedido</b>.
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={cancelingPayment}
-                  onClick={onCancel}
-                  className="h-10 w-full rounded-xl border-red-300 bg-red-50 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-70"
-                >
-                  {cancelingPayment ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                      A cancelar...
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-3.5 w-3.5 mr-1.5" />
-                      Já cancelei no telefone
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       </div>
     );
   }
+
 
   if (error) {
     const isCancelled = wasCancelled;
