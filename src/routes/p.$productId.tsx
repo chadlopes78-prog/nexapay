@@ -580,17 +580,49 @@ function CheckoutPage() {
     );
   }
 
-  // Paleta Cloud White + azul (redesign minimalist stack). O accent do submit
-  // é SEMPRE azul — não muda com o método selecionado (mantém identidade
-  // "Cloud White"). Cores oficiais M-Pesa/e-Mola aparecem só nos ícones das tiles.
-  const BRAND = "#3b82f6";
-  const BRAND_DARK = "#2563eb";
+  // A identidade visual vem do editor de checkout. Validamos o hex para que
+  // um valor inválido gravado na base nunca quebre o render do checkout.
+  const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+  const safeHex = (value: unknown, fallback: string) => {
+    const candidate = typeof value === "string" ? value.trim() : "";
+    return HEX_RE.test(candidate) ? candidate : fallback;
+  };
+  const BRAND = safeHex(checkout?.primary_color, "#3b82f6");
+  const TIMER_COLOR = safeHex(checkout?.timer_color, "#ef4444");
+  // Tons derivados: usados como CSS vars para reproduzir as opacidades que
+  // antes estavam fixas no Tailwind (`/5`, `/20`, ...).
+  const alpha = (hex: string, pct: number) => {
+    const full =
+      hex.length === 4
+        ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+        : hex;
+    const suffix = Math.round((pct / 100) * 255)
+      .toString(16)
+      .padStart(2, "0");
+    return `${full}${suffix}`;
+  };
+  const brandVars = {
+    "--brand": BRAND,
+    "--brand-5": alpha(BRAND, 5),
+    "--brand-15": alpha(BRAND, 15),
+    "--brand-20": alpha(BRAND, 20),
+    "--brand-25": alpha(BRAND, 25),
+    "--brand-30": alpha(BRAND, 30),
+    "--brand-40": alpha(BRAND, 40),
+  } as React.CSSProperties;
   const submitStyle = {
     background: BRAND,
-    boxShadow: `0 10px 25px -5px ${BRAND}55`,
+    boxShadow: `0 10px 25px -5px ${alpha(BRAND, 33)}`,
   };
   const fontHeading = { fontFamily: "'Sora', system-ui, sans-serif" };
   const fontBody = { fontFamily: "'Manrope', system-ui, sans-serif" };
+  const timerEnabled = checkout?.timer_enabled !== false;
+  const checkoutTitle = checkout?.title?.trim() || null;
+  const checkoutSubtitle = checkout?.subtitle?.trim() || null;
+  const guaranteeText = checkout?.guarantee_text?.trim() || null;
+  const footerText = checkout?.footer_text?.trim() || null;
+  const logoUrl = checkout?.logo_url?.trim() || null;
+  const bannerUrl = product.checkout_banner_url || checkout?.banner_url || null;
 
   return (
     <div
