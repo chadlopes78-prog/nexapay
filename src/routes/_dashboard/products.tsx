@@ -11,6 +11,8 @@ import {
   Edit,
   Trash2,
   Copy,
+  Power,
+
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -356,7 +358,25 @@ function ProductsPage() {
     }
   };
 
+  const handleToggleStatus = async (product: any) => {
+    const nextStatus = product.status === "active" ? "inactive" : "active";
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ status: nextStatus })
+        .eq("id", product.id);
+      if (error) throw error;
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, status: nextStatus } : p)),
+      );
+      toast.success(nextStatus === "active" ? "Produto ativado!" : "Produto desativado!");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   const handleDuplicateProduct = async (product: any) => {
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -588,6 +608,12 @@ function ProductsPage() {
                         <Copy className="mr-2 h-4 w-4" /> Duplicar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleToggleStatus(product)}>
+                        <Power className="mr-2 h-4 w-4" />
+                        {product.status === "active" ? "Desativar produto" : "Ativar produto"}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+
                       <DropdownMenuItem
                         className="text-red-600"
                         onClick={() => handleDeleteProduct(product.id)}
