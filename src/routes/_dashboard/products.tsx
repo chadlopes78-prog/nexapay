@@ -606,6 +606,12 @@ function ProductsPage() {
                         <Copy className="mr-2 h-4 w-4" /> Duplicar
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleToggleStatus(product)}>
+                        <Power className="mr-2 h-4 w-4" />
+                        {product.status === "active" ? "Desativar produto" : "Ativar produto"}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+
                       <DropdownMenuItem
                         className="text-red-600"
                         onClick={() => handleDeleteProduct(product.id)}
