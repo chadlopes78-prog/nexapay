@@ -884,14 +884,34 @@ function CheckoutPage() {
                     placeholder={paymentMethod === "mpesa" ? "84 / 85 xxx xxxx" : "86 / 87 xxx xxxx"}
                     required
                     inputMode="tel"
+                    disabled={processingPayment}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="h-13 pl-[78px] rounded-xl border-[var(--brand-25)] bg-white text-base font-semibold tracking-wide focus-visible:ring-2 focus-visible:ring-[var(--brand-20)] focus-visible:border-[var(--brand)]"
+                    className="h-13 pl-[78px] rounded-xl border-[var(--brand-25)] bg-white text-base font-semibold tracking-wide focus-visible:ring-2 focus-visible:ring-[var(--brand-20)] focus-visible:border-[var(--brand)] disabled:opacity-70 disabled:cursor-not-allowed"
                   />
                 </div>
-                <p className="mt-2 text-[10px] text-[#94a3b8] text-center">
-                  Nunca partilhamos o seu número. Débito seguro e instantâneo.
-                </p>
+
+                {/* Status inteligente integrado — substitui o overlay desfocado */}
+                {(processingPayment || paymentErrorMessage) && (
+                  <PaymentStatusCard
+                    processing={processingPayment}
+                    error={paymentErrorMessage}
+                    failureCode={paymentFailureCode}
+                    showCancelButton={showCancelButton}
+                    cancelingPayment={cancelingPayment}
+                    paymentMethod={paymentMethod}
+                    phone={phone}
+                    onCancel={onCancelPayment}
+                    onRetry={onRetryPayment}
+                    retryCooldownLeft={retryCooldownLeft}
+                  />
+                )}
+
+                {!processingPayment && !paymentErrorMessage && (
+                  <p className="mt-2 text-[10px] text-[#94a3b8] text-center">
+                    Nunca partilhamos o seu número. Débito seguro e instantâneo.
+                  </p>
+                )}
               </div>
 
             </section>
