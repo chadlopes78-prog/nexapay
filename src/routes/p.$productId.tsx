@@ -897,14 +897,12 @@ function CheckoutPage() {
                     processing={processingPayment}
                     error={paymentErrorMessage}
                     failureCode={paymentFailureCode}
-                    showCancelButton={showCancelButton}
-                    cancelingPayment={cancelingPayment}
                     paymentMethod={paymentMethod}
                     phone={phone}
-                    onCancel={onCancelPayment}
                     onRetry={onRetryPayment}
                     retryCooldownLeft={retryCooldownLeft}
                   />
+
                 )}
 
                 {!processingPayment && !paymentErrorMessage && (
