@@ -177,19 +177,13 @@ function CheckoutPage() {
     void prewarmGatewayFn({ data: { productId } }).catch(() => undefined);
   }, [prewarmGatewayFn, productId]);
 
-  // Contador puramente visual (feedback ao usuário).
-  // NÃO controla nem atrasa a chamada à API de pagamento.
+  // O cancelamento feito pelo cliente no pop-up da operadora é detectado
+  // automaticamente pelo backend (reconciliação com a gateway), por isso
+  // nenhuma ação manual é oferecida durante o processamento.
   useEffect(() => {
-    if (!processingPayment) {
-      setShowCancelButton(false);
-      return;
-    }
-    // Mostra "Já cancelei no telefone" após 20s — suficiente para o PIN
-    // aparecer, mas curto o suficiente para não prender o cliente se
-    // cancelou ou mudou de ideia.
-    const t = setTimeout(() => setShowCancelButton(true), 20000);
-    return () => clearTimeout(t);
+    if (!processingPayment) setShowCancelButton(false);
   }, [processingPayment]);
+
 
 
 
