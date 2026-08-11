@@ -356,7 +356,25 @@ function ProductsPage() {
     }
   };
 
+  const handleToggleStatus = async (product: any) => {
+    const nextStatus = product.status === "active" ? "inactive" : "active";
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ status: nextStatus })
+        .eq("id", product.id);
+      if (error) throw error;
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, status: nextStatus } : p)),
+      );
+      toast.success(nextStatus === "active" ? "Produto ativado!" : "Produto desativado!");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
   const handleDuplicateProduct = async (product: any) => {
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
