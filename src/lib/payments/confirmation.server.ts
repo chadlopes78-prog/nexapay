@@ -227,6 +227,12 @@ function collectGatewayText(input: unknown) {
     payload.payment_status,
     payload.state,
     payload.result,
+    // Mensagem real da operadora (a E2Payments devolve o motivo verdadeiro
+    // dentro destes campos, enquanto `error` fica genérico).
+    payload.emola_response,
+    payload.mpesa_response,
+    payload.provider_response,
+    payload.gateway_response,
     data.message,
     data.error,
     data.detail,
@@ -235,7 +241,12 @@ function collectGatewayText(input: unknown) {
     data.payment_status,
     data.state,
     data.result,
+    data.emola_response,
+    data.mpesa_response,
+    data.provider_response,
+    data.gateway_response,
   ];
+
 
   const rawMessage = values
     .filter((value) => value != null && String(value).trim().length > 0)
@@ -306,7 +317,12 @@ export function readGatewayFailureDetails(
   }
 
 
-  if (/(saldo\s+insuf|insufficient|not\s+enough|sem\s+saldo|funds|balance)/i.test(combined)) {
+  // Inclui a formulação usada pela e-Mola: "O teu saldo nao e suficiente...".
+  if (
+    /(saldo\s+insuf|insufficient|not\s+enough|sem\s+saldo|funds|balance)/i.test(combined) ||
+    /saldo[^.]{0,40}(n[aã]o\s+(e|é|esta|está)\s+)?sufici/i.test(combined)
+  ) {
+
     return {
       code: "insufficient_funds",
       message: "Saldo insuficiente na conta do cliente.",
