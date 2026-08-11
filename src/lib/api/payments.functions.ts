@@ -77,7 +77,14 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     let failed = ["failed", "error", "cancelled", "canceled", "expired", "refused", "declined"].includes(raw);
     if (!paid && !failed) {
       const { reconcilePendingSale } = await import("@/lib/payments/reconciliation.server");
-      await reconcilePendingSale(sale).catch(() => null);
+      // Limite de 2,5s: se a gateway estiver lenta, devolvemos o estado atual
+      // e o próximo tick (1s depois) lê o resultado já gravado — em vez de
+      // segurar a resposta e atrasar a deteção do cancelamento.
+      const reconcileTask = reconcilePendingSale(sale).catch(() => null);
+      await Promise.race([
+        reconcileTask,
+        new Promise((resolve) => setTimeout(resolve, 2_500)),
+      ]);
       // CAUSA RAIZ da dessincronização: a leitura acima é feita ANTES da
       // reconciliação (que pode demorar segundos a falar com a E2Payments).
       // Nesse intervalo o webhook/gateway em background já pode ter gravado
