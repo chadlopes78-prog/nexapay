@@ -929,6 +929,13 @@ function CheckoutPage() {
                 )}
               </Button>
 
+              {guaranteeText && (
+                <div className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-5)] border border-[var(--brand-15)] px-3 py-2 text-[12px] font-medium text-[#1e293b]">
+                  <ShieldAlert className="h-4 w-4 text-[var(--brand)] flex-shrink-0" />
+                  <span className="text-center">{guaranteeText}</span>
+                </div>
+              )}
+
               <p className="text-center text-[11px] text-[#94a3b8] leading-relaxed px-2">
                 Ao clicar em <b>"{buttonLabel}"</b>, você concorda com os{" "}
                 <a href="#" className="text-[var(--brand)] hover:underline">Termos de Uso</a> e{" "}
@@ -938,6 +945,9 @@ function CheckoutPage() {
           </form>
         </div>
         </div>
+        {footerText && (
+          <p className="text-center text-[11px] text-[#94a3b8] px-2">{footerText}</p>
+        )}
       </div>
 
 
