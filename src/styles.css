@@ -191,6 +191,8 @@
     -webkit-touch-callout: none;
     text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
   body {
     padding-top: env(safe-area-inset-top);
