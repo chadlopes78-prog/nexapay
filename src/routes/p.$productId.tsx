@@ -13,6 +13,12 @@ import {
   ShieldAlert,
   Package,
   Clock,
+  Smartphone,
+  Loader2,
+  XCircle,
+  RefreshCw,
+  ShieldCheck,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
