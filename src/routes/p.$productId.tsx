@@ -580,48 +580,107 @@ function CheckoutPage() {
     );
   }
 
-  // Paleta Cloud White + azul (redesign minimalist stack). O accent do submit
-  // é SEMPRE azul — não muda com o método selecionado (mantém identidade
-  // "Cloud White"). Cores oficiais M-Pesa/e-Mola aparecem só nos ícones das tiles.
-  const BRAND = "#3b82f6";
-  const BRAND_DARK = "#2563eb";
+  // A identidade visual vem do editor de checkout. Validamos o hex para que
+  // um valor inválido gravado na base nunca quebre o render do checkout.
+  const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+  const safeHex = (value: unknown, fallback: string) => {
+    const candidate = typeof value === "string" ? value.trim() : "";
+    return HEX_RE.test(candidate) ? candidate : fallback;
+  };
+  const BRAND = safeHex(checkout?.primary_color, "#3b82f6");
+  const TIMER_COLOR = safeHex(checkout?.timer_color, "#ef4444");
+  // Tons derivados: usados como CSS vars para reproduzir as opacidades que
+  // antes estavam fixas no Tailwind (`/5`, `/20`, ...).
+  const alpha = (hex: string, pct: number) => {
+    const full =
+      hex.length === 4
+        ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+        : hex;
+    const suffix = Math.round((pct / 100) * 255)
+      .toString(16)
+      .padStart(2, "0");
+    return `${full}${suffix}`;
+  };
+  const brandVars = {
+    "--brand": BRAND,
+    "--brand-5": alpha(BRAND, 5),
+    "--brand-15": alpha(BRAND, 15),
+    "--brand-20": alpha(BRAND, 20),
+    "--brand-25": alpha(BRAND, 25),
+    "--brand-30": alpha(BRAND, 30),
+    "--brand-40": alpha(BRAND, 40),
+  } as React.CSSProperties;
   const submitStyle = {
     background: BRAND,
-    boxShadow: `0 10px 25px -5px ${BRAND}55`,
+    boxShadow: `0 10px 25px -5px ${alpha(BRAND, 33)}`,
   };
   const fontHeading = { fontFamily: "'Sora', system-ui, sans-serif" };
   const fontBody = { fontFamily: "'Manrope', system-ui, sans-serif" };
+  const timerEnabled = checkout?.timer_enabled !== false;
+  const checkoutTitle = checkout?.title?.trim() || null;
+  const checkoutSubtitle = checkout?.subtitle?.trim() || null;
+  const guaranteeText = checkout?.guarantee_text?.trim() || null;
+  const footerText = checkout?.footer_text?.trim() || null;
+  const logoUrl = checkout?.logo_url?.trim() || null;
+  const bannerUrl = product.checkout_banner_url || checkout?.banner_url || null;
 
   return (
     <div
       className="min-h-screen bg-[#fafbfc] flex items-start sm:items-center justify-center p-4 py-6"
-      style={fontBody}
+      style={{ ...fontBody, ...brandVars }}
     >
       <div className="w-full max-w-[560px] space-y-3">
+        {logoUrl && (
+          <div className="flex justify-center">
+            <img
+              src={logoUrl}
+              alt="Logótipo"
+              className="h-10 max-w-[180px] object-contain"
+              loading="eager"
+              decoding="async"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+          </div>
+        )}
         {/* Barra de urgência — alto contraste, estilo checkout de alta conversão */}
-        <div className="rounded-2xl bg-[#ef4444] px-6 py-3.5 text-center text-white shadow-[0_8px_20px_rgba(239,68,68,0.25)]">
-          <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] opacity-90">
-            <Clock className="h-3 w-3" />
-            Oferta expira em
+        {timerEnabled && (
+          <div
+            className="rounded-2xl px-6 py-3.5 text-center text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)]"
+            style={{ backgroundColor: TIMER_COLOR }}
+          >
+            <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.15em] opacity-90">
+              <Clock className="h-3 w-3" />
+              {checkout?.timer_message?.trim() || "Oferta expira em"}
+            </div>
+            <div className="mt-0.5 text-2xl font-extrabold tabular-nums tracking-tight" style={fontHeading}>
+              <CountdownTimer initialSeconds={(checkout?.timer_minutes ?? 10) * 60} />
+            </div>
           </div>
-          <div className="mt-0.5 text-2xl font-extrabold tabular-nums tracking-tight" style={fontHeading}>
-            <CountdownTimer initialSeconds={(checkout?.timer_minutes ?? 10) * 60} />
-          </div>
-        </div>
+        )}
 
         <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#64748b]">
-          <Lock className="h-3.5 w-3.5 text-[#3b82f6]" />
+          <Lock className="h-3.5 w-3.5 text-[var(--brand)]" />
           Checkout seguro · NexaPay
         </div>
 
         <div className="w-full bg-white rounded-3xl border border-[#e8ecf1] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
         <div className="p-5 sm:p-7 space-y-6">
+          {(checkoutTitle || checkoutSubtitle) && (
+            <div className="text-center space-y-1">
+              {checkoutTitle && (
+                <h2 className="text-lg font-bold text-[#1e293b]" style={fontHeading}>{checkoutTitle}</h2>
+              )}
+              {checkoutSubtitle && (
+                <p className="text-xs text-[#64748b]">{checkoutSubtitle}</p>
+              )}
+            </div>
+          )}
           {/* Produto em destaque: banner + nome + preço */}
           <div className="rounded-2xl border border-[#e8ecf1] overflow-hidden bg-white">
-            {product.checkout_banner_url && (
+            {bannerUrl && (
               <div className="w-full bg-[#f1f5f9]" style={{ aspectRatio: "16 / 9" }}>
                 <img
-                  src={product.checkout_banner_url}
+                  src={bannerUrl}
                   alt="Oferta"
                   className="w-full h-full object-cover opacity-0 transition-opacity duration-200"
                   loading="eager"
@@ -661,7 +720,7 @@ function CheckoutPage() {
                 <h1 className="text-sm font-bold text-[#1e293b] uppercase tracking-tight leading-tight truncate" style={fontHeading}>
                   {product.name}
                 </h1>
-                <p className="text-2xl font-extrabold text-[#3b82f6] leading-tight" style={fontHeading}>
+                <p className="text-2xl font-extrabold text-[var(--brand)] leading-tight" style={fontHeading}>
                   {productPriceFmt} <span className="text-sm font-bold">MZN</span>
                 </p>
               </div>
@@ -676,8 +735,8 @@ function CheckoutPage() {
                   className={cn(
                     "block cursor-pointer rounded-xl border-2 border-dashed p-3 transition-all",
                     bumpAccepted
-                      ? "border-[#3b82f6] bg-[#3b82f6]/5"
-                      : "border-[#cbd5e1] bg-white hover:border-[#3b82f6]/40",
+                      ? "border-[var(--brand)] bg-[var(--brand-5)]"
+                      : "border-[#cbd5e1] bg-white hover:border-[var(--brand-40)]",
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -685,7 +744,7 @@ function CheckoutPage() {
                       type="checkbox"
                       checked={bumpAccepted}
                       onChange={(e) => setBumpAccepted(e.target.checked)}
-                      className="mt-1 h-5 w-5 accent-[#3b82f6] flex-shrink-0"
+                      className="mt-1 h-5 w-5 accent-[var(--brand)] flex-shrink-0"
                     />
                     {checkout?.order_bump_image_url && (
                       <img src={checkout.order_bump_image_url} alt="" width={48} height={48} loading="lazy" decoding="async" className="h-12 w-12 rounded-lg object-cover border border-[#e8ecf1] flex-shrink-0" />
@@ -698,7 +757,7 @@ function CheckoutPage() {
                         <p className="mt-1 text-xs text-[#64748b] leading-snug">{checkout.order_bump_description}</p>
                       )}
                       {bumpPrice > 0 && (
-                        <p className="mt-1 text-sm font-bold text-[#3b82f6]">
+                        <p className="mt-1 text-sm font-bold text-[var(--brand)]">
                           + Mt {bumpPriceFmt} MZN
                         </p>
                       )}
@@ -717,11 +776,11 @@ function CheckoutPage() {
           </div>
 
           {checkout?.social_proof_enabled && (
-            <div className="rounded-xl bg-[#3b82f6]/5 border border-[#3b82f6]/15 px-4 py-2.5 flex items-center justify-between gap-3 text-[12px] text-[#1e293b]">
+            <div className="rounded-xl bg-[var(--brand-5)] border border-[var(--brand-15)] px-4 py-2.5 flex items-center justify-between gap-3 text-[12px] text-[#1e293b]">
               <span className="flex items-center gap-2 min-w-0">
-                <CheckCircle2 className="h-4 w-4 text-[#3b82f6] flex-shrink-0" />
+                <CheckCircle2 className="h-4 w-4 text-[var(--brand)] flex-shrink-0" />
                 <span className="truncate">
-                  <b className="text-[#3b82f6]">{checkout?.social_proof_count ?? 127}</b>{" "}
+                  <b className="text-[var(--brand)]">{checkout?.social_proof_count ?? 127}</b>{" "}
                   {checkout?.social_proof_message || "pessoas já compraram este produto"}
                 </span>
               </span>
@@ -743,14 +802,14 @@ function CheckoutPage() {
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-[#94a3b8] mb-1.5 ml-1">
-                    Nome completo <span className="text-[#3b82f6]">*</span>
+                    Nome completo <span className="text-[var(--brand)]">*</span>
                   </label>
                   <Input
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Como no seu documento"
-                    className="h-12 rounded-xl border-[#e8ecf1] bg-white text-sm focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6]"
+                    className="h-12 rounded-xl border-[#e8ecf1] bg-white text-sm focus-visible:ring-2 focus-visible:ring-[var(--brand-20)] focus-visible:border-[var(--brand)]"
                   />
                 </div>
               </div>
@@ -770,12 +829,12 @@ function CheckoutPage() {
                   className={cn(
                     "relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
                     paymentMethod === "mpesa"
-                      ? "border-[#3b82f6] bg-[#3b82f6]/5"
-                      : "border-[#e8ecf1] hover:border-[#3b82f6]/30",
+                      ? "border-[var(--brand)] bg-[var(--brand-5)]"
+                      : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
                   )}
                 >
                   {paymentMethod === "mpesa" && (
-                    <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[#3b82f6]" />
+                    <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[var(--brand)]" />
                   )}
                   <div className="w-11 h-11 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
                     <img src="/mpesa-logo.jpg" width={44} height={44} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="M-Pesa" />
@@ -789,12 +848,12 @@ function CheckoutPage() {
                   className={cn(
                     "relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all bg-white",
                     paymentMethod === "emola"
-                      ? "border-[#3b82f6] bg-[#3b82f6]/5"
-                      : "border-[#e8ecf1] hover:border-[#3b82f6]/30",
+                      ? "border-[var(--brand)] bg-[var(--brand-5)]"
+                      : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
                   )}
                 >
                   {paymentMethod === "emola" && (
-                    <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[#3b82f6]" />
+                    <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[var(--brand)]" />
                   )}
                   <div className="w-11 h-11 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
                     <img src="/emola-logo.jpg" width={44} height={44} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="e-Mola" />
@@ -805,9 +864,9 @@ function CheckoutPage() {
               </div>
 
               {/* Número de pagamento em destaque */}
-              <div className="rounded-2xl border border-[#3b82f6]/20 bg-[#3b82f6]/5 p-4">
+              <div className="rounded-2xl border border-[var(--brand-20)] bg-[var(--brand-5)] p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-8 w-8 rounded-lg bg-[#3b82f6] grid place-items-center text-white flex-shrink-0">
+                  <div className="h-8 w-8 rounded-lg bg-[var(--brand)] grid place-items-center text-white flex-shrink-0">
                     <Lock className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
@@ -830,7 +889,7 @@ function CheckoutPage() {
                     inputMode="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="h-13 pl-[78px] rounded-xl border-[#3b82f6]/25 bg-white text-base font-semibold tracking-wide focus-visible:ring-2 focus-visible:ring-[#3b82f6]/20 focus-visible:border-[#3b82f6]"
+                    className="h-13 pl-[78px] rounded-xl border-[var(--brand-25)] bg-white text-base font-semibold tracking-wide focus-visible:ring-2 focus-visible:ring-[var(--brand-20)] focus-visible:border-[var(--brand)]"
                   />
                 </div>
                 <p className="mt-2 text-[10px] text-[#94a3b8] text-center">
@@ -870,15 +929,25 @@ function CheckoutPage() {
                 )}
               </Button>
 
+              {guaranteeText && (
+                <div className="flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-5)] border border-[var(--brand-15)] px-3 py-2 text-[12px] font-medium text-[#1e293b]">
+                  <ShieldAlert className="h-4 w-4 text-[var(--brand)] flex-shrink-0" />
+                  <span className="text-center">{guaranteeText}</span>
+                </div>
+              )}
+
               <p className="text-center text-[11px] text-[#94a3b8] leading-relaxed px-2">
                 Ao clicar em <b>"{buttonLabel}"</b>, você concorda com os{" "}
-                <a href="#" className="text-[#3b82f6] hover:underline">Termos de Uso</a> e{" "}
-                <a href="#" className="text-[#3b82f6] hover:underline">Política de Privacidade</a>.
+                <a href="#" className="text-[var(--brand)] hover:underline">Termos de Uso</a> e{" "}
+                <a href="#" className="text-[var(--brand)] hover:underline">Política de Privacidade</a>.
               </p>
             </div>
           </form>
         </div>
         </div>
+        {footerText && (
+          <p className="text-center text-[11px] text-[#94a3b8] px-2">{footerText}</p>
+        )}
       </div>
 
 
@@ -1034,7 +1103,7 @@ const ProcessingOverlay = memo(function ProcessingOverlay({ phase }: { phase: "p
       <div className="w-full max-w-sm rounded-3xl bg-white shadow-2xl p-6 text-center">
         <div
           aria-hidden="true"
-          className="mx-auto h-12 w-12 rounded-full border-4 border-slate-200 border-t-[#3b82f6] motion-safe:animate-spin motion-reduce:opacity-70"
+          className="mx-auto h-12 w-12 rounded-full border-4 border-slate-200 border-t-[var(--brand)] motion-safe:animate-spin motion-reduce:opacity-70"
         />
         <span className="sr-only">A processar pagamento</span>
         <h2 id="pay-overlay-title" className="mt-5 text-lg font-extrabold text-slate-900" style={{ fontFamily: "'Sora', system-ui, sans-serif" }}>
@@ -1091,7 +1160,7 @@ const CancelledOverlay = memo(function CancelledOverlay({
           type="button"
           disabled={cooldownLeft > 0}
           onClick={onRetry}
-          className="mt-5 h-12 w-full rounded-xl bg-[#3b82f6] text-sm font-bold text-white hover:bg-[#2f6fe0] disabled:opacity-70"
+          className="mt-5 h-12 w-full rounded-xl bg-[var(--brand)] text-sm font-bold text-white hover:bg-[#2f6fe0] disabled:opacity-70"
         >
           {cooldownLeft > 0 ? (
             <>
