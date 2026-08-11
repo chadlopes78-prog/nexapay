@@ -69,10 +69,12 @@ export function TrafficAnalysis() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
+      const pageIds = pages?.map((p) => p.id).filter(Boolean) ?? [];
+      if (pageIds.length === 0) return [];
       const { data, error } = await supabase
         .from("traffic_events")
         .select("*")
-        .eq("page_id", pages?.map((p) => p.id) ?? [])
+        .in("page_id", pageIds)
         .order("created_at", { ascending: true });
       
       if (error) throw error;
