@@ -184,11 +184,10 @@ function CheckoutPage() {
       setShowCancelButton(false);
       return;
     }
-    // Só mostra "Já cancelei no telefone" DEPOIS de 60s — tempo médio do
-    // cliente destravar o telefone, ler a notificação STK/PIN e digitar
-    // os dígitos. Antes disso o botão apareceria ainda com o pop-up do PIN
-    // aberto e confundiria o cliente.
-    const t = setTimeout(() => setShowCancelButton(true), 60000);
+    // Mostra "Já cancelei no telefone" após 20s — suficiente para o PIN
+    // aparecer, mas curto o suficiente para não prender o cliente se
+    // cancelou ou mudou de ideia.
+    const t = setTimeout(() => setShowCancelButton(true), 20000);
     return () => clearTimeout(t);
   }, [processingPayment]);
 
