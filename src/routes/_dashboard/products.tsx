@@ -139,14 +139,20 @@ function ProductsPage() {
 
   const handleCreateProduct = async (e?: React.FormEvent) => {
     e?.preventDefault?.();
+    if (creating) return;
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      toast.error("Sessão expirada. Entre novamente para criar o produto.");
+      return;
+    }
 
+    setCreating(true);
     try {
       const validSupportPhone = getValidSupportPhone();
       if (!validSupportPhone) return;
+
 
       // Um produto ativo precisa ter pelo menos um link para o cliente aceder
       // ao que comprou. Sem access_link nem delivery_link o checkout aprova mas
