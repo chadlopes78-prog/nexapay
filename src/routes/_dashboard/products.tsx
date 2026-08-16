@@ -81,6 +81,7 @@ function ProductsPage() {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string>("");
+  const [creating, setCreating] = useState(false);
 
   const uploadProductImage = async (userId: string, file: File): Promise<string> => {
     const fileExt = file.name.split(".").pop();
