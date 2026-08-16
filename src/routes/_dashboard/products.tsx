@@ -468,6 +468,7 @@ function ProductsPage() {
               bannerUrl={bannerUrl} setBannerUrl={setBannerUrl}
               onCancel={() => setIsDialogOpen(false)}
               onSubmit={() => handleCreateProduct()}
+              submitting={creating}
             />
           </DialogContent>
         </Dialog>
