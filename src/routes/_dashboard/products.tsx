@@ -247,7 +247,10 @@ function ProductsPage() {
       fetchProducts();
 
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Erro ao criar produto:", error);
+      toast.error(error?.message || "Não foi possível publicar o produto. Tente novamente.");
+    } finally {
+      setCreating(false);
     }
   };
 
