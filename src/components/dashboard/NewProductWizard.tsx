@@ -41,7 +41,7 @@ export function NewProductWizard(props: Props) {
   const canNext =
     (step === 1 && !!type) ||
     (step === 2 && props.name.trim().length > 0 && Number(props.price) > 0) ||
-    (step === 3 && props.supportNumber.trim().length > 0) ||
+    (step === 3 && props.supportNumber.trim().length > 0 && props.accessLink.trim().length > 0) ||
     step === 4;
 
   const next = () => setStep((s) => Math.min(total, s + 1));

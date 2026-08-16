@@ -81,6 +81,7 @@ function ProductsPage() {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string>("");
+  const [creating, setCreating] = useState(false);
 
   const uploadProductImage = async (userId: string, file: File): Promise<string> => {
     const fileExt = file.name.split(".").pop();
@@ -138,14 +139,20 @@ function ProductsPage() {
 
   const handleCreateProduct = async (e?: React.FormEvent) => {
     e?.preventDefault?.();
+    if (creating) return;
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      toast.error("Sessão expirada. Entre novamente para criar o produto.");
+      return;
+    }
 
+    setCreating(true);
     try {
       const validSupportPhone = getValidSupportPhone();
       if (!validSupportPhone) return;
+
 
       // Um produto ativo precisa ter pelo menos um link para o cliente aceder
       // ao que comprou. Sem access_link nem delivery_link o checkout aprova mas
@@ -240,7 +247,10 @@ function ProductsPage() {
       fetchProducts();
 
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Erro ao criar produto:", error);
+      toast.error(error?.message || "Não foi possível publicar o produto. Tente novamente.");
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -458,6 +468,7 @@ function ProductsPage() {
               bannerUrl={bannerUrl} setBannerUrl={setBannerUrl}
               onCancel={() => setIsDialogOpen(false)}
               onSubmit={() => handleCreateProduct()}
+              submitting={creating}
             />
           </DialogContent>
         </Dialog>
