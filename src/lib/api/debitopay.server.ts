@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const DEBITOPAY_URLS = {
-  live: "https://api.debitopay.com", // Domínio oficial atualizado após auditoria
-  sandbox: "https://sandbox.debitopay.com",
+  live: "https://gyqoaningqhurhvdugne.supabase.co/functions/v1",
+  sandbox: "https://gyqoaningqhurhvdugne.supabase.co/functions/v1",
 };
 
 export type DebitoPayEnv = "sandbox" | "live";
