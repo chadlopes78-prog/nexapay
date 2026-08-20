@@ -4,6 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  getDebitoPayConfig,
+  testDebitoPayConnection,
+  fetchDebitoPayWallets,
+  saveDebitoPayConfig
+} from "@/lib/api/debitopay.functions";
+
+import {
   Search,
   Zap,
   Wallet,
@@ -994,33 +1001,55 @@ function PushcutDialog({
 }
 
 function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
-  const [env, setEnv] = useState<"sandbox" | "live">("sandbox");
+  const getFn = useServerFn(getDebitoPayConfig);
+  const testFn = useServerFn(testDebitoPayConnection);
+  const fetchWalletsFn = useServerFn(fetchDebitoPayWallets);
+  const saveFn = useServerFn(saveDebitoPayConfig);
+  const qc = useQueryClient();
+
+  const { data: config, isLoading } = useQuery({
+    queryKey: ["debitopay-config"],
+    queryFn: () => getFn(),
+  });
+
+  const [env, setEnv] = useState<"sandbox" | "live">("live");
   const [apiKey, setApiKey] = useState("");
   const [walletZa, setWalletZa] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [wallets, setWallets] = useState<any[]>([]);
   const [isTesting, setIsTesting] = useState(false);
   const [isFetchingWallets, setIsFetchingWallets] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    if (config) {
+      setEnv(config.environment);
+      setWalletZa(config.walletZa);
+    }
+  }, [config]);
 
   const handleTest = async () => {
+    if (!apiKey && !config?.connected) return toast.error("Insira a API Key para testar");
     setIsTesting(true);
     try {
-      // call testDebitoPayConnection
-      toast.success("Conexão com Débito Pay estabelecida");
-      setIsConnected(true);
-    } catch (e) {
-      toast.error("Falha na conexão");
+      const res = await testFn({ data: { environment: env, apiKey: apiKey || "dummy", walletZa: walletZa || "dummy", webhookSecret } });
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Falha na conexão");
     } finally {
       setIsTesting(false);
     }
   };
 
   const handleFetchWallets = async () => {
+    if (!apiKey && !config?.connected) return toast.error("Insira a API Key");
     setIsFetchingWallets(true);
     try {
-      // call fetchDebitoPayWallets
-      setWallets([{ id: "wallet_zar_live_1", label: "🇿🇦 ZAR Wallet (ZAR)" }]);
+      const res = await fetchWalletsFn({ data: { apiKey: apiKey || "dummy" } });
+      setWallets(res);
       toast.success("Wallets sincronizadas");
     } finally {
       setIsFetchingWallets(false);
@@ -1028,9 +1057,19 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
   };
 
   const handleSave = async () => {
-    toast.success("Configuração Débito Pay ZA salva");
-    onSaved();
+    if (!apiKey && !config?.connected) return toast.error("API Key obrigatória");
+    try {
+      await saveFn({ data: { environment: env, apiKey, walletZa, webhookSecret } });
+      qc.invalidateQueries({ queryKey: ["debitopay-config"] });
+      toast.success("Configuração Débito Pay ZA salva");
+      onSaved();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao salvar");
+    }
   };
+
+
+  if (isLoading) return <div className="py-6 text-center text-sm text-slate-500">Carregando...</div>;
 
   return (
     <div className="grid gap-6 py-4">
@@ -1039,8 +1078,8 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
           <p className="text-sm font-semibold">Status da Integração</p>
           <p className="text-xs text-slate-500">África do Sul 🇿🇦</p>
         </div>
-        <Badge className={isConnected ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}>
-          {isConnected ? "🟢 Conectado" : "🔴 Não configurado"}
+        <Badge className={config?.connected ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}>
+          {config?.connected ? "🟢 Conectado" : "🔴 Não configurado"}
         </Badge>
       </div>
 
@@ -1062,10 +1101,11 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
           type="password"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          placeholder="••••••••••••••••"
+          placeholder={config?.apiKeyMasked || "••••••••••••••••"}
         />
         <p className="text-[10px] text-slate-500">A chave será mascarada após salvar.</p>
       </div>
+
 
       <div className="grid gap-2">
         <Label>Wallet ZAR</Label>

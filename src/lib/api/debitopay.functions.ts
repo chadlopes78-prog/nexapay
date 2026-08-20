@@ -12,16 +12,23 @@ const DebitoPayCredentialsInput = z.object({
 export const getDebitoPayConfig = createServerFn({ method: "GET" })
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: { user } } = await supabaseAdmin.auth.getUser(); // Note: This needs proper session handling in real app
-    
-    // For now, using a placeholder until we verify the session pattern in this specific project's server functions
-    // In TanStack Start, we usually get the user from middleware or context
+    const { data: { user } } = await supabaseAdmin.auth.getUser();
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: creds } = await supabaseAdmin
+      .from("user_payment_credentials")
+      .select("e2p_client_id, wallet_za")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const isConnected = !!creds?.e2p_client_id && !!creds?.wallet_za;
+
     return {
-      connected: false,
-      environment: "sandbox" as const,
-      apiKeyMasked: "",
-      walletZa: "",
-      webhookUrl: `${process.env.VITE_SUPABASE_URL}/functions/v1/debito-webhook`,
+      connected: isConnected,
+      environment: "live" as const, // Based on real usage preference
+      apiKeyMasked: creds?.e2p_client_id ? `••••••••${creds.e2p_client_id.slice(-4)}` : "",
+      walletZa: creds?.wallet_za || "",
+      webhookUrl: `${window.location.origin}/api/public/debito-webhook`,
     };
   });
 
