@@ -35,8 +35,13 @@ function Index() {
                   Venda em Moçambique com M-Pesa e e-Mola
                 </h1>
                 <p className="mx-auto max-w-[800px] text-gray-500 text-lg md:text-xl leading-relaxed">
-                  A plataforma de checkout mais completa para empreendedores moçambicanos. 
-                  Segurança, facilidade e conversão em um só lugar. Integrada com as maiores operadoras locais.
+                  Quero integrar métodos de pagamento da África do Sul as API são da débito 
+                  
+                  Entre nesse link e leia a documentaçāo: https://debitopay.com/developers/payments-api/
+                  
+                  Busque saber como conectar as API especificamente da África do Sul 
+                  
+                  E me diga oque precisa para conectarmos e processarmos pagamentos
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
