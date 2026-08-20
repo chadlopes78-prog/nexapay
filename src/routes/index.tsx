@@ -35,7 +35,7 @@ function Index() {
                   Venda em Moçambique com M-Pesa e e-Mola
                 </h1>
                 <p className="mx-auto max-w-[800px] text-gray-500 text-lg md:text-xl leading-relaxed">
-                  faz todos esses passos
+                  faz toda analise e vamos implementar o payfast zar da debito
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
