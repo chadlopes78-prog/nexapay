@@ -397,9 +397,12 @@ function IntegrationsPage() {
           integration={editing}
           state={config[editing.id] || { connected: false, enabled: false, config: {} }}
           onClose={() => setEditing(null)}
-          onSave={(next) => {
+          onSave={async (next) => {
             update(editing.id, next);
             setEditing(null);
+            // Invalidate queries to ensure UI reflects server state immediately
+            await queryClient.invalidateQueries({ queryKey: ["debitopay-config"] });
+            await queryClient.invalidateQueries({ queryKey: ["pushcut-integration"] });
             toast.success(`${editing.name} atualizado com sucesso`);
           }}
         />
