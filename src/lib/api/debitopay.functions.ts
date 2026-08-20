@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { orderedE2payHosts, setE2payBaseUrl } from "@/lib/payments/e2pay-hosts";
 
@@ -10,15 +11,14 @@ const DebitoPayCredentialsInput = z.object({
 });
 
 export const getDebitoPayConfig = createServerFn({ method: "GET" })
-  .handler(async () => {
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: { user } } = await supabaseAdmin.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
 
     const { data: creds } = await supabaseAdmin
       .from("user_payment_credentials")
       .select("e2p_client_id, wallet_za")
-      .eq("user_id", user.id)
+      .eq("user_id", context.userId)
       .maybeSingle();
 
     const isConnected = !!creds?.e2p_client_id && !!creds?.wallet_za;
@@ -112,16 +112,15 @@ export const fetchDebitoPayWallets = createServerFn({ method: "POST" })
   });
 
 export const saveDebitoPayConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((input) => DebitoPayCredentialsInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: { user } } = await supabaseAdmin.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
 
     const { error } = await supabaseAdmin
       .from("user_payment_credentials")
       .upsert({
-        user_id: user.id,
+        user_id: context.userId,
         e2p_client_id: data.apiKey,
         e2p_client_secret: data.apiKey, // DebitoPay API Key
         wallet_za: data.walletZa,
