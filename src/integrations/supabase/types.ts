@@ -958,6 +958,7 @@ export type Database = {
       user_payment_credentials: {
         Row: {
           created_at: string
+          debitopay_merchant_id: string | null
           debitopay_za_webhook_secret: string | null
           e2p_client_id: string | null
           e2p_client_secret: string | null
@@ -969,6 +970,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          debitopay_merchant_id?: string | null
           debitopay_za_webhook_secret?: string | null
           e2p_client_id?: string | null
           e2p_client_secret?: string | null
@@ -980,6 +982,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          debitopay_merchant_id?: string | null
           debitopay_za_webhook_secret?: string | null
           e2p_client_id?: string | null
           e2p_client_secret?: string | null
