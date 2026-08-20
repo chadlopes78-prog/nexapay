@@ -37,21 +37,25 @@ export const getDebitoPayConfig = createServerFn({ method: "GET" })
 export const testDebitoPayConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => DebitoPayCredentialsInput.parse(input))
-  .handler(async ({ data, context }) => {
-    const hosts = ["https://mpesaemolatech.com", "https://e2payments.explicador.co.mz"];
-    let success = false;
-    let details = {
-      apiKey: "inválida",
-      environment: data.environment === "live" ? "Live" : "Sandbox",
-      wallet: "inválida",
-      currency: "ZAR",
-      status: "integração inactiva"
-    };
+  .handler(async ({ data }) => {
+    // A documentação oficial aponta para mpesaemolatech.com ou explicador.co.mz
+    const hosts = data.environment === "live" 
+      ? ["https://mpesaemolatech.com", "https://e2payments.explicador.co.mz"]
+      : ["https://sandbox.mpesaemolatech.com"]; // Sandbox costuma ter prefixo ou host diferente
+      
+    let lastError: any = null;
+    let authSuccess = false;
+    let walletFound = false;
+    let walletData: any = null;
+    let debugLog: any = null;
 
     for (const host of hosts) {
+      const endpoint = `${host}/oauth/token`;
+      const method = "POST";
+      
       try {
-        const tokenRes = await fetch(`${host}/oauth/token`, {
-          method: "POST",
+        const tokenRes = await fetch(endpoint, {
+          method,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             grant_type: "client_credentials",
@@ -59,39 +63,108 @@ export const testDebitoPayConnection = createServerFn({ method: "POST" })
             client_secret: data.apiKey,
           }),
         });
-        
+
+        const status = tokenRes.status;
+        const body = await tokenRes.text();
+        let json: any = {};
+        try { json = JSON.parse(body); } catch {}
+
         if (tokenRes.ok) {
-          details.apiKey = "válida";
-          const { access_token } = await tokenRes.json();
+          authSuccess = true;
+          const { access_token } = json;
           
-          // Verify Wallet
-          const walletRes = await fetch(`${host}/v1/wallets/${data.walletZa}`, {
+          const walletEndpoint = `${host}/v1/wallets/${data.walletZa}`;
+          const walletRes = await fetch(walletEndpoint, {
+            method: "GET",
             headers: { "Authorization": `Bearer ${access_token}` },
           });
 
+          const wStatus = walletRes.status;
+          const wBody = await walletRes.text();
+          let wJson: any = {};
+          try { wJson = JSON.parse(wBody); } catch {}
+
+          debugLog = {
+            httpStatus: wStatus,
+            endpoint: walletEndpoint.replace(host, host), // Proteção visual se necessário
+            method: "GET",
+            response: wJson,
+            environment: data.environment.toUpperCase(),
+            walletId: data.walletZa
+          };
+
           if (walletRes.ok) {
-            const wallet = await walletRes.json();
-            // DebitoPay returns the wallet in a 'data' property usually, but check structure
-            const w = wallet.data || wallet;
-            if (w.id === data.walletZa) {
-              details.wallet = "válida";
-              details.currency = w.currency || "ZAR";
-              details.status = "integração activa";
-              success = true;
-              break;
-            }
+            walletFound = true;
+            walletData = wJson.data || wJson;
+            break;
+          } else {
+            lastError = {
+              type: "wallet",
+              status: wStatus,
+              code: wJson.error || wJson.code || "unknown",
+              message: wJson.message || "Wallet não encontrada ou erro na consulta",
+              endpoint: walletEndpoint
+            };
           }
+        } else {
+          lastError = {
+            type: "auth",
+            status,
+            code: json.error || "unauthorized",
+            message: json.message || (status === 401 ? "API Key inválida" : "Falha na autenticação"),
+            endpoint
+          };
         }
-      } catch (e) {
-        continue;
+      } catch (e: any) {
+        lastError = {
+          type: "network",
+          message: e.message || "Erro de conexão (DNS/Timeout)",
+          endpoint
+        };
       }
     }
 
-    const message = success 
-      ? `API Key: ${details.apiKey}\nAmbiente: ${details.environment}\nWallet ZAR: ${details.wallet}\nMoeda: ${details.currency}\nStatus: ${details.status}`
-      : "❌ Falha na comunicação com Débito Pay ou Wallet inválida.";
+    if (walletFound) {
+      return {
+        success: true,
+        message: `✅ Conectado com sucesso!\nAmbiente: ${data.environment.toUpperCase()}\nMoeda: ${walletData.currency}\nStatus: ${walletData.status || "Ativa"}\nWallet ID: ${data.walletZa}`,
+        debug: debugLog
+      };
+    }
 
-    return { success, message };
+    // Se falhou, construir mensagem detalhada
+    let detailedMessage = "❌ Falha na Integração\n\n";
+    if (lastError?.type === "auth") {
+      detailedMessage += `Motivo: Falha na Autenticação (HTTP ${lastError.status})\n`;
+      detailedMessage += `Dica: Verifique se a API Key pertence ao ambiente ${data.environment.toUpperCase()}.\n`;
+    } else if (lastError?.type === "wallet") {
+      detailedMessage += `Motivo: Wallet Inválida/Não Encontrada (HTTP ${lastError.status})\n`;
+      detailedMessage += `ID Enviado: ${data.walletZa}\n`;
+      if (lastError.status === 404) detailedMessage += "Dica: A wallet informada não existe nesta conta.\n";
+    } else if (lastError?.type === "network") {
+      detailedMessage += `Motivo: Erro de Comunicação\n${lastError.message}\n`;
+    }
+
+    if (lastError) {
+      detailedMessage += `\n--- LOG DE DIAGNÓSTICO ---\n`;
+      detailedMessage += `HTTP: ${lastError.status || "N/A"}\n`;
+      detailedMessage += `Endpoint: ${lastError.endpoint || "N/A"}\n`;
+      detailedMessage += `Provider Code: ${lastError.code || "N/A"}\n`;
+      detailedMessage += `Provider Msg: ${lastError.message || "N/A"}\n`;
+    }
+
+    return { 
+      success: false, 
+      message: detailedMessage,
+      debug: {
+        httpStatus: lastError?.status,
+        endpoint: lastError?.endpoint,
+        environment: data.environment.toUpperCase(),
+        walletId: data.walletZa,
+        providerCode: lastError?.code,
+        providerMessage: lastError?.message
+      }
+    };
   });
 
 export const fetchDebitoPayWallets = createServerFn({ method: "POST" })
