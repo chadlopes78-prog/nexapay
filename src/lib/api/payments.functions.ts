@@ -607,7 +607,7 @@ export const chargeSale = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sale, error: saleErr } = await supabaseAdmin
       .from("sales")
-      .select("id, status, amount, payment_method, customer_phone, payment_reference, user_id, country, currency, products(access_link, delivery_link)")
+      .select("id, status, amount, customer_name, payment_method, customer_phone, payment_reference, user_id, country, currency, products(access_link, delivery_link)")
       .eq("id", data.saleId)
       .maybeSingle();
     if (saleErr || !sale) return { success: false, error: "Venda não encontrada." };
