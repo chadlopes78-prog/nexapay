@@ -35,7 +35,7 @@ export const getPublicProduct = createServerFn({ method: "GET" })
 
     const { data: product, error } = await supabase
       .from("products")
-      .select(PUBLIC_PRODUCT_COLUMNS)
+      .select("*, checkouts(*)")
       .or(filter)
       .limit(1)
       .maybeSingle();
