@@ -600,7 +600,17 @@ export const initiateSale = createServerFn({ method: "POST" })
       return { success: false, error: "Não foi possível registar a venda." };
     }
 
+    const isZaSale = product.country === "ZA" || product.currency === "ZAR" || data.method === "payfast" || data.method === "card" || data.method === "eft";
+    if (isZaSale) {
+      const { waitUntil } = await import("@/lib/runtime-context.server");
+      const chargeTask = chargeSale({ data: { saleId: sale.id } }).catch((err) =>
+        console.warn("ZA initial charge background failed", err),
+      );
+      if (!waitUntil(chargeTask)) void chargeTask;
+    }
+
     return { success: true, saleId: sale.id, transactionId: null, status: "pending", accessLink: null };
+
   });
 
 export const chargeSale = createServerFn({ method: "POST" })
@@ -626,7 +636,7 @@ export const chargeSale = createServerFn({ method: "POST" })
       return { success: false, saleId: sale.id, error: "Vendedor sem integração de pagamento configurada." };
     }
     const paymentMethod = sale.payment_method;
-    const isZa = sale.country === "ZA" || sale.currency === "ZAR";
+    const isZa = sale.country === "ZA" || sale.currency === "ZAR" || sale.payment_method === "payfast" || sale.payment_method === "card" || sale.payment_method === "eft";
     const walletId = isZa 
       ? creds.wallet_za 
       : (paymentMethod === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
@@ -643,7 +653,7 @@ export const chargeSale = createServerFn({ method: "POST" })
     } = await import("@/lib/payments/confirmation.server");
 
     const reference = sale.payment_reference || `PMZ${sale.id.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 20);
-    const localPhone = isZa ? sale.customer_phone : String(sale.customer_phone).slice(3);
+    const localPhone = (isZa && sale.payment_method !== "payfast" && sale.payment_method !== "card" && sale.payment_method !== "eft") ? sale.customer_phone : (isZa ? sale.customer_phone : String(sale.customer_phone).slice(3));
     const amount = Number(sale.amount);
 
     try {
