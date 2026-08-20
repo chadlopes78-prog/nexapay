@@ -1004,7 +1004,7 @@ export const startPayment = createServerFn({ method: "POST" })
         }
         return { ok: res.ok, status: res.status, json, text };
       })
-      .finally(() => clearTimeout(timeoutId));
+      .finally(() => {});
 
     /*
      * Esta promise interpreta a resposta final da gateway e actualiza
