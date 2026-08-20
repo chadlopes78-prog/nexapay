@@ -22,13 +22,14 @@ export const getDebitoPayConfig = createServerFn({ method: "GET" })
       .maybeSingle();
 
     const isConnected = !!creds?.e2p_client_id && !!creds?.wallet_za;
+    const origin = process.env.VITE_SITE_URL || "https://nexapayio.com";
 
     return {
       connected: isConnected,
-      environment: "live" as const, // Based on real usage preference
+      environment: "live" as const,
       apiKeyMasked: creds?.e2p_client_id ? `••••••••${creds.e2p_client_id.slice(-4)}` : "",
       walletZa: creds?.wallet_za || "",
-      webhookUrl: `${window.location.origin}/api/public/debito-webhook`,
+      webhookUrl: `${origin}/api/public/debito-webhook`,
     };
   });
 
