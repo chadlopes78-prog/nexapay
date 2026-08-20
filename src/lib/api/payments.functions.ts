@@ -496,7 +496,7 @@ export const initiateSale = createServerFn({ method: "POST" })
       );
     let productQuery = supabaseAdmin
       .from("products")
-      .select("id, price, status, user_id, access_link, delivery_link");
+      .select("id, price, status, user_id, country, currency, access_link, delivery_link");
     productQuery = isUuid
       ? productQuery.eq("id", data.productId)
       : productQuery.eq("custom_url", data.productId);
