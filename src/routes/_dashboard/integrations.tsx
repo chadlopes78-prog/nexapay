@@ -261,12 +261,13 @@ function IntegrationsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Debug Info Temporário */}
-      <div className="hidden">
-        Debug: DebitoPay Loaded: {debitoPayRow ? 'Yes' : 'No'} | 
-        Connected: {debitoPayRow?.connected ? 'Yes' : 'No'} |
-        Error: {debitoPayError ? String(debitoPayError) : 'None'}
-      </div>
+      {/* Debug Info Temporário - Visível apenas para facilitar o diagnóstico do bug */}
+      {debitoPayError && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+          <strong>Erro de Carregamento (ZA):</strong> {String(debitoPayError)}
+        </div>
+      )}
+
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
