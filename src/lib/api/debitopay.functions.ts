@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { DEBITOPAY_URLS, validateDebitoPayWallet, listDebitoPayWallets } from "./debitopay.server";
+import { DEBITOPAY_URLS, validateDebitoPayWallet } from "./debitopay.server";
 
 const DebitoPayCredentialsInput = z.object({
   environment: z.enum(["sandbox", "live"]),

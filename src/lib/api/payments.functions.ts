@@ -525,20 +525,20 @@ export const initiateSale = createServerFn({ method: "POST" })
     if (!creds) {
       return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
     }
-    const isZa = product.country === "ZA" || product.currency === "ZAR";
-    const walletId = isZa 
+    const isZaSale = product.country === "ZA" || product.currency === "ZAR";
+    const walletId = isZaSale 
       ? creds.wallet_za 
       : (data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
       
     if (!walletId) {
-      const methodLabel = isZa ? "ZAR (África do Sul)" : data.method.toUpperCase();
+      const methodLabel = isZaSale ? "ZAR (África do Sul)" : data.method.toUpperCase();
       return { success: false, error: `Carteira ${methodLabel} não configurada pelo vendedor.` };
     }
 
     const amount = Number(product.price);
-    const isZa = product.country === "ZA" || product.currency === "ZAR";
+    const isZaProduct = product.country === "ZA" || product.currency === "ZAR";
     
-    if (isZa && amount < 5) {
+    if (isZaProduct && amount < 5) {
       return { success: false, error: "O valor mínimo para pagamento é R5." };
     }
 
@@ -656,7 +656,7 @@ export const chargeSale = createServerFn({ method: "POST" })
           amount,
           currency: "ZAR",
           customer_email: "cliente@nexapay.io", // Placeholder for serverFn
-          customer_name: sale.customer_name || "Cliente",
+          customer_name: sale.customer_name?.toString() || "Cliente",
           customer_phone: sale.customer_phone,
           return_url: `${process.env.VITE_SITE_URL || "https://nexapayio.com"}/payment-success?saleId=${sale.id}`,
         });
@@ -820,6 +820,7 @@ export const startPayment = createServerFn({ method: "POST" })
         : Promise.resolve({ data: null as { id?: string } | null }),
     ]);
     
+    const isZaSale = product.country === "ZA" || product.currency === "ZAR";
     if (product.status && product.status !== "active") {
       return { success: false, error: "Produto indisponível para compra." };
     }
