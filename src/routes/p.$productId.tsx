@@ -51,7 +51,7 @@ export const Route = createFileRoute("/p/$productId")({
       return await getPublicProduct({ data: { productId } });
     } catch (err) {
       console.error("Loader error:", err);
-      return { product: null, checkout: null, defaultPixel: null };
+      return { product: null, checkout: null, defaultPixel: null, lookupError: true };
     }
   },
   head: ({ loaderData }) => {
@@ -100,7 +100,7 @@ function CheckoutPage() {
   const cancelPaymentFn = useServerFn(cancelPayment);
   const prewarmGatewayFn = useServerFn(prewarmPaymentGateway);
   const { productId } = useParams({ from: "/p/$productId" });
-  const { product, checkout, defaultPixel } = Route.useLoaderData();
+  const { product, checkout, defaultPixel, lookupError } = Route.useLoaderData();
   const buttonLabel = (checkout?.button_text?.trim() || "Finalizar Compra");
 
   const pixelId = product?.facebook_pixel_id || defaultPixel?.fb_pixel_id;
@@ -595,9 +595,13 @@ function CheckoutPage() {
           <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShieldAlert className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">Link Desativado</h1>
+          <h1 className="text-xl font-bold text-slate-900">
+            {lookupError ? "Não foi possível carregar o produto" : "Produto não encontrado"}
+          </h1>
           <p className="text-slate-500 mt-3 text-sm">
-            Este produto não está disponível para venda no momento.
+            {lookupError
+              ? "Ocorreu uma falha técnica. Atualize a página e tente novamente."
+              : "Este link não corresponde a um produto disponível."}
           </p>
           <Button className="mt-6 w-full h-11 rounded-xl font-bold bg-slate-900 hover:bg-black" asChild>
             <a href="/">Voltar ao início</a>
