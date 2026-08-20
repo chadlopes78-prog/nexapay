@@ -1,65 +1,184 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-// O erro mudou para:
+// A auditoria foi realizada, mas antes de considerar a integração concluída quero uma VALIDAÇÃO REAL da API.
 // 
-// HTTP 404 — Wallet não encontrada
+// Não faça mais alterações visuais.
 // 
-// Endpoint usado:
+// Não altere a homepage.
 // 
-// https://mpesaemolatech.com/v1/wallets/34471
+// Utilize a implementação actual e execute testes reais no backend.
 // 
-// Antes de concluir que a Wallet 34471 está errada, quero uma auditoria imediata.
+// TESTE 1 — AUTENTICAÇÃO
 // 
-// Documentação obrigatória:
+// Execute uma chamada REAL utilizando a API Key LIVE actualmente configurada.
 // 
-// https://debitopay.com/developers/payments-api/
+// Quero o resultado:
 // 
-// Não quero mais suposições.
+// HTTP status
 // 
-// CONFIRME no código e na documentação oficial:
+// endpoint utilizado
 // 
-// Esse domínio mpesaemolatech.com é realmente um endpoint oficial da Débito Pay?
+// método HTTP
 // 
-// O endpoint /v1/wallets/{wallet_id} existe realmente na documentação oficial?
+// autenticação utilizada
 // 
-// A autenticação usada nessa chamada é exactamente a indicada pela Débito Pay?
+// sucesso ou falha
 // 
-// A Wallet ID da África do Sul deve mesmo ser validada desta forma?
+// NÃO mostrar API Key.
 // 
-// Existe diferença entre Wallet ID, Merchant ID, Account ID ou outro identificador?
+// TESTE 2 — LISTAR WALLETS
 // 
-// A API Key LIVE que estou usando tem acesso a wallets ZAR?
+// Execute:
 // 
-// Se mpesaemolatech.com NÃO estiver explicitamente documentado pela Débito Pay, REMOVA imediatamente esse endpoint da integração ZA.
+// GET /v1/wallets
 // 
-// Não tente adivinhar outro endpoint.
+// na API Débito Pay LIVE que você afirmou ser oficial.
 // 
-// Use apenas endpoints confirmados na documentação oficial.
+// Mostre o resultado REAL da API.
 // 
-// Depois responda somente com:
+// Quero saber:
 // 
-// Domínio oficial da API Débito Pay LIVE:
+// HTTP status
+// 
+// quantas wallets foram retornadas
+// 
+// IDs das wallets
+// 
+// moedas
+// 
+// países
+// 
+// status
+// 
+// Não invente resultados.
+// 
+// TESTE 3 — WALLET 34471
+// 
+// Execute uma consulta REAL para:
+// 
+// Wallet ID:
+// 
+// 34471
+// 
+// Quero a resposta real da API.
+// 
+// Informar:
+// 
+// HTTP status:
 // [...]
 // 
-// Endpoint oficial para listar wallets:
+// Wallet encontrada:
+// SIM / NÃO
+// 
+// Wallet ID:
 // [...]
 // 
-// Endpoint oficial para consultar uma wallet:
+// Currency:
 // [...]
 // 
-// Método de autenticação:
+// Country:
 // [...]
 // 
-// Formato esperado do Wallet ID:
+// Status:
 // [...]
 // 
-// O ID 34471 foi realmente consultado na API oficial?
-// Sim/Não
-// 
-// Motivo exacto do 404:
+// Provider response:
 // [...]
 // 
-// Não diga “wallet inválida” sem antes provar que a chamada foi feita para a API oficial da Débito Pay.
+// Somente considere a wallet válida para África do Sul se:
+// 
+// currency = ZAR
+// 
+// e estiver activa/utilizável.
+// 
+// TESTE 4 — NÃO CONFUNDIR 404
+// 
+// Se receber HTTP 404 novamente, mostre a resposta bruta sanitizada da API.
+// 
+// Não transforme automaticamente em mensagem genérica.
+// 
+// Quero saber se o 404 significa:
+// 
+// endpoint inexistente
+// 
+// wallet inexistente
+// 
+// recurso não autorizado
+// 
+// outro motivo
+// 
+// TESTE 5 — CRIAÇÃO DE PAGAMENTO
+// 
+// Se a wallet 34471 for validada como ZAR, NÃO cobre dinheiro real ainda.
+// 
+// Primeiro confirme qual endpoint oficial do código actual será usado para criar pagamento.
+// 
+// Mostrar:
+// 
+// Endpoint:
+// [...]
+// 
+// Método HTTP:
+// [...]
+// 
+// Campos obrigatórios:
+// [...]
+// 
+// Wallet enviada:
+// 34471
+// 
+// Currency:
+// ZAR
+// 
+// Country:
+// ZA
+// 
+// Métodos de pagamento disponíveis:
+// [...]
+// 
+// IMPORTANTE
+// 
+// Você afirmou que utiliza:
+// 
+// Base URL:
+// https://api.debitopay.com
+// 
+// Wallet list:
+// GET /v1/wallets
+// 
+// Wallet detail:
+// GET /v1/wallets/{id}
+// 
+// Authentication:
+// Bearer Token
+// 
+// Agora quero que prove que esses valores estão efectivamente funcionando contra a API REAL.
+// 
+// Não responda somente com documentação ou código.
+// 
+// Execute a chamada e entregue os resultados reais.
+// 
+// A integração só pode ser marcada como:
+// 
+// 🟢 CONFIGURADA
+// 
+// depois que:
+// 
+// API Key autenticar;
+// 
+// API responder;
+// 
+// Wallet 34471 for encontrada;
+// 
+// Currency for ZAR;
+// 
+// Wallet estiver activa.
+// 
+// Caso qualquer um desses testes falhe, mantenha:
+// 
+// 🔴 NÃO CONFIGURADO
+// 
+// e mostre o erro real.
 
 export const Route = createFileRoute("/")({
   component: Index,
