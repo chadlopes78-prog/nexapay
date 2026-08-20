@@ -516,10 +516,7 @@ export const initiateSale = createServerFn({ method: "POST" })
     const v = await validateAndLoad(data, product);
     if (v.error) return { success: false, error: v.error };
     const msisdn = v.msisdn!;
-      ? productQuery.eq("id", data.productId)
-      : productQuery.eq("custom_url", data.productId);
-    const { data: product, error: productError } = await productQuery.single();
-    if (productError || !product) return { success: false, error: "Produto não encontrado." };
+
     if (product.status && product.status !== "active") {
       return { success: false, error: "Produto indisponível para compra." };
     }
