@@ -168,6 +168,11 @@ const GATEWAY_CODE_MAP: Record<string, { status: NormalizedPaymentStatus; code: 
   "ins-2001": { status: "failed", code: "invalid_pin" },
   "ins-2006": { status: "failed", code: "insufficient_funds" },
   "ins-2051": { status: "failed", code: "invalid_msisdn" },
+  // Débito Pay ZA (específicos)
+  "dp-0": { status: "paid", code: "success" },
+  "dp-1": { status: "failed", code: "gateway_internal_error" },
+  "dp-5": { status: "cancelled", code: "cancelled_by_user" },
+  "dp-9": { status: "expired", code: "timeout" },
   // e-Mola / genéricos
   "insufficient_funds": { status: "failed", code: "insufficient_funds" },
   "insufficient_balance": { status: "failed", code: "insufficient_funds" },
