@@ -760,10 +760,11 @@ export const startPayment = createServerFn({ method: "POST" })
 
     // Parallelize both server-only module imports up-front (each import()
     // on the Worker can add 50-200ms on cold path).
-    const [{ supabaseAdmin }, confirmationMod] = await Promise.all([
+    const [serverClient, confirmationMod] = await Promise.all([
       import("@/integrations/supabase/client.server"),
       import("@/lib/payments/confirmation.server"),
     ]);
+    const { supabaseAdmin: _admin } = serverClient;
     const {
       paymentReferenceForSale,
       confirmSalePayment,
