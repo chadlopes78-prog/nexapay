@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { Clock, Users, ShoppingCart, TrendingUp, Palette, Save, Image as ImageIcon, CheckCircle2, Circle } from "lucide-react";
+import { Clock, Users, ShoppingCart, TrendingUp, Palette, Save, Image as ImageIcon, CheckCircle2, Circle, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CheckoutData {
