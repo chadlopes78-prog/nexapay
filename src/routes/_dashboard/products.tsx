@@ -82,6 +82,8 @@ function ProductsPage() {
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string>("");
   const [creating, setCreating] = useState(false);
+  const [country, setCountry] = useState("MZ");
+
 
   const uploadProductImage = async (userId: string, file: File): Promise<string> => {
     const fileExt = file.name.split(".").pop();
@@ -212,8 +214,9 @@ function ProductsPage() {
           access_link: accessLink || deliveryLink,
           thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: uploadedImageUrl || null,
-          checkout_banner_url: uploadedBannerUrl || null,
-        })
+           checkout_banner_url: uploadedBannerUrl || null,
+           country: country,
+         })
         .select()
         .single();
 
@@ -271,7 +274,9 @@ function ProductsPage() {
     setImageUrl("");
     setBannerFile(null);
     setBannerUrl("");
+    setCountry("MZ");
   };
+
 
   const handleEditProduct = (product: any) => {
     setEditingProduct(product);
@@ -338,8 +343,9 @@ function ProductsPage() {
           access_link: accessLink || deliveryLink,
           thank_you_button_text: thankYouButtonText || "Liberar acesso",
           image_url: finalImageUrl || null,
-          checkout_banner_url: finalBannerUrl || null,
-        })
+           checkout_banner_url: finalBannerUrl || null,
+           country: country,
+         })
         .eq("id", editingProduct.id);
 
       if (error) throw error;
@@ -465,8 +471,9 @@ function ProductsPage() {
               imageFile={imageFile} setImageFile={setImageFile}
               imageUrl={imageUrl} setImageUrl={setImageUrl}
               bannerFile={bannerFile} setBannerFile={setBannerFile}
-              bannerUrl={bannerUrl} setBannerUrl={setBannerUrl}
-              onCancel={() => setIsDialogOpen(false)}
+               bannerUrl={bannerUrl} setBannerUrl={setBannerUrl}
+               country={country} setCountry={setCountry}
+               onCancel={() => setIsDialogOpen(false)}
               onSubmit={() => handleCreateProduct()}
               submitting={creating}
             />
@@ -509,9 +516,11 @@ function ProductsPage() {
                     imageFile={imageFile} setImageFile={setImageFile}
                     imageUrl={imageUrl} setImageUrl={setImageUrl}
                     bannerFile={bannerFile} setBannerFile={setBannerFile}
-                    bannerUrl={bannerUrl} setBannerUrl={setBannerUrl}
-                    showDeliveryFile={false}
-                  />
+                     bannerUrl={bannerUrl} setBannerUrl={setBannerUrl}
+                     showDeliveryFile={false}
+                     country={country}
+                     setCountry={setCountry}
+                   />
                   <section className="rounded-xl border border-slate-200/70 bg-white p-4 sm:p-5 grid gap-4">
                     <h3 className="text-sm font-semibold text-slate-900">Acesso ao produto</h3>
                     <div className="grid gap-2">
@@ -640,7 +649,7 @@ function ProductsPage() {
                   {product.name}
                 </h3>
                 <p className="mt-1 text-sm font-bold text-slate-900">
-                  {product.price.toLocaleString("pt-MZ")} <span className="text-[10px] font-medium text-slate-500">MT</span>
+                  {product.price.toLocaleString("pt-MZ")} <span className="text-[10px] font-medium text-slate-500">{product.country === "ZA" ? "R" : "MT"}</span>
                 </p>
                 <div className="mt-2 flex gap-1">
                   <Button

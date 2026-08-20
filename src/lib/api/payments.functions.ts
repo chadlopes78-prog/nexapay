@@ -9,7 +9,7 @@ import {
 
 const PaymentInput = z.object({
   productId: z.string().min(1).max(120),
-  method: z.enum(["mpesa", "emola"]),
+  method: z.enum(["mpesa", "emola", "card", "eft", "bank_transfer"]),
   msisdn: z.string().min(9).max(20),
   customerName: z.string().min(1).max(100),
   contactPhone: z.string().max(20).optional(),
@@ -68,7 +68,7 @@ export const getSaleStatus = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sale } = await supabaseAdmin
       .from("sales")
-      .select("id, status, created_at, user_id, payment_method, transaction_id, payment_reference, failure_reason, failure_code, products(access_link, delivery_link)")
+      .select("id, status, created_at, user_id, payment_method, transaction_id, payment_reference, failure_reason, failure_code, country, currency, products(access_link, delivery_link)")
       .eq("id", data.saleId)
       .maybeSingle();
     if (!sale) return { status: "not_found" as const, accessLink: null, error: null };
@@ -334,7 +334,7 @@ async function loadUserCreds(userId: string): Promise<UserCreds | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("user_payment_credentials")
-    .select("e2p_client_id, e2p_client_secret, wallet_mpesa, wallet_emola")
+    .select("e2p_client_id, e2p_client_secret, wallet_mpesa, wallet_emola, wallet_za")
     .eq("user_id", userId)
     .maybeSingle();
   if (!data?.e2p_client_id || !data?.e2p_client_secret) return null;
@@ -358,9 +358,12 @@ const TOKEN_MIN_TTL_MS = 10 * 60 * 1000;
 // Teto: nunca confia em token por mais de 55 min (E2Payments emite 1h).
 const TOKEN_MAX_TTL_MS = 55 * 60 * 1000;
 
+import { invalidateAccessToken as invalidateAccessTokenInternal } from "@/lib/payments/confirmation.server";
+
 export function invalidateAccessToken(clientId: string) {
   tokenCache.delete(clientId);
   inflightToken.delete(clientId);
+  invalidateAccessTokenInternal(clientId);
 }
 
 async function getAccessToken(clientId: string, clientSecret: string): Promise<string> {

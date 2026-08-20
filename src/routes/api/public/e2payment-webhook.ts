@@ -15,28 +15,35 @@ export const Route = createFileRoute("/api/public/e2payment-webhook")({
         // Shared-secret verification. In produção o secret é OBRIGATÓRIO
         // — sem ele qualquer origem poderia forjar aprovação de venda.
         // Em dev/preview aceitamos ausência para não bloquear testes locais.
-        const expectedSecret = process.env.E2PAYMENT_WEBHOOK_SECRET;
-        const isProd = process.env.NODE_ENV === "production";
-        if (!expectedSecret) {
-          if (isProd) {
-            console.error("[Webhook] E2PAYMENT_WEBHOOK_SECRET missing in production — rejecting request");
-            return new Response("Server misconfigured", { status: 500 });
-          }
-        } else {
-          const sent =
+        const mzSecret = process.env.E2PAYMENT_WEBHOOK_SECRET;
+        const zaSecret = process.env.DEBITO_WEBHOOK_SECRET || process.env.E2PAYMENT_WEBHOOK_SECRET_ZA;
+        
+        const mzSent =
             request.headers.get("x-webhook-secret") ||
             request.headers.get("x-e2payment-secret") ||
             "";
-          // Comparação em tempo constante para evitar timing oracle.
+        
+        const verify = (secret: string, sent: string) => {
+          if (!secret) return false;
           const a = new TextEncoder().encode(sent);
-          const b = new TextEncoder().encode(expectedSecret);
+          const b = new TextEncoder().encode(secret);
           let equal = a.length === b.length;
           const len = Math.max(a.length, b.length);
           for (let i = 0; i < len; i++) equal = equal && a[i] === b[i];
-          if (!equal) {
-            return new Response("Unauthorized", { status: 401 });
-          }
+          return equal;
+        };
+
+        const isProd = process.env.NODE_ENV === "production";
+        let authenticated = false;
+        
+        if (verify(mzSecret!, mzSent) || (zaSecret && verify(zaSecret, mzSent))) {
+           authenticated = true;
         }
+
+        if (!authenticated && isProd) {
+           return new Response("Unauthorized", { status: 401 });
+        }
+
 
         const {
           confirmSalePayment,

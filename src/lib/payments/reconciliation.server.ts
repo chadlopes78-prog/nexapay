@@ -7,16 +7,14 @@ import {
   readGatewayReference,
   readGatewayTransactionId,
   saveGatewayIdentifiers,
+  invalidateAccessToken,
 } from "@/lib/payments/confirmation.server";
 
 import { getE2payBaseUrl, orderedE2payHosts, setE2payBaseUrl } from "@/lib/payments/e2pay-hosts";
+
 const HISTORY_LIMIT = 50;
-// Intervalo curto: o cancelamento no pop-up da operadora só é detectado
-// quando o histórico da gateway é consultado. 3s (valor anterior) somava
-// dezenas de segundos de atraso na percepção do cliente.
 const RECONCILIATION_INTERVAL_MS = 1_000;
-// Cache de token por client_id — evita um OAuth round-trip completo
-// (0,5–2s) em cada tick de polling.
+
 const tokenCache = new Map<string, { value: string; expiresAt: number }>();
 const lastReconciliationAt = new Map<string, number>();
 const reconciliationInFlight = new Map<string, Promise<"paid" | "cancelled" | "failed" | "expired" | "pending" | null>>();
@@ -27,6 +25,8 @@ type PendingSale = {
   payment_method: string | null;
   transaction_id: string | null;
   payment_reference: string | null;
+  country?: string | null;
+  currency?: string | null;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -62,12 +62,15 @@ function findMatchingPayment(payload: unknown, sale: PendingSale) {
 }
 
 async function requestHistory(sale: PendingSale) {
-  if (!sale.user_id || !["mpesa", "emola"].includes(String(sale.payment_method))) return null;
+  if (!sale.user_id) return null;
+  
+  const isZA = sale.country === "ZA" || sale.currency === "ZAR";
   const { data: credentials } = await supabaseAdmin
     .from("user_payment_credentials")
-    .select("e2p_client_id, e2p_client_secret")
+    .select("e2p_client_id, e2p_client_secret, wallet_za")
     .eq("user_id", sale.user_id)
     .maybeSingle();
+    
   if (!credentials?.e2p_client_id || !credentials.e2p_client_secret) return null;
 
   let accessToken: string | null = null;
@@ -101,9 +104,14 @@ async function requestHistory(sale: PendingSale) {
   }
   if (!accessToken) return null;
 
-  const method = String(sale.payment_method);
+  // Se for ZA, não usamos method na URL mas sim o wallet_id de ZA
+  const baseUrl = getE2payBaseUrl(credentials.e2p_client_id);
+  const endpoint = isZA 
+    ? `${baseUrl}/v1/payments/get/all/paginate/${HISTORY_LIMIT}`
+    : `${baseUrl}/v1/payments/${sale.payment_method}/get/all/paginate/${HISTORY_LIMIT}`;
+
   const historyResponse = await fetch(
-    `${getE2payBaseUrl(credentials.e2p_client_id)}/v1/payments/${method}/get/all/paginate/${HISTORY_LIMIT}`,
+    endpoint,
     {
       method: "POST",
       headers: {
@@ -111,17 +119,19 @@ async function requestHistory(sale: PendingSale) {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ client_id: credentials.e2p_client_id }),
+      body: JSON.stringify({ 
+        client_id: credentials.e2p_client_id,
+        wallet_id: isZA ? credentials.wallet_za : undefined 
+      }),
     },
   );
+  
   if (historyResponse.status === 401 || historyResponse.status === 403) {
-    // Token em cache expirou antes do previsto — descarta para o próximo tick.
     tokenCache.delete(credentials.e2p_client_id);
   }
   if (!historyResponse.ok) return null;
   return historyResponse.json().catch(() => null);
 }
-
 
 export async function reconcilePendingSale(sale: PendingSale) {
   const existing = reconciliationInFlight.get(sale.id);

@@ -31,7 +31,10 @@ interface Props {
   onSubmit: () => void;
   onCancel: () => void;
   submitting?: boolean;
+  country: string;
+  setCountry: (v: string) => void;
 }
+
 
 export function NewProductWizard(props: Props) {
   const [step, setStep] = useState(1);
@@ -137,9 +140,22 @@ export function NewProductWizard(props: Props) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="wiz-price" className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" /> Preço (MT) *</Label>
+                <Label htmlFor="wiz-price" className="flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" /> Preço ({props.country === "ZA" ? "ZAR" : "MT"}) *</Label>
                 <Input id="wiz-price" type="number" value={props.price} onChange={(e) => props.setPrice(e.target.value)} placeholder="1000" />
               </div>
+              <div className="grid gap-2">
+                <Label htmlFor="wiz-country">País do checkout</Label>
+                <select
+                  id="wiz-country"
+                  value={props.country}
+                  onChange={(e) => props.setCountry(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                >
+                  <option value="MZ">Moçambique 🇲🇿</option>
+                  <option value="ZA">África do Sul 🇿🇦</option>
+                </select>
+              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="wiz-cat">Categoria</Label>
                 <Input id="wiz-cat" value={props.category} onChange={(e) => props.setCategory(e.target.value)} placeholder="Educação" />
@@ -253,7 +269,7 @@ export function NewProductWizard(props: Props) {
                 <p className="text-xs text-slate-500 truncate">{props.category || "Sem categoria"} · {TYPES.find(t => t.id === type)?.title}</p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold text-slate-900">{props.price ? `${Number(props.price).toLocaleString("pt-MZ")} MT` : "—"}</p>
+                <p className="text-lg font-bold text-slate-900">{props.price ? `${Number(props.price).toLocaleString("pt-MZ")} ${props.country === "ZA" ? "R" : "MT"}` : "—"}</p>
               </div>
             </div>
             <dl className="rounded-xl border bg-white divide-y text-sm">

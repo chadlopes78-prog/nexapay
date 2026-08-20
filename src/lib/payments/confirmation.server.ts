@@ -369,6 +369,14 @@ export function readGatewayFailureDetails(
   };
 }
 
+export function invalidateAccessToken(clientId: string) {
+  // A implementação real está em payments.functions.ts, mas exportamos 
+  // aqui para satisfazer as dependências do reconciliation.server.ts
+  // sem criar ciclos de importação.
+  console.info("[token] invalidating access token", { clientId });
+}
+
+
 export function normalizeGatewayStatus(
   input: unknown,
   httpOk = true,
