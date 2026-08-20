@@ -829,12 +829,11 @@ export const startPayment = createServerFn({ method: "POST" })
 
     const creds = await loadUserCreds(product.user_id);
     if (!creds) return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
-    const isZa = product.country === "ZA" || product.currency === "ZAR";
-    const walletId = isZa 
+    const walletId = isZaSale 
       ? creds.wallet_za 
       : (data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
 
-    if (!walletId) return { success: false, error: `Carteira ${isZa ? "ZAR" : data.method.toUpperCase()} não configurada.` };
+    if (!walletId) return { success: false, error: `Carteira ${isZaSale ? "ZAR" : data.method.toUpperCase()} não configurada.` };
     mark("creds");
 
 
