@@ -1,184 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-// A auditoria foi realizada, mas antes de considerar a integração concluída quero uma VALIDAÇÃO REAL da API.
+// Olá. Estamos integrando a API Débito Pay para pagamentos na África do Sul (ZAR). Ao tentar acessar https://api.debitopay.com/v1/wallets/34471 recebemos HTTP 525 – SSL Handshake Failed e não conseguimos conectar a https://api.debitopay.com. Por favor confirmem:
 // 
-// Não faça mais alterações visuais.
 // 
-// Não altere a homepage.
 // 
-// Utilize a implementação actual e execute testes reais no backend.
 // 
-// TESTE 1 — AUTENTICAÇÃO
+// - Se https://api.debitopay.com é a URL oficial LIVE.  
 // 
-// Execute uma chamada REAL utilizando a API Key LIVE actualmente configurada.
+// - Se há indisponibilidade ou problema SSL/TLS neste domínio.  
 // 
-// Quero o resultado:
+// - Qual é a Base URL correta para produção.  
 // 
-// HTTP status
+// - Qual é a Base URL correta para sandbox.  
 // 
-// endpoint utilizado
+// - Se GET /v1/wallets/{id} é o endpoint correto para consultar uma wallet.  
 // 
-// método HTTP
+// - Se a Wallet ID 34471 está ativa e configurada para ZAR/África do Sul.  
 // 
-// autenticação utilizada
+// - Se há requisitos de IP whitelist, mTLS, certificado cliente ou firewall.  
 // 
-// sucesso ou falha
+// - O erro ocorre antes da autenticação.
 // 
-// NÃO mostrar API Key.
 // 
-// TESTE 2 — LISTAR WALLETS
 // 
-// Execute:
 // 
-// GET /v1/wallets
-// 
-// na API Débito Pay LIVE que você afirmou ser oficial.
-// 
-// Mostre o resultado REAL da API.
-// 
-// Quero saber:
-// 
-// HTTP status
-// 
-// quantas wallets foram retornadas
-// 
-// IDs das wallets
-// 
-// moedas
-// 
-// países
-// 
-// status
-// 
-// Não invente resultados.
-// 
-// TESTE 3 — WALLET 34471
-// 
-// Execute uma consulta REAL para:
-// 
-// Wallet ID:
-// 
-// 34471
-// 
-// Quero a resposta real da API.
-// 
-// Informar:
-// 
-// HTTP status:
-// [...]
-// 
-// Wallet encontrada:
-// SIM / NÃO
-// 
-// Wallet ID:
-// [...]
-// 
-// Currency:
-// [...]
-// 
-// Country:
-// [...]
-// 
-// Status:
-// [...]
-// 
-// Provider response:
-// [...]
-// 
-// Somente considere a wallet válida para África do Sul se:
-// 
-// currency = ZAR
-// 
-// e estiver activa/utilizável.
-// 
-// TESTE 4 — NÃO CONFUNDIR 404
-// 
-// Se receber HTTP 404 novamente, mostre a resposta bruta sanitizada da API.
-// 
-// Não transforme automaticamente em mensagem genérica.
-// 
-// Quero saber se o 404 significa:
-// 
-// endpoint inexistente
-// 
-// wallet inexistente
-// 
-// recurso não autorizado
-// 
-// outro motivo
-// 
-// TESTE 5 — CRIAÇÃO DE PAGAMENTO
-// 
-// Se a wallet 34471 for validada como ZAR, NÃO cobre dinheiro real ainda.
-// 
-// Primeiro confirme qual endpoint oficial do código actual será usado para criar pagamento.
-// 
-// Mostrar:
-// 
-// Endpoint:
-// [...]
-// 
-// Método HTTP:
-// [...]
-// 
-// Campos obrigatórios:
-// [...]
-// 
-// Wallet enviada:
-// 34471
-// 
-// Currency:
-// ZAR
-// 
-// Country:
-// ZA
-// 
-// Métodos de pagamento disponíveis:
-// [...]
-// 
-// IMPORTANTE
-// 
-// Você afirmou que utiliza:
-// 
-// Base URL:
-// https://api.debitopay.com
-// 
-// Wallet list:
-// GET /v1/wallets
-// 
-// Wallet detail:
-// GET /v1/wallets/{id}
-// 
-// Authentication:
-// Bearer Token
-// 
-// Agora quero que prove que esses valores estão efectivamente funcionando contra a API REAL.
-// 
-// Não responda somente com documentação ou código.
-// 
-// Execute a chamada e entregue os resultados reais.
-// 
-// A integração só pode ser marcada como:
-// 
-// 🟢 CONFIGURADA
-// 
-// depois que:
-// 
-// API Key autenticar;
-// 
-// API responder;
-// 
-// Wallet 34471 for encontrada;
-// 
-// Currency for ZAR;
-// 
-// Wallet estiver activa.
-// 
-// Caso qualquer um desses testes falhe, mantenha:
-// 
-// 🔴 NÃO CONFIGURADO
-// 
-// e mostre o erro real.
+// Agradecemos a confirmação técnica para concluir a integração.
 
 export const Route = createFileRoute("/")({
   component: Index,
