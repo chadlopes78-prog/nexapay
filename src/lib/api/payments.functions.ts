@@ -960,40 +960,57 @@ export const startPayment = createServerFn({ method: "POST" })
 
 
 
-    const localPhone = msisdn.slice(3);
-    const endpoint =
-      data.method === "mpesa"
-        ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
-        : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
+    let resPromise: Promise<Response>;
+    if (isZaSale) {
+      const { initiateDebitoPayPayment } = await import("./debitopay.server");
+      const auth = { apiKey: creds.e2p_client_id, environment: "live" as const };
+      resPromise = initiateDebitoPayPayment(auth, {
+        merchant_id: (creds as any).debitopay_merchant_id,
+        wallet_code: walletId,
+        amount,
+        currency: "ZAR",
+        customer_email: "cliente@nexapay.io",
+        customer_name: data.customerName,
+        customer_phone: msisdn,
+        return_url: `${process.env.VITE_SITE_URL || "https://nexapayio.com"}/payment-success?saleId=${saleId}`,
+      }).then(debitoRes => ({
+        ok: debitoRes.ok,
+        status: debitoRes.status,
+        text: () => Promise.resolve(JSON.stringify(debitoRes.data)),
+        json: () => Promise.resolve(debitoRes.data),
+      } as Response));
+    } else {
+      const localPhone = msisdn.slice(3);
+      const endpoint =
+        data.method === "mpesa"
+          ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
+          : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
 
-    const controller = new AbortController();
+      const { PAYMENT_WAIT_WINDOW_MS } = await import("@/lib/payments/timing");
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), PAYMENT_WAIT_WINDOW_MS);
+      
+      resPromise = fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+          "User-Agent": "NexaPay/1.0",
+        },
+        body: JSON.stringify({
+          client_id: creds.e2p_client_id,
+          amount: String(amount),
+          phone: localPhone,
+          reference,
+          merchant_name: "NexaPay",
+          description: "Pagamento de produto digital",
+        }),
+        signal: ctrl.signal,
+      }).finally(() => clearTimeout(timeout));
+    }
 
-    const { PAYMENT_WAIT_WINDOW_MS } = await import("@/lib/payments/timing");
-
-    const timeoutId = setTimeout(() => controller.abort(), PAYMENT_WAIT_WINDOW_MS);
-
-    /*
-     * O pedido à gateway começa imediatamente.
-     * O checkout não precisa ficar bloqueado durante toda a espera pelo PIN.
-     */
-    const gatewayPromise: Promise<GatewayCallResult> = fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-        "User-Agent": "NexaPay/1.0",
-      },
-      body: JSON.stringify({
-        client_id: creds.e2p_client_id,
-        amount: String(amount),
-        phone: localPhone,
-        reference,
-        merchant_name: "NexaPay",
-        description: "Pagamento de produto digital",
-      }),
-      signal: controller.signal,
-    })
+    const gatewayPromise: Promise<GatewayCallResult> = resPromise
       .then(async (res) => {
         const text = await res.text();
         let json: Record<string, unknown> | null = null;
@@ -1025,31 +1042,23 @@ export const startPayment = createServerFn({ method: "POST" })
 
         const transactionId = readGatewayTransactionId(json);
         const finalStatus = normalizeGatewayStatus(json, ok, status);
-        await saveGatewayIdentifiers({ saleId, transactionId, reference });
+        const p = product as { access_link?: string | null; delivery_link?: string | null } | null;
 
-        // Log temporário de diagnóstico de cancelamento (sem tokens/segredos).
-        const dbg = (json ?? {}) as Record<string, unknown>;
-        const dbgData = (dbg.data && typeof dbg.data === "object" ? dbg.data : {}) as Record<string, unknown>;
-        console.info("[payment-cancellation-debug]", {
-          saleId,
-          httpStatus: status,
-          normalizedStatus: finalStatus,
-          transactionId,
-          gatewayStatus: dbg.status ?? dbg.payment_status ?? dbgData.status ?? null,
-          gatewayCode: dbg.code ?? dbg.response_code ?? dbgData.code ?? null,
-          gatewayMessage: String(dbg.message ?? dbg.error ?? dbgData.message ?? "").slice(0, 200) || null,
-        });
-
+        // Se a Débito Pay devolver checkout_url, temos de a passar ao frontend
+        const checkoutUrl = (json as any)?.checkout_url;
 
         if (finalStatus === "paid") {
-          await confirmSalePayment({
-            saleId,
-            transactionId,
-            reference,
-            rawPayload: json,
-            triggerPushcut: true,
-          });
-        } else if (finalStatus === "failed" || finalStatus === "expired" || finalStatus === "cancelled") {
+          await confirmSalePayment({ saleId, transactionId, reference, rawPayload: json, triggerPushcut: true });
+          return { finalStatus, transactionId, json, accessLink: p?.access_link || p?.delivery_link || null };
+        }
+        
+        if (checkoutUrl && finalStatus === "pending") {
+           return { finalStatus, transactionId, json, accessLink: checkoutUrl }; 
+        }
+
+        await saveGatewayIdentifiers({ saleId, transactionId, reference });
+
+        if (finalStatus === "failed" || finalStatus === "expired" || finalStatus === "cancelled") {
           const failure = readGatewayFailureDetails(json, finalStatus);
           await markSaleTerminalFailure({
             saleId,
@@ -1116,14 +1125,14 @@ export const startPayment = createServerFn({ method: "POST" })
 
     const accessLink = product.access_link || product.delivery_link || null;
 
-    if (immediateResult?.finalStatus === "paid") {
-      mark("returned paid");
+    if (immediateResult?.finalStatus === "paid" || (immediateResult as any)?.accessLink) {
+      mark("returned terminal/redirect");
       return {
         success: true,
         saleId,
-        transactionId: immediateResult.transactionId,
-        status: "paid",
-        accessLink,
+        transactionId: immediateResult!.transactionId,
+        status: immediateResult!.finalStatus === "paid" ? "paid" : "pending",
+        accessLink: (immediateResult as any).accessLink || accessLink,
       };
     }
 
