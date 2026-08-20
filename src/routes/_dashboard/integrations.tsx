@@ -178,6 +178,7 @@ function maskSecret(v: string) {
 }
 
 function IntegrationsPage() {
+  const queryClient = useQueryClient();
   const [config, setConfig] = useState<ConfigMap>(() => loadConfig());
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<IntegrationDef | null>(null);
