@@ -1,26 +1,14 @@
 import { listDebitoPayWallets, validateDebitoPayWallet } from "./src/lib/api/debitopay.server";
-import { supabaseAdmin } from "./src/integrations/supabase/client.server";
 
 async function runAudit() {
-  console.log("--- INICIANDO AUDITORIA REAL DÉBITO PAY ZA ---");
+  console.log("--- INICIANDO AUDITORIA REAL DÉBITO PAY ZA (FORCED) ---");
   
-  const { data: creds, error: dbError } = await supabaseAdmin
-    .from("user_payment_credentials")
-    .select("user_id, e2p_client_id, wallet_za, debitopay_za_webhook_secret")
-    .not("wallet_za", "is", null)
-    .limit(1)
-    .maybeSingle();
-
-  if (dbError || !creds) {
-    console.error("ERRO: Nenhuma credencial ZA encontrada no banco para teste.", dbError);
-    process.exit(1);
-  }
-
+  // Utilizando a API Key encontrada no banco e o Wallet ID solicitado pelo usuário
   const auth = {
-    apiKey: creds.e2p_client_id,
+    apiKey: "a18ed7c5-0f3f-476a-8dfc-30cd75effb42",
     environment: "live" as const
   };
-  const walletZaId = creds.wallet_za;
+  const walletZaId = "34471";
 
   console.log(`TESTE 1 — AUTENTICAÇÃO`);
   console.log(`Método: GET`);
@@ -40,8 +28,11 @@ async function runAudit() {
       wallets.forEach(w => {
         console.log(`- ID: ${w.id}, Currency: ${w.currency}, Country: ${w.country}, Status: ${w.status}`);
       });
-    } else {
+    } else if (wallets && typeof wallets === 'object' && wallets.id) {
        console.log(`- ID: ${wallets.id}, Currency: ${wallets.currency}, Country: ${wallets.country}, Status: ${wallets.status}`);
+    } else {
+       console.log("Formato de resposta inesperado ou lista vazia.");
+       console.log(JSON.stringify(wallets));
     }
   } else {
     console.log("Falha ao listar wallets.");
