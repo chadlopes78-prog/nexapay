@@ -35,7 +35,7 @@ function Index() {
                   Venda em Moçambique com M-Pesa e e-Mola
                 </h1>
                 <p className="mx-auto max-w-[800px] text-gray-500 text-lg md:text-xl leading-relaxed">
-                  https://debitopay.com/developers/payments-api/ analisa e vamos programar
+                  voce mecheu coisa que nao devia devolva intervance como estava do meu gatway
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
