@@ -171,7 +171,7 @@ Cada tentativa deve possuir uma referência única. Utilizar idempotency key se 
 
 15. PÁGINA DE SUCESSO
 
-Pagamento aprovado ✓ -> Encaminhar para página de acesso.
+Pagamento aprovado ✓ -{" > "}Encaminhar para página de acesso.
 
 16. DASHBOARD
 
