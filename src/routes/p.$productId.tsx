@@ -959,7 +959,7 @@ function CheckoutPage() {
                   </div>
 
                   <Input
-                    placeholder={paymentMethod === "mpesa" ? "84 / 85 xxx xxxx" : "86 / 87 xxx xxxx"}
+                    placeholder={(product as any)?.country === "ZA" ? "Número de telefone SA" : (paymentMethod === "mpesa" ? "84 / 85 xxx xxxx" : "86 / 87 xxx xxxx")}
                     required
                     inputMode="tel"
                     disabled={processingPayment}
