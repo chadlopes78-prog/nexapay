@@ -164,12 +164,14 @@ function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola" | "card" | "eft">("mpesa");
   
   useEffect(() => {
-    if (product?.country === "ZA") {
+    const country = (product as any)?.country;
+    if (country === "ZA") {
       setPaymentMethod("card");
     } else {
       setPaymentMethod("mpesa");
     }
-  }, [product?.country]);
+  }, [product]);
+
 
   const [bumpAccepted, setBumpAccepted] = useState(false);
 
@@ -177,19 +179,23 @@ function CheckoutPage() {
   const bumpPrice = checkout?.order_bump_enabled ? Number(checkout?.order_bump_price ?? 0) : 0;
   const totalPrice = (product?.price ?? 0) + (bumpAccepted ? bumpPrice : 0);
   const totalPriceFmt = useMemo(() => {
-    const symbol = product?.country === "ZA" ? "R" : "MT";
+    const country = (product as any)?.country;
+    const symbol = country === "ZA" ? "R" : "MT";
     return `${totalPrice.toLocaleString("pt-MZ")} ${symbol}`;
-  }, [totalPrice, product?.country]);
+  }, [totalPrice, product]);
 
   const productPriceFmt = useMemo(() => {
-    const symbol = product?.country === "ZA" ? "R" : "MT";
+    const country = (product as any)?.country;
+    const symbol = country === "ZA" ? "R" : "MT";
     return `${(product?.price ?? 0).toLocaleString("pt-MZ")} ${symbol}`;
-  }, [product?.price, product?.country]);
+  }, [product?.price, product]);
 
   const bumpPriceFmt = useMemo(() => {
-    const symbol = product?.country === "ZA" ? "R" : "MT";
+    const country = (product as any)?.country;
+    const symbol = country === "ZA" ? "R" : "MT";
     return `${bumpPrice.toLocaleString("pt-MZ")} ${symbol}`;
-  }, [bumpPrice, product?.country]);
+  }, [bumpPrice, product]);
+
 
 
   useEffect(() => {
@@ -258,7 +264,7 @@ function CheckoutPage() {
           content_ids: [product.id],
           content_type: 'product',
           value: product.price,
-          currency: product.country === "ZA" ? "ZAR" : "MZN"
+          currency: (product as any).country === "ZA" ? "ZAR" : "MZN"
         });
       } catch (e) {
         console.error('FB Pixel error:', e);
@@ -280,7 +286,7 @@ function CheckoutPage() {
     try {
       if (pixelId && window.fbq && product) {
         window.fbq('track', event, {
-          content_name: product.name, value: product.price, currency: product.country === "ZA" ? "ZAR" : "MZN",
+          content_name: product.name, value: product.price, currency: (product as any).country === "ZA" ? "ZAR" : "MZN",
         });
       }
     } catch (e) { console.error(e); }
