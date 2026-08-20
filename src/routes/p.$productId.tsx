@@ -741,8 +741,9 @@ function CheckoutPage() {
                   {product.name}
                 </h1>
                 <p className="text-2xl font-extrabold text-[var(--brand)] leading-tight" style={fontHeading}>
-                  {productPriceFmt} <span className="text-sm font-bold">MZN</span>
+                  {productPriceFmt} <span className="text-sm font-bold">{product.currency || "MZN"}</span>
                 </p>
+
               </div>
             </div>
           </div>
@@ -790,8 +791,9 @@ function CheckoutPage() {
             <div className="flex justify-between items-center">
               <span className="text-sm font-semibold text-[#64748b]">Total</span>
               <span className="text-lg font-bold text-[#1e293b]" style={fontHeading}>
-                Mt {totalPriceFmt} MZN
+                {product.currency === "ZAR" ? "R" : "Mt"} {totalPriceFmt} {product.currency || "MZN"}
               </span>
+
             </div>
           </div>
 

@@ -441,6 +441,7 @@ export type Database = {
           checkout_banner_url: string | null
           country: string | null
           created_at: string
+          currency: string | null
           custom_url: string | null
           delivery_file_url: string | null
           delivery_link: string | null
@@ -466,6 +467,7 @@ export type Database = {
           checkout_banner_url?: string | null
           country?: string | null
           created_at?: string
+          currency?: string | null
           custom_url?: string | null
           delivery_file_url?: string | null
           delivery_link?: string | null
@@ -491,6 +493,7 @@ export type Database = {
           checkout_banner_url?: string | null
           country?: string | null
           created_at?: string
+          currency?: string | null
           custom_url?: string | null
           delivery_file_url?: string | null
           delivery_link?: string | null

@@ -330,7 +330,7 @@ type UserCreds = {
   wallet_emola: string | null;
 };
 
-async function loadUserCreds(userId: string): Promise<UserCreds | null> {
+async function loadUserCreds(userId: string): Promise<UserCreds & { wallet_za?: string | null } | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("user_payment_credentials")
@@ -343,6 +343,7 @@ async function loadUserCreds(userId: string): Promise<UserCreds | null> {
     e2p_client_secret: data.e2p_client_secret,
     wallet_mpesa: data.wallet_mpesa,
     wallet_emola: data.wallet_emola,
+    wallet_za: data.wallet_za,
   };
 }
 

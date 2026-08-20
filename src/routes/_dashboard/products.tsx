@@ -286,6 +286,7 @@ function ProductsPage() {
     setCategory(product.category || "");
     setSupportPhone(product.support_phone || "");
     setSupportNumber(product.support_number || product.support_phone || "");
+    setCountry(product.country || "MZ");
     setFacebookPixelId(product.facebook_pixel_id || "");
     setFacebookAccessToken(product.facebook_access_token || "");
     setDeliveryType(product.delivery_type || "none");
