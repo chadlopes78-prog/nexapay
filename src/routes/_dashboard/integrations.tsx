@@ -178,6 +178,7 @@ function maskSecret(v: string) {
 }
 
 function IntegrationsPage() {
+  const queryClient = useQueryClient();
   const [config, setConfig] = useState<ConfigMap>(() => loadConfig());
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<IntegrationDef | null>(null);
@@ -195,6 +196,8 @@ function IntegrationsPage() {
   const { data: debitoPayRow, error: debitoPayError, isLoading: isDebitoLoading } = useQuery({
     queryKey: ["debitopay-config"],
     queryFn: () => getDebitoPay(),
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
   useEffect(() => {
@@ -209,18 +212,29 @@ function IntegrationsPage() {
       const next = { ...prev };
       
       // Update Pushcut
-      next.pushcut = {
-        connected: !!pushcutRow,
-        enabled: !!pushcutRow?.active,
-        config: pushcutRow ? { url: pushcutRow.url } : {},
-      };
+      if (pushcutRow !== undefined) {
+        next.pushcut = {
+          connected: !!pushcutRow,
+          enabled: !!pushcutRow?.active,
+          config: pushcutRow ? { url: pushcutRow.url } : {},
+        };
+      }
 
       // Update DebitoPay
-      next.debitopay_za = {
-        connected: !!debitoPayRow?.connected,
-        enabled: !!debitoPayRow?.connected,
-        config: debitoPayRow || {},
-      };
+      // IMPORTANTE: Se debitoPayRow existir, sincronizamos. 
+      // Se for nulo ou vazio, tratamos como desconectado mas o card continua lá.
+      if (debitoPayRow !== undefined) {
+        next.debitopay_za = {
+          connected: !!debitoPayRow?.connected,
+          enabled: !!debitoPayRow?.connected,
+          config: debitoPayRow || {},
+        };
+      }
+
+      // Persist to local storage to keep it fast on next load
+      if (Object.keys(next).length > 0) {
+        saveConfig(next);
+      }
 
       return next;
     });
@@ -384,9 +398,12 @@ function IntegrationsPage() {
           integration={editing}
           state={config[editing.id] || { connected: false, enabled: false, config: {} }}
           onClose={() => setEditing(null)}
-          onSave={(next) => {
+          onSave={async (next) => {
             update(editing.id, next);
             setEditing(null);
+            // Invalidate queries to ensure UI reflects server state immediately
+            await queryClient.invalidateQueries({ queryKey: ["debitopay-config"] });
+            await queryClient.invalidateQueries({ queryKey: ["pushcut-integration"] });
             toast.success(`${editing.name} atualizado com sucesso`);
           }}
         />
