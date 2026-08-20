@@ -168,9 +168,12 @@ export const testDebitoPayConnection = createServerFn({ method: "POST" })
   });
 
 export const fetchDebitoPayWallets = createServerFn({ method: "POST" })
-  .inputValidator((input) => z.object({ apiKey: z.string() }).parse(input))
+  .inputValidator((input) => z.object({ apiKey: z.string(), environment: z.enum(["sandbox", "live"]).optional() }).parse(input))
   .handler(async ({ data }) => {
-     const hosts = ["https://mpesaemolatech.com", "https://e2payments.explicador.co.mz"];
+     const environment = data.environment || "live";
+     const hosts = environment === "live"
+       ? ["https://mpesaemolatech.com", "https://e2payments.explicador.co.mz"]
+       : ["https://sandbox.mpesaemolatech.com"];
      
      for (const host of hosts) {
        try {
@@ -191,15 +194,17 @@ export const fetchDebitoPayWallets = createServerFn({ method: "POST" })
            });
            
            if (walletRes.ok) {
-             const { data: wallets } = await walletRes.json();
+             const json = await walletRes.json();
+             const wallets = json.data || json;
              return (wallets || [])
                .filter((w: any) => w.currency === "ZAR" || w.country === "ZA")
                .map((w: any) => ({
                  id: w.id,
+                 name: w.name,
                  country: w.country || "ZA",
                  currency: w.currency || "ZAR",
                  status: w.status || "active",
-                 label: `🇿🇦 ${w.name || "ZAR Wallet"} (${w.currency})`
+                 label: `🇿🇦 ${w.name || "ZAR Wallet"} (${w.id}) - ${w.status || 'active'}`
                }));
            }
          }
@@ -207,7 +212,7 @@ export const fetchDebitoPayWallets = createServerFn({ method: "POST" })
          continue;
        }
      }
-
+ 
      return [];
   });
 
