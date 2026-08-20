@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const DEBITOPAY_URLS = {
-  live: "https://mpesaemolatech.com", // Base URL para API de pagamentos real da Débito Pay
-  sandbox: "https://sandbox.mpesaemolatech.com",
+  live: "https://api.debitopay.com", // Domínio oficial atualizado após auditoria
+  sandbox: "https://sandbox.debitopay.com",
 };
 
 export type DebitoPayEnv = "sandbox" | "live";
@@ -76,7 +76,7 @@ export async function validateDebitoPayWallet(auth: DebitoPayAuth, walletId: str
   return callDebitoPay({
     auth,
     method: "GET",
-    path: `/v1/wallets/${walletId}`,
+    path: `/v1/wallets/${walletId}`, // Conforme documentação: GET /v1/wallets/{id}
   });
 }
 
