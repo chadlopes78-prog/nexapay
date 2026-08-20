@@ -9,7 +9,7 @@ import {
 
 const PaymentInput = z.object({
   productId: z.string().min(1).max(120),
-  method: z.enum(["mpesa", "emola", "card", "eft", "bank_transfer"]),
+  method: z.enum(["mpesa", "emola", "payfast", "card", "eft", "bank_transfer"]),
   msisdn: z.string().min(9).max(20),
   customerName: z.string().min(1).max(100),
   contactPhone: z.string().max(20).optional(),
