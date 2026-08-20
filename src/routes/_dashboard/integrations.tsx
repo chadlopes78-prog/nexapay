@@ -1107,20 +1107,35 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
       </div>
 
 
-      <div className="grid gap-2">
-        <Label>Wallet ZAR</Label>
-        <div className="flex gap-2">
-          <select
-            value={walletZa}
-            onChange={(e) => setWalletZa(e.target.value)}
-            className="flex-1 h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-          >
-            <option value="">Selecionar wallet...</option>
-            {wallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
-          </select>
-          <Button variant="outline" size="sm" onClick={handleFetchWallets} disabled={isFetchingWallets}>
-            {isFetchingWallets ? "Buscando..." : "Buscar wallets"}
-          </Button>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label>Wallet ZAR (Auto)</Label>
+          <div className="flex gap-2">
+            <select
+              value={walletZa}
+              onChange={(e) => setWalletZa(e.target.value)}
+              className="flex-1 h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+            >
+              <option value="">Buscar wallets...</option>
+              {wallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+            </select>
+            <Button variant="outline" size="sm" onClick={handleFetchWallets} disabled={isFetchingWallets}>
+              {isFetchingWallets ? "..." : "Buscar"}
+            </Button>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <Label>Wallet ID ZAR (Manual)</Label>
+          <div className="flex gap-2">
+            <Input
+              value={walletZa}
+              onChange={(e) => setWalletZa(e.target.value)}
+              placeholder="Digite o Wallet ID"
+            />
+            <Button variant="outline" size="sm" onClick={handleTest}>
+              Validar
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -1130,7 +1145,7 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
           type="password"
           value={webhookSecret}
           onChange={(e) => setWebhookSecret(e.target.value)}
-          placeholder="Opcional - para validação de assinatura"
+          placeholder={config?.webhookSecretMasked || "Opcional - para validação de assinatura"}
         />
       </div>
 

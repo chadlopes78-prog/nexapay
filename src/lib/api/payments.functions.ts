@@ -496,7 +496,7 @@ export const initiateSale = createServerFn({ method: "POST" })
       );
     let productQuery = supabaseAdmin
       .from("products")
-      .select("id, price, status, user_id, access_link, delivery_link");
+      .select("id, price, status, user_id, country, currency, access_link, delivery_link");
     productQuery = isUuid
       ? productQuery.eq("id", data.productId)
       : productQuery.eq("custom_url", data.productId);
@@ -510,9 +510,14 @@ export const initiateSale = createServerFn({ method: "POST" })
     if (!creds) {
       return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
     }
-    const walletId = data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
+    const isZa = product.country === "ZA" || product.currency === "ZAR";
+    const walletId = isZa 
+      ? creds.wallet_za 
+      : (data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
+      
     if (!walletId) {
-      return { success: false, error: `Carteira ${data.method.toUpperCase()} não configurada pelo vendedor.` };
+      const methodLabel = isZa ? "ZAR (África do Sul)" : data.method.toUpperCase();
+      return { success: false, error: `Carteira ${methodLabel} não configurada pelo vendedor.` };
     }
 
     const amount = Number(product.price);
@@ -581,7 +586,7 @@ export const chargeSale = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sale, error: saleErr } = await supabaseAdmin
       .from("sales")
-      .select("id, status, amount, payment_method, customer_phone, payment_reference, user_id, products(access_link, delivery_link)")
+      .select("id, status, amount, payment_method, customer_phone, payment_reference, user_id, country, currency, products(access_link, delivery_link)")
       .eq("id", data.saleId)
       .maybeSingle();
     if (saleErr || !sale) return { success: false, error: "Venda não encontrada." };
@@ -597,8 +602,12 @@ export const chargeSale = createServerFn({ method: "POST" })
     if (!creds) {
       return { success: false, saleId: sale.id, error: "Vendedor sem integração de pagamento configurada." };
     }
-    const method = sale.payment_method as "mpesa" | "emola";
-    const walletId = method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
+    const paymentMethod = sale.payment_method;
+    const isZa = sale.country === "ZA" || sale.currency === "ZAR";
+    const walletId = isZa 
+      ? creds.wallet_za 
+      : (paymentMethod === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
+
     if (!walletId) return { success: false, saleId: sale.id, error: "Carteira não configurada." };
 
     const {
@@ -622,9 +631,11 @@ export const chargeSale = createServerFn({ method: "POST" })
       const { PAYMENT_WAIT_WINDOW_MS } = await import("@/lib/payments/timing");
       const timeoutId = setTimeout(() => controller.abort(), PAYMENT_WAIT_WINDOW_MS);
       const endpoint =
-        method === "mpesa"
-          ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
-          : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
+        isZa
+          ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/debitopay-payment/${walletId}`
+          : (paymentMethod === "mpesa"
+            ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
+            : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`);
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -648,7 +659,7 @@ export const chargeSale = createServerFn({ method: "POST" })
       const text = await res.text();
       let json: Record<string, unknown> | null = null;
       try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
-      console.info("e2payment response", { status: res.status, method, reference, body: text?.slice(0, 800) });
+      console.info("e2payment response", { status: res.status, paymentMethod, reference, body: text?.slice(0, 800) });
 
       const transactionId = readGatewayTransactionId(json);
       const finalStatus = normalizeGatewayStatus(json, res.ok, res.status);
@@ -740,7 +751,7 @@ export const startPayment = createServerFn({ method: "POST" })
       );
     let productQuery = supabaseAdmin
       .from("products")
-      .select("id, price, status, user_id, access_link, delivery_link");
+      .select("id, price, status, user_id, country, currency, access_link, delivery_link");
     productQuery = isUuid
       ? productQuery.eq("id", data.productId)
       : productQuery.eq("custom_url", data.productId);
@@ -765,8 +776,12 @@ export const startPayment = createServerFn({ method: "POST" })
 
     const creds = await loadUserCreds(product.user_id);
     if (!creds) return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
-    const walletId = data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
-    if (!walletId) return { success: false, error: `Carteira ${data.method.toUpperCase()} não configurada.` };
+    const isZa = product.country === "ZA" || product.currency === "ZAR";
+    const walletId = isZa 
+      ? creds.wallet_za 
+      : (data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
+
+    if (!walletId) return { success: false, error: `Carteira ${isZa ? "ZAR" : data.method.toUpperCase()} não configurada.` };
     mark("creds");
 
 
