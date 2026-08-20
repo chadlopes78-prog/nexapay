@@ -600,8 +600,8 @@ export const initiateSale = createServerFn({ method: "POST" })
       return { success: false, error: "Não foi possível registar a venda." };
     }
 
-    const isZaSale = product.country === "ZA" || product.currency === "ZAR" || data.method === "payfast" || data.method === "card" || data.method === "eft";
     if (isZaSale) {
+
       const { waitUntil } = await import("@/lib/runtime-context.server");
       const chargeTask = chargeSale({ data: { saleId: sale.id } }).catch((err) =>
         console.warn("ZA initial charge background failed", err),
