@@ -852,86 +852,81 @@ function CheckoutPage() {
                 Método de Pagamento
               </h3>
               <div className="grid grid-cols-2 gap-3">
-                {(product as any)?.country === "ZA" ? (
-                  <>
+                {availableMethods.map((method) => {
+                  const isMpesa = method === "mpesa";
+                  const isEmola = method === "emola";
+                  const isPayFast = method === "payfast";
+                  const isCard = method === "card";
+                  const isEft = method === "eft";
+
+                  let label = method;
+                  let subLabel = "";
+                  let icon = <CreditCard className="h-5 w-5 text-slate-600" />;
+                  let imgSrc = "";
+
+                  if (isMpesa) {
+                    label = "M-Pesa";
+                    subLabel = "Vodacom";
+                    imgSrc = "/mpesa-logo.jpg";
+                  } else if (isEmola) {
+                    label = "e-Mola";
+                    subLabel = "Movitel";
+                    imgSrc = "/emola-logo.jpg";
+                  } else if (isPayFast) {
+                    label = "PayFast";
+                    subLabel = "ZA Card/EFT";
+                    icon = <CreditCard className="h-5 w-5 text-slate-600" />;
+                  } else if (isCard) {
+                    label = "Cartão";
+                    subLabel = "Visa/MC";
+                  } else if (isEft) {
+                    label = "Banco";
+                    subLabel = "EFT/Instant";
+                    icon = <RefreshCw className="h-5 w-5 text-slate-600" />;
+                  }
+
+                  return (
                     <button
+                      key={method}
                       type="button"
-                      onClick={() => setPaymentMethod("card")}
+                      onClick={() => {
+                        setPaymentMethod(method as any);
+                        if (!isPayFast && !isCard && !isEft) setPhone("");
+                      }}
                       className={cn(
                         "relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all bg-white",
-                        paymentMethod === "card"
+                        paymentMethod === method
                           ? "border-[var(--brand)] bg-[var(--brand-5)]"
                           : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
                       )}
                     >
-                      {paymentMethod === "card" && <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[var(--brand)]" />}
-                      <div className="w-11 h-11 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
-                        <CreditCard className="h-5 w-5 text-slate-600" />
-                      </div>
-                      <span className="text-sm font-bold text-[#1e293b]">Cartão</span>
-                      <span className="text-[9px] font-semibold uppercase tracking-wider text-[#94a3b8] mt-0.5">Visa/MC</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod("eft")}
-                      className={cn(
-                        "relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all bg-white",
-                        paymentMethod === "eft"
-                          ? "border-[var(--brand)] bg-[var(--brand-5)]"
-                          : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
-                      )}
-                    >
-                      {paymentMethod === "eft" && <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[var(--brand)]" />}
-                      <div className="w-11 h-11 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
-                        <RefreshCw className="h-5 w-5 text-slate-600" />
-                      </div>
-                      <span className="text-sm font-bold text-[#1e293b]">Banco</span>
-                      <span className="text-[9px] font-semibold uppercase tracking-wider text-[#94a3b8] mt-0.5">EFT/Instant</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => { setPaymentMethod("mpesa"); setPhone(""); }}
-                      className={cn(
-                        "relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all bg-white",
-                        paymentMethod === "mpesa"
-                          ? "border-[var(--brand)] bg-[var(--brand-5)]"
-                          : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
-                      )}
-                    >
-                      {paymentMethod === "mpesa" && (
+                      {paymentMethod === method && (
                         <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[var(--brand)]" />
                       )}
                       <div className="w-11 h-11 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
-                        <img src="/mpesa-logo.jpg" width={44} height={44} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="M-Pesa" />
+                        {imgSrc ? (
+                          <img
+                            src={imgSrc}
+                            width={44}
+                            height={44}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-full object-cover"
+                            alt={label}
+                          />
+                        ) : (
+                          icon
+                        )}
                       </div>
-                      <span className="text-sm font-bold text-[#1e293b]">M-Pesa</span>
-                      <span className="text-[9px] font-semibold uppercase tracking-wider text-[#94a3b8] mt-0.5">Vodacom</span>
+                      <span className="text-sm font-bold text-[#1e293b]">{label}</span>
+                      <span className="text-[9px] font-semibold uppercase tracking-wider text-[#94a3b8] mt-0.5">
+                        {subLabel}
+                      </span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => { setPaymentMethod("emola"); setPhone(""); }}
-                      className={cn(
-                        "relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all bg-white",
-                        paymentMethod === "emola"
-                          ? "border-[var(--brand)] bg-[var(--brand-5)]"
-                          : "border-[#e8ecf1] hover:border-[var(--brand-30)]",
-                      )}
-                    >
-                      {paymentMethod === "emola" && (
-                        <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-[var(--brand)]" />
-                      )}
-                      <div className="w-11 h-11 rounded-full bg-white shadow-sm mb-2 flex items-center justify-center overflow-hidden ring-1 ring-[#e8ecf1]">
-                        <img src="/emola-logo.jpg" width={44} height={44} loading="lazy" decoding="async" className="h-full w-full object-cover" alt="e-Mola" />
-                      </div>
-                      <span className="text-sm font-bold text-[#1e293b]">e-Mola</span>
-                      <span className="text-[9px] font-semibold uppercase tracking-wider text-[#94a3b8] mt-0.5">Movitel</span>
-                    </button>
-                  </>
-                )}
+                  );
+                })}
               </div>
+
 
 
               {/* Número de pagamento em destaque */}
@@ -945,37 +940,53 @@ function CheckoutPage() {
                       {(product as any)?.country === "ZA" ? "Detalhes do Pagamento" : "Número para fazer o pagamento"}
                     </p>
                     <p className="text-[10px] text-[#64748b]">
-                      {(product as any)?.country === "ZA" 
-                        ? (paymentMethod === "card" ? "Visa, Mastercard ou AMEX" : "EFT Bancário Instantâneo")
+                      {(product as any)?.country === "ZA" || paymentMethod === "payfast"
+                        ? (paymentMethod === "eft" ? "EFT Bancário Instantâneo" : "Cartão Visa, Mastercard ou AMEX")
                         : (paymentMethod === "mpesa" ? "M-Pesa · 84 ou 85" : "e-Mola · 86 ou 87")}
                     </p>
 
+
                   </div>
                 </div>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-[#e8ecf1] pr-2">
-                    {(product as any)?.country === "ZA" ? (
-                      <>
-                        <span className="text-lg">🇿🇦</span>
-                        <span className="text-xs font-semibold text-[#64748b]">+27</span>
-                      </>
-                    ) : (
-                      <>
-                        <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
-                        <span className="text-xs font-semibold text-[#64748b]">+258</span>
-                      </>
-                    )}
-                  </div>
+                 <div className="relative">
+                  {paymentMethod !== "payfast" && paymentMethod !== "card" && paymentMethod !== "eft" && (
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none border-r border-[#e8ecf1] pr-2">
+                      {(product as any)?.country === "ZA" ? (
+                        <>
+                          <span className="text-lg">🇿🇦</span>
+                          <span className="text-xs font-semibold text-[#64748b]">+27</span>
+                        </>
+                      ) : (
+                        <>
+                          <img src={mozFlag.url} alt="MZ" width={20} height={14} loading="lazy" decoding="async" className="h-3.5 w-5 object-cover rounded-sm" />
+                          <span className="text-xs font-semibold text-[#64748b]">+258</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
 
                   <Input
-                    placeholder={(product as any)?.country === "ZA" ? "Número de telefone SA" : (paymentMethod === "mpesa" ? "84 / 85 xxx xxxx" : "86 / 87 xxx xxxx")}
+                    placeholder={
+                      (paymentMethod === "payfast" || paymentMethod === "card" || paymentMethod === "eft")
+                        ? "E-mail para receber o acesso"
+                        : ((product as any)?.country === "ZA" ? "Número de telefone SA" : (paymentMethod === "mpesa" ? "84 / 85 xxx xxxx" : "86 / 87 xxx xxxx"))
+                    }
                     required
-                    inputMode="tel"
+                    inputMode={
+                      (paymentMethod === "payfast" || paymentMethod === "card" || paymentMethod === "eft")
+                        ? "email"
+                        : "tel"
+                    }
                     disabled={processingPayment}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="h-13 pl-[78px] rounded-xl border-[var(--brand-25)] bg-white text-base font-semibold tracking-wide focus-visible:ring-2 focus-visible:ring-[var(--brand-20)] focus-visible:border-[var(--brand)] disabled:opacity-70 disabled:cursor-not-allowed"
+                    className={cn(
+                      "h-13 rounded-xl border-[var(--brand-25)] bg-white text-base font-semibold tracking-wide focus-visible:ring-2 focus-visible:ring-[var(--brand-20)] focus-visible:border-[var(--brand)] disabled:opacity-70 disabled:cursor-not-allowed",
+                      (paymentMethod !== "payfast" && paymentMethod !== "card" && paymentMethod !== "eft") && "pl-[78px]"
+                    )}
                   />
+
                 </div>
 
                 {/* Status inteligente integrado — substitui o overlay desfocado */}
