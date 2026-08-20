@@ -1,30 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-// Olá. Estamos integrando a API Débito Pay para pagamentos na África do Sul (ZAR). Ao tentar acessar https://api.debitopay.com/v1/wallets/34471 recebemos HTTP 525 – SSL Handshake Failed e não conseguimos conectar a https://api.debitopay.com. Por favor confirmem:
-// 
-// 
-// 
-// 
-// - Se https://api.debitopay.com é a URL oficial LIVE.  
-// 
-// - Se há indisponibilidade ou problema SSL/TLS neste domínio.  
-// 
-// - Qual é a Base URL correta para produção.  
-// 
-// - Qual é a Base URL correta para sandbox.  
-// 
-// - Se GET /v1/wallets/{id} é o endpoint correto para consultar uma wallet.  
-// 
-// - Se a Wallet ID 34471 está ativa e configurada para ZAR/África do Sul.  
-// 
-// - Se há requisitos de IP whitelist, mTLS, certificado cliente ou firewall.  
-// 
-// - O erro ocorre antes da autenticação.
-// 
-// 
-// 
-// 
-// Agradecemos a confirmação técnica para concluir a integração.
+// Corrija a página /integrations para que o cartão Débito Pay 🇿🇦 permaneça visível após conexão, mostrando status, mercado, moeda, wallet mascarada, ambiente, métodos configurados e botões Gerir integração e Testar conexão, sem expor API Key. Não altere credenciais, endpoints ou autenticação. Verifique que o checkout para country=ZA e currency=ZAR usa essa integração exclusivamente. Confirme que a criação de pagamento chama realmente a Débito Pay, que o webhook está configurado e processa idempotentemente, e que a venda só fica APROVADA após confirmação real do provedor. Após correção, informe: Integração ZA: Conectada/Não conectada; Wallet ZAR: Validada/Não validada; Checkout ZA utiliza esta integração: Sim/Não; Criação real de pagamento implementada: Sim/Não; Endpoint utilizado: [endpoint real]; Webhook funcional: Sim/Não; Consulta de status implementada: Sim/Não; Métodos ZA disponíveis: [lista real]; Pronto para cobrança LIVE de baixo valor: Sim/Não (listar o que falta se Não). Não realize pagamento real.
 
 export const Route = createFileRoute("/")({
   component: Index,
