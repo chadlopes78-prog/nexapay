@@ -30,6 +30,7 @@ import { Route as DashboardFilesRouteImport } from './routes/_dashboard/files'
 import { Route as DashboardDashboardRouteImport } from './routes/_dashboard/dashboard'
 import { Route as DashboardCustomersRouteImport } from './routes/_dashboard/customers'
 import { Route as ApiPublicE2paymentWebhookRouteImport } from './routes/api/public/e2payment-webhook'
+import { Route as ApiPublicDebitoWebhookRouteImport } from './routes/api/public/debito-webhook'
 import { Route as DashboardReportsTrafficRouteImport } from './routes/_dashboard.reports.traffic'
 import { Route as ApiPublicHooksSweepSmsRouteImport } from './routes/api/public/hooks/sweep-sms'
 import { Route as ApiPublicHooksSweepPushcutRouteImport } from './routes/api/public/hooks/sweep-pushcut'
@@ -141,6 +142,11 @@ const ApiPublicE2paymentWebhookRoute =
     path: '/api/public/e2payment-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicDebitoWebhookRoute = ApiPublicDebitoWebhookRouteImport.update({
+  id: '/api/public/debito-webhook',
+  path: '/api/public/debito-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardReportsTrafficRoute = DashboardReportsTrafficRouteImport.update({
   id: '/reports/traffic',
   path: '/reports/traffic',
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/sms': typeof DashboardSmsRoute
   '/p/$productId': typeof PProductIdRoute
   '/reports/traffic': typeof DashboardReportsTrafficRoute
+  '/api/public/debito-webhook': typeof ApiPublicDebitoWebhookRoute
   '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
   '/api/public/hooks/process-webhook-queue': typeof ApiPublicHooksProcessWebhookQueueRoute
   '/api/public/hooks/sweep-pending-sales': typeof ApiPublicHooksSweepPendingSalesRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/sms': typeof DashboardSmsRoute
   '/p/$productId': typeof PProductIdRoute
   '/reports/traffic': typeof DashboardReportsTrafficRoute
+  '/api/public/debito-webhook': typeof ApiPublicDebitoWebhookRoute
   '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
   '/api/public/hooks/process-webhook-queue': typeof ApiPublicHooksProcessWebhookQueueRoute
   '/api/public/hooks/sweep-pending-sales': typeof ApiPublicHooksSweepPendingSalesRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/_dashboard/sms': typeof DashboardSmsRoute
   '/p/$productId': typeof PProductIdRoute
   '/_dashboard/reports/traffic': typeof DashboardReportsTrafficRoute
+  '/api/public/debito-webhook': typeof ApiPublicDebitoWebhookRoute
   '/api/public/e2payment-webhook': typeof ApiPublicE2paymentWebhookRoute
   '/api/public/hooks/process-webhook-queue': typeof ApiPublicHooksProcessWebhookQueueRoute
   '/api/public/hooks/sweep-pending-sales': typeof ApiPublicHooksSweepPendingSalesRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/sms'
     | '/p/$productId'
     | '/reports/traffic'
+    | '/api/public/debito-webhook'
     | '/api/public/e2payment-webhook'
     | '/api/public/hooks/process-webhook-queue'
     | '/api/public/hooks/sweep-pending-sales'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/sms'
     | '/p/$productId'
     | '/reports/traffic'
+    | '/api/public/debito-webhook'
     | '/api/public/e2payment-webhook'
     | '/api/public/hooks/process-webhook-queue'
     | '/api/public/hooks/sweep-pending-sales'
@@ -331,6 +342,7 @@ export interface FileRouteTypes {
     | '/_dashboard/sms'
     | '/p/$productId'
     | '/_dashboard/reports/traffic'
+    | '/api/public/debito-webhook'
     | '/api/public/e2payment-webhook'
     | '/api/public/hooks/process-webhook-queue'
     | '/api/public/hooks/sweep-pending-sales'
@@ -348,6 +360,7 @@ export interface RootRouteChildren {
   SuccessRoute: typeof SuccessRoute
   WaitingApprovalRoute: typeof WaitingApprovalRoute
   PProductIdRoute: typeof PProductIdRoute
+  ApiPublicDebitoWebhookRoute: typeof ApiPublicDebitoWebhookRoute
   ApiPublicE2paymentWebhookRoute: typeof ApiPublicE2paymentWebhookRoute
   ApiPublicHooksProcessWebhookQueueRoute: typeof ApiPublicHooksProcessWebhookQueueRoute
   ApiPublicHooksSweepPendingSalesRoute: typeof ApiPublicHooksSweepPendingSalesRoute
@@ -504,6 +517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicE2paymentWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/debito-webhook': {
+      id: '/api/public/debito-webhook'
+      path: '/api/public/debito-webhook'
+      fullPath: '/api/public/debito-webhook'
+      preLoaderRoute: typeof ApiPublicDebitoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_dashboard/reports/traffic': {
       id: '/_dashboard/reports/traffic'
       path: '/reports/traffic'
@@ -586,6 +606,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuccessRoute: SuccessRoute,
   WaitingApprovalRoute: WaitingApprovalRoute,
   PProductIdRoute: PProductIdRoute,
+  ApiPublicDebitoWebhookRoute: ApiPublicDebitoWebhookRoute,
   ApiPublicE2paymentWebhookRoute: ApiPublicE2paymentWebhookRoute,
   ApiPublicHooksProcessWebhookQueueRoute:
     ApiPublicHooksProcessWebhookQueueRoute,

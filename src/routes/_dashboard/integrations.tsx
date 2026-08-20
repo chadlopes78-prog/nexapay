@@ -52,7 +52,9 @@ type IntegrationId =
   | "webhooks"
   | "e2payments"
   | "custom_api"
-  | "pushcut";
+  | "pushcut"
+  | "debitopay_za";
+
 
 interface FieldDef {
   key: string;
@@ -70,7 +72,7 @@ interface IntegrationDef {
   icon: React.ComponentType<{ className?: string }>;
   color: string;
   fields?: FieldDef[];
-  customEditor?: "webhooks" | "custom_api" | "e2payments" | "pushcut";
+  customEditor?: "webhooks" | "custom_api" | "e2payments" | "pushcut" | "debitopay_za";
 }
 
 const INTEGRATIONS: IntegrationDef[] = [
