@@ -99,49 +99,6 @@ export const testDebitoPayConnection = createServerFn({ method: "POST" })
     };
   });
 
-    if (walletFound) {
-      return {
-        success: true,
-        message: `✅ Conectado com sucesso!\nAmbiente: ${data.environment.toUpperCase()}\nMoeda: ${walletData.currency}\nStatus: ${walletData.status || "Ativa"}\nWallet ID: ${data.walletZa}`,
-        debug: debugLog
-      };
-    }
-
-    // Se falhou, construir mensagem detalhada
-    let detailedMessage = "❌ Falha na Integração\n\n";
-    if (lastError?.type === "auth") {
-      detailedMessage += `Motivo: Falha na Autenticação (HTTP ${lastError.status})\n`;
-      detailedMessage += `Dica: Verifique se a API Key pertence ao ambiente ${data.environment.toUpperCase()}.\n`;
-    } else if (lastError?.type === "wallet") {
-      detailedMessage += `Motivo: Wallet Inválida/Não Encontrada (HTTP ${lastError.status})\n`;
-      detailedMessage += `ID Enviado: ${data.walletZa}\n`;
-      if (lastError.status === 404) detailedMessage += "Dica: A wallet informada não existe nesta conta.\n";
-    } else if (lastError?.type === "network") {
-      detailedMessage += `Motivo: Erro de Comunicação\n${lastError.message}\n`;
-    }
-
-    if (lastError) {
-      detailedMessage += `\n--- LOG DE DIAGNÓSTICO ---\n`;
-      detailedMessage += `HTTP: ${lastError.status || "N/A"}\n`;
-      detailedMessage += `Endpoint: ${lastError.endpoint || "N/A"}\n`;
-      detailedMessage += `Provider Code: ${lastError.code || "N/A"}\n`;
-      detailedMessage += `Provider Msg: ${lastError.message || "N/A"}\n`;
-    }
-
-    return { 
-      success: false, 
-      message: detailedMessage,
-      debug: {
-        httpStatus: lastError?.status,
-        endpoint: lastError?.endpoint,
-        environment: data.environment.toUpperCase(),
-        walletId: data.walletZa,
-        providerCode: lastError?.code,
-        providerMessage: lastError?.message
-      }
-    };
-  });
-
 export const fetchDebitoPayWallets = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ apiKey: z.string(), environment: z.enum(["sandbox", "live"]).optional() }).parse(input))
   .handler(async ({ data }) => {
