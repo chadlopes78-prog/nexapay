@@ -851,7 +851,7 @@ export const startPayment = createServerFn({ method: "POST" })
     // Insert sale with the final gateway reference + preload OAuth token in parallel.
     // This removes the old insert→update race where a fast webhook could arrive
     // before `payment_reference` existed, leaving checkout stuck in processing.
-    const tokenPromise = isZa 
+    const tokenPromise = isZaSale 
       ? Promise.resolve("ZA_DIRECT_KEY") 
       : getAccessToken(creds.e2p_client_id, creds.e2p_client_secret).catch((e) => e as Error);
     const saleRes = await supabaseAdmin
