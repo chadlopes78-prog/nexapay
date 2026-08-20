@@ -439,6 +439,7 @@ export type Database = {
           access_link: string | null
           category: string | null
           checkout_banner_url: string | null
+          country: string | null
           created_at: string
           custom_url: string | null
           delivery_file_url: string | null
@@ -463,6 +464,7 @@ export type Database = {
           access_link?: string | null
           category?: string | null
           checkout_banner_url?: string | null
+          country?: string | null
           created_at?: string
           custom_url?: string | null
           delivery_file_url?: string | null
@@ -487,6 +489,7 @@ export type Database = {
           access_link?: string | null
           category?: string | null
           checkout_banner_url?: string | null
+          country?: string | null
           created_at?: string
           custom_url?: string | null
           delivery_file_url?: string | null
@@ -658,7 +661,9 @@ export type Database = {
       sales: {
         Row: {
           amount: number
+          country: string | null
           created_at: string
+          currency: string | null
           customer_id: string | null
           customer_name: string | null
           customer_phone: string | null
@@ -680,7 +685,9 @@ export type Database = {
         }
         Insert: {
           amount: number
+          country?: string | null
           created_at?: string
+          currency?: string | null
           customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
@@ -702,7 +709,9 @@ export type Database = {
         }
         Update: {
           amount?: number
+          country?: string | null
           created_at?: string
+          currency?: string | null
           customer_id?: string | null
           customer_name?: string | null
           customer_phone?: string | null
@@ -952,6 +961,7 @@ export type Database = {
           user_id: string
           wallet_emola: string | null
           wallet_mpesa: string | null
+          wallet_za: string | null
         }
         Insert: {
           created_at?: string
@@ -961,6 +971,7 @@ export type Database = {
           user_id: string
           wallet_emola?: string | null
           wallet_mpesa?: string | null
+          wallet_za?: string | null
         }
         Update: {
           created_at?: string
@@ -970,6 +981,7 @@ export type Database = {
           user_id?: string
           wallet_emola?: string | null
           wallet_mpesa?: string | null
+          wallet_za?: string | null
         }
         Relationships: []
       }
