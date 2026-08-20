@@ -44,7 +44,11 @@ export const getPublicProduct = createServerFn({ method: "GET" })
       console.error("Public checkout product lookup failed:", error.message);
     }
 
-    if (!product || (product.status && product.status !== "active")) {
+    // O SELECT deve retornar apenas produtos que existem. 
+    // O RLS deve ser a primeira linha de defesa, mas garantimos aqui que 
+    // um produto deletado (status="deleted") ou explicitamente inativo 
+    // não seja retornado como sucesso.
+    if (!product || product.status === "deleted") {
       return { product: null, checkout: null, defaultPixel: null };
     }
 

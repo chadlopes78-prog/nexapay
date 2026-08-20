@@ -595,9 +595,9 @@ function CheckoutPage() {
           <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShieldAlert className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">Produto Indisponível</h1>
+          <h1 className="text-xl font-bold text-slate-900">Link Desativado</h1>
           <p className="text-slate-500 mt-3 text-sm">
-            O link pode ter expirado ou o produto foi removido.
+            Este produto não está disponível para venda no momento.
           </p>
           <Button className="mt-6 w-full h-11 rounded-xl font-bold bg-slate-900 hover:bg-black" asChild>
             <a href="/">Voltar ao início</a>
