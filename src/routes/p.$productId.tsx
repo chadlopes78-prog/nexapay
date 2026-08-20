@@ -1083,7 +1083,7 @@ type PaymentStatusCardProps = {
   processing: boolean;
   error: string | null;
   failureCode: string | null;
-  paymentMethod: "mpesa" | "emola" | "card" | "eft";
+  paymentMethod: "mpesa" | "emola" | "card" | "eft" | "payfast";
 
   phone: string;
   onRetry: () => void;
@@ -1102,7 +1102,7 @@ const PaymentStatusCard = memo(function PaymentStatusCard({
   onRetry,
   retryCooldownLeft,
 }: PaymentStatusCardProps) {
-  const methodLabel = paymentMethod === "mpesa" ? "M-Pesa" : paymentMethod === "emola" ? "e-Mola" : paymentMethod === "card" ? "Visa / Mastercard" : "EFT / Banco";
+  const methodLabel = paymentMethod === "mpesa" ? "M-Pesa" : paymentMethod === "emola" ? "e-Mola" : paymentMethod === "payfast" ? "PayFast" : paymentMethod === "card" ? "Visa / Mastercard" : "EFT / Banco";
   const failureCodeKey = (failureCode ?? "").toLowerCase();
   const wasCancelled = CANCELLED_CODES.has(failureCodeKey);
 
@@ -1119,7 +1119,7 @@ const PaymentStatusCard = memo(function PaymentStatusCard({
               Confirme no seu telefone
             </p>
             <p className="mt-1 text-xs text-[#64748b] leading-relaxed">
-              Pedido enviado via <b>{methodLabel}</b> para <b>+258 {phone}</b>.
+              Pedido enviado via <b>{methodLabel}</b> para <b>{(paymentMethod === "payfast" || paymentMethod === "card" || paymentMethod === "eft") ? phone : `+258 ${phone}`}</b>.
               Não feche esta página. Introduza o PIN na aba que vai receber para concluir a compra.
             </p>
           </div>
