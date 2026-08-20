@@ -467,9 +467,10 @@ export const prewarmPaymentGateway = createServerFn({ method: "POST" })
   });
 
 async function validateAndLoad(data: z.infer<typeof PaymentInput>, product: any) {
-  const isZa = product.country === "ZA" || product.currency === "ZAR";
+  const isZa = product.country === "ZA" || product.currency === "ZAR" || data.method === "payfast" || data.method === "card" || data.method === "eft";
   
   if (isZa) {
+
     // Para ZA, o número de telefone pode ser +27 ou 0 seguido de 9 dígitos.
     // Vamos apenas garantir que tenha dígitos.
     const digits = data.msisdn.replace(/\D/g, "");
@@ -525,10 +526,11 @@ export const initiateSale = createServerFn({ method: "POST" })
     if (!creds) {
       return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
     }
-    const isZaSale = product.country === "ZA" || product.currency === "ZAR";
+    const isZaSale = product.country === "ZA" || product.currency === "ZAR" || data.method === "payfast" || data.method === "card" || data.method === "eft";
     const walletId = isZaSale 
       ? creds.wallet_za 
       : (data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
+
       
     if (!walletId) {
       const methodLabel = isZaSale ? "ZAR (África do Sul)" : data.method.toUpperCase();
@@ -536,7 +538,7 @@ export const initiateSale = createServerFn({ method: "POST" })
     }
 
     const amount = Number(product.price);
-    const isZaProduct = product.country === "ZA" || product.currency === "ZAR";
+    const isZaProduct = product.country === "ZA" || product.currency === "ZAR" || data.method === "payfast" || data.method === "card" || data.method === "eft";
     
     if (isZaProduct && amount < 5) {
       return { success: false, error: "O valor mínimo para pagamento é R5." };
