@@ -1048,7 +1048,7 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
     if (!apiKey && !config?.connected) return toast.error("Insira a API Key");
     setIsFetchingWallets(true);
     try {
-      const res = await fetchWalletsFn({ data: { apiKey: apiKey || "dummy" } });
+      const res = await fetchWalletsFn({ data: { apiKey: apiKey || "dummy", environment: env } });
       setWallets(res);
       toast.success("Wallets sincronizadas");
     } finally {
