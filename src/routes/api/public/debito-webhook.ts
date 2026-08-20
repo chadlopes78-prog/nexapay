@@ -51,7 +51,7 @@ export const Route = createFileRoute("/api/public/debito-webhook")({
         const status = normalizeGatewayStatus(payload, true);
         if (status === "paid") {
           await confirmSalePayment({
-            saleId: saleData.id,
+            saleId: saleData.id!,
             transactionId,
             reference,
             rawPayload: payload,
