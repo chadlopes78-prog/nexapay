@@ -1,116 +1,65 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-// Existe um erro na integração real da Débito Pay.
-// Ao tentar validar a Wallet ZAR 34471, o sistema apresenta apenas:
-// “Falha na comunicação com Débito Pay ou Wallet inválida.”
-// ESSA MENSAGEM É GENÉRICA E NÃO É SUFICIENTE.
-// Não altere a homepage. Trabalhe directamente no backend da integração.
+// O erro mudou para:
+// 
+// HTTP 404 — Wallet não encontrada
+// 
+// Endpoint usado:
+// 
+// https://mpesaemolatech.com/v1/wallets/34471
+// 
+// Antes de concluir que a Wallet 34471 está errada, quero uma auditoria imediata.
+// 
 // Documentação obrigatória:
+// 
 // https://debitopay.com/developers/payments-api/
-// Quero que faça DEBUG da chamada REAL realizada quando clico em Validar.
-// 1. MOSTRAR O ERRO REAL
-// Actualmente vocês estão agrupando erro de comunicação, autenticação e wallet inválida na mesma mensagem.
-// Isso deve ser corrigido.
-// O backend deve identificar e registrar:
-// HTTP status retornado
-// endpoint chamado
-// método HTTP
-// resposta da Débito Pay
-// código de erro da Débito
-// mensagem retornada pela Débito
-// ambiente utilizado
-// NUNCA registrar/exibir a API Key completa.
-// 2. DIFERENCIAR OS ERROS
-// Por exemplo:
-// 401
-// → API Key/autenticação inválida
-// 403
-// → acesso não autorizado
-// 404
-// → wallet/endpoint não encontrado
-// 422
-// → parâmetros inválidos
-// 5xx
-// → erro do servidor/provedor
-// Falha de DNS/timeout
-// → erro de comunicação
-// Utilize os códigos e mensagens REAIS da Débito Pay; os exemplos acima são apenas orientação de tratamento HTTP.
-// Não transforme tudo em:
-// “Wallet inválida.”
-// 3. AUDITAR O BOTÃO VALIDAR
-// Quero confirmar que:
-// Wallet ID ZAR = 34471
-// está realmente sendo enviado ao backend.
-// Depois confirme que o backend está consultando a Débito Pay através do endpoint OFICIAL definido na documentação.
-// Não invente endpoint.
-// 4. VERIFICAR AUTENTICAÇÃO
-// Confirme na documentação oficial:
-// URL base de produção
-// URL base sandbox
-// formato exacto da API Key
-// header exacto de autenticação
-// endpoint de wallets
-// formato/ID esperado para uma wallet
-// Compare isso com o código actualmente implementado.
-// Corrija qualquer divergência.
-// 5. AMBIENTE
-// Estou usando:
-// Live / Produção
-// Portanto NÃO envie a requisição para endpoint Sandbox.
-// API Key Live + endpoint Live + Wallet Live precisam pertencer ao mesmo ambiente.
-// 6. BOTÃO “BUSCAR WALLETS”
-// Também teste o botão Buscar.
-// Ele deve consultar a API REAL e retornar as wallets da minha conta.
-// Não quero wallets hardcoded.
-// Se a API retornar uma wallet ZAR, mostrar:
-// Nome
-// Wallet ID
-// Currency
-// Status
-// e permitir seleccioná-la.
-// 7. LOG ADMINISTRATIVO
-// Temporariamente, durante o diagnóstico, quando eu clicar Validar, mostrar algo como:
-// Status da validação
-// HTTP: [status real]
-// Endpoint: [endpoint utilizado, sem secrets]
-// Environment: LIVE
-// Wallet ID: 34471
-// Provider code: [código real]
-// Provider message: [mensagem real]
-// NUNCA mostrar:
-// API Key completa
-// Webhook Secret
-// Authorization header completo
-// 8. NÃO INVENTAR A RESPOSTA
-// Se a chamada nem sequer estiver chegando à Débito Pay, diga:
-// “Requisição não chegou à Débito Pay.”
-// Se a autenticação falhar, diga isso.
-// Se 34471 não existir, diga isso.
-// Se a wallet existir mas não for ZAR, diga isso.
-// Se a wallet estiver inactiva, diga isso.
-// Quero o motivo REAL.
-// 9. DEPOIS DO DEBUG
-// Responda-me com:
-// Endpoint chamado:
+// 
+// Não quero mais suposições.
+// 
+// CONFIRME no código e na documentação oficial:
+// 
+// Esse domínio mpesaemolatech.com é realmente um endpoint oficial da Débito Pay?
+// 
+// O endpoint /v1/wallets/{wallet_id} existe realmente na documentação oficial?
+// 
+// A autenticação usada nessa chamada é exactamente a indicada pela Débito Pay?
+// 
+// A Wallet ID da África do Sul deve mesmo ser validada desta forma?
+// 
+// Existe diferença entre Wallet ID, Merchant ID, Account ID ou outro identificador?
+// 
+// A API Key LIVE que estou usando tem acesso a wallets ZAR?
+// 
+// Se mpesaemolatech.com NÃO estiver explicitamente documentado pela Débito Pay, REMOVA imediatamente esse endpoint da integração ZA.
+// 
+// Não tente adivinhar outro endpoint.
+// 
+// Use apenas endpoints confirmados na documentação oficial.
+// 
+// Depois responda somente com:
+// 
+// Domínio oficial da API Débito Pay LIVE:
 // [...]
-// Método:
+// 
+// Endpoint oficial para listar wallets:
 // [...]
-// HTTP status:
+// 
+// Endpoint oficial para consultar uma wallet:
 // [...]
-// Resposta da Débito Pay:
+// 
+// Método de autenticação:
 // [...]
-// Ambiente:
-// LIVE
-// Wallet enviada:
-// 34471
-// Resultado da autenticação:
+// 
+// Formato esperado do Wallet ID:
 // [...]
-// Motivo exacto da falha:
+// 
+// O ID 34471 foi realmente consultado na API oficial?
+// Sim/Não
+// 
+// Motivo exacto do 404:
 // [...]
-// Ficheiro/Edge Function responsável:
-// [...]
-// NÃO diga apenas “corrigido”.
-// Quero os dados técnicos da chamada que está falhando.
+// 
+// Não diga “wallet inválida” sem antes provar que a chamada foi feita para a API oficial da Débito Pay.
 
 export const Route = createFileRoute("/")({
   component: Index,
