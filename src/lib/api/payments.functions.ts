@@ -510,9 +510,14 @@ export const initiateSale = createServerFn({ method: "POST" })
     if (!creds) {
       return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
     }
-    const walletId = data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
+    const isZa = product.country === "ZA" || product.currency === "ZAR";
+    const walletId = isZa 
+      ? creds.wallet_za 
+      : (data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
+      
     if (!walletId) {
-      return { success: false, error: `Carteira ${data.method.toUpperCase()} não configurada pelo vendedor.` };
+      const methodLabel = isZa ? "ZAR (África do Sul)" : data.method.toUpperCase();
+      return { success: false, error: `Carteira ${methodLabel} não configurada pelo vendedor.` };
     }
 
     const amount = Number(product.price);
@@ -597,8 +602,11 @@ export const chargeSale = createServerFn({ method: "POST" })
     if (!creds) {
       return { success: false, saleId: sale.id, error: "Vendedor sem integração de pagamento configurada." };
     }
-    const method = sale.payment_method as "mpesa" | "emola";
-    const walletId = method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
+    const isZa = sale.country === "ZA" || sale.currency === "ZAR";
+    const walletId = isZa 
+      ? creds.wallet_za 
+      : (sale.payment_method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
+
     if (!walletId) return { success: false, saleId: sale.id, error: "Carteira não configurada." };
 
     const {
@@ -765,8 +773,12 @@ export const startPayment = createServerFn({ method: "POST" })
 
     const creds = await loadUserCreds(product.user_id);
     if (!creds) return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
-    const walletId = data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola;
-    if (!walletId) return { success: false, error: `Carteira ${data.method.toUpperCase()} não configurada.` };
+    const isZa = product.country === "ZA" || product.currency === "ZAR";
+    const walletId = isZa 
+      ? creds.wallet_za 
+      : (data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
+
+    if (!walletId) return { success: false, error: `Carteira ${isZa ? "ZAR" : data.method.toUpperCase()} não configurada.` };
     mark("creds");
 
 
