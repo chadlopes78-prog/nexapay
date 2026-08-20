@@ -1016,6 +1016,7 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
   const [apiKey, setApiKey] = useState("");
   const [walletZa, setWalletZa] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
+  const [values, setValues] = useState<any>({});
   const [wallets, setWallets] = useState<any[]>([]);
   const [isTesting, setIsTesting] = useState(false);
   const [isFetchingWallets, setIsFetchingWallets] = useState(false);
@@ -1024,6 +1025,7 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
     if (config) {
       setEnv(config.environment);
       setWalletZa(config.walletZa);
+      setValues({ merchantId: config.merchantId });
     }
   }, [config]);
 
@@ -1031,7 +1033,7 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
     if (!apiKey && !config?.connected) return toast.error("Insira a API Key para testar");
     setIsTesting(true);
     try {
-      const res = await testFn({ data: { environment: env, apiKey: apiKey || "dummy", walletZa: walletZa || "dummy", webhookSecret } });
+      const res = await testFn({ data: { environment: env, apiKey: apiKey || "dummy", walletZa: walletZa || "dummy", merchantId: values.merchantId || "00000000-0000-0000-0000-000000000000", webhookSecret } });
       if (res.success) {
         toast.success(res.message);
       } else {
@@ -1048,7 +1050,7 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
     if (!apiKey && !config?.connected) return toast.error("Insira a API Key");
     setIsFetchingWallets(true);
     try {
-      const res = await fetchWalletsFn({ data: { apiKey: apiKey || "dummy", environment: env } });
+      const res = await fetchWalletsFn({ data: { apiKey: apiKey || "dummy", environment: env, walletCode: walletZa } });
       setWallets(res);
       toast.success("Wallets sincronizadas");
     } finally {
@@ -1059,7 +1061,7 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
   const handleSave = async () => {
     if (!apiKey && !config?.connected) return toast.error("API Key obrigatória");
     try {
-      await saveFn({ data: { environment: env, apiKey, walletZa, webhookSecret } });
+      await saveFn({ data: { environment: env, apiKey, walletZa, merchantId: values.merchantId, webhookSecret } });
       qc.invalidateQueries({ queryKey: ["debitopay-config"] });
       toast.success("Configuração Débito Pay ZA salva");
       onSaved();
@@ -1109,7 +1111,27 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
-          <Label>Wallet ZAR (Auto)</Label>
+          <Label>Merchant ID (ZA)</Label>
+          <Input
+            value={config?.merchantId || ""}
+            readOnly
+            className="bg-slate-50"
+            placeholder="Salvo no backend"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label>Merchant ID (Novo)</Label>
+          <Input
+            value={values.merchantId || ""}
+            onChange={(e) => setValues({ ...values, merchantId: e.target.value })}
+            placeholder="UUID do Merchant"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label>Wallet Code ZAR (Auto)</Label>
           <div className="flex gap-2">
             <select
               value={walletZa}
@@ -1125,12 +1147,12 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
           </div>
         </div>
         <div className="grid gap-2">
-          <Label>Wallet ID ZAR (Manual)</Label>
+          <Label>Wallet Code ZAR (Manual)</Label>
           <div className="flex gap-2">
             <Input
               value={walletZa}
               onChange={(e) => setWalletZa(e.target.value)}
-              placeholder="Digite o Wallet ID"
+              placeholder="Ex: 34471"
             />
             <Button variant="outline" size="sm" onClick={handleTest}>
               Validar

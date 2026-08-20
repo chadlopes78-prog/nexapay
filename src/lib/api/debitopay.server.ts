@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const DEBITOPAY_URLS = {
-  live: "https://api.debitopay.com", // Domínio oficial atualizado após auditoria
-  sandbox: "https://sandbox.debitopay.com",
+  live: "https://gyqoaningqhurhvdugne.supabase.co/functions/v1",
+  sandbox: "https://gyqoaningqhurhvdugne.supabase.co/functions/v1",
 };
 
 export type DebitoPayEnv = "sandbox" | "live";
@@ -72,34 +72,28 @@ export async function callDebitoPay(options: DebitoPayRequestOptions) {
 /**
  * Valida uma wallet específica.
  */
-export async function validateDebitoPayWallet(auth: DebitoPayAuth, walletId: string) {
+export async function validateDebitoPayWallet(auth: DebitoPayAuth, walletCode: string) {
   return callDebitoPay({
     auth,
     method: "GET",
-    path: `/v1/wallets/${walletId}`, // Conforme documentação: GET /v1/wallets/{id}
+    path: `/wallet-balance?wallet_code=${walletCode}`,
   });
 }
 
 /**
- * Lista wallets da conta.
+ * Inicia um pagamento C2B via PayFast.
  */
-export async function listDebitoPayWallets(auth: DebitoPayAuth) {
-  return callDebitoPay({
-    auth,
-    method: "GET",
-    path: "/v1/wallets",
-  });
-}
-
-/**
- * Inicia um pagamento C2B.
- */
-export async function initiateDebitoPayPayment(auth: DebitoPayAuth, walletId: string, payload: any) {
+export async function initiateDebitoPayPayment(auth: DebitoPayAuth, payload: any) {
   return callDebitoPay({
     auth,
     method: "POST",
-    path: `/v1/c2b/debitopay-payment/${walletId}`,
-    body: payload,
+    path: "/payment-orchestrator",
+    body: {
+      ...payload,
+      action: "process",
+      payment_method: "payfast",
+      currency: "ZAR",
+    },
   });
 }
 
@@ -107,10 +101,25 @@ export async function initiateDebitoPayPayment(auth: DebitoPayAuth, walletId: st
  * Consulta o status de uma transação.
  */
 export async function getDebitoPayTransactionStatus(auth: DebitoPayAuth, transactionId: string) {
-  // A Débito Pay usa o endpoint de pagamentos para consultar status
   return callDebitoPay({
     auth,
-    method: "GET",
-    path: `/v1/payments/${transactionId}`,
+    method: "POST",
+    path: "/payment-orchestrator",
+    body: {
+      action: "check-status",
+      payment_id: transactionId,
+    },
+  });
+}
+
+/**
+ * Cria uma sessão de pagamento (opcional/checkout browser).
+ */
+export async function createDebitoPaySession(auth: DebitoPayAuth, payload: any) {
+  return callDebitoPay({
+    auth,
+    method: "POST",
+    path: "/payment-session",
+    body: payload,
   });
 }

@@ -169,10 +169,10 @@ const GATEWAY_CODE_MAP: Record<string, { status: NormalizedPaymentStatus; code: 
   "ins-2006": { status: "failed", code: "insufficient_funds" },
   "ins-2051": { status: "failed", code: "invalid_msisdn" },
   // Débito Pay ZA (específicos)
-  "dp-0": { status: "paid", code: "success" },
-  "dp-1": { status: "failed", code: "gateway_internal_error" },
-  "dp-5": { status: "cancelled", code: "cancelled_by_user" },
-  "dp-9": { status: "expired", code: "timeout" },
+  "dp-0": { status: "paid" as const, code: "success" },
+  "dp-1": { status: "failed" as const, code: "gateway_internal_error" },
+  "dp-5": { status: "cancelled" as const, code: "cancelled_by_user" },
+  "dp-9": { status: "expired" as const, code: "timeout" },
   // e-Mola / genéricos
   "insufficient_funds": { status: "failed", code: "insufficient_funds" },
   "insufficient_balance": { status: "failed", code: "insufficient_funds" },
@@ -389,7 +389,7 @@ export function normalizeGatewayStatus(
 ): NormalizedPaymentStatus {
   // PRIORIDADE 1 — código estruturado (não depende de texto livre).
   const mappedCode = lookupGatewayCode(input);
-  if (mappedCode) return mappedCode.status;
+  if (mappedCode) return mappedCode.status === "paid" ? "paid" : mappedCode.status;
 
   const payload = asObject(input);
   const data = nestedObject(payload, "data");
@@ -833,6 +833,7 @@ async function dispatchApprovedSideEffects(
     payment_method: sale.payment_method,
     status: "paid",
     payment_status: "paid",
+    gateway_status: "success",
     transaction_id: sale.transaction_id,
     payment_reference: sale.payment_reference,
     paid_at: new Date().toISOString(),
