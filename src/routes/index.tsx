@@ -32,10 +32,10 @@ function Index() {
                   Novo: Checkout Inteligente Disponível
                 </div>
                 <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900">
-                  Venda em Moçambique com M-Pesa e e-Mola
+                  Venda em Moçambique e África do Sul
                 </h1>
                 <p className="mx-auto max-w-[800px] text-gray-500 text-sm md:text-base leading-relaxed">
-                  A plataforma de pagamentos mais rápida e segura para o seu negócio digital. Integre M-Pesa, e-Mola e cartões em minutos e comece a escalar suas vendas hoje mesmo.
+                  A plataforma de pagamentos mais rápida e segura para o seu negócio digital. Integre M-Pesa, e-Mola, EFT e cartões em minutos e comece a escalar suas vendas hoje mesmo.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
@@ -55,6 +55,9 @@ function Index() {
               <div className="flex items-center gap-8 pt-8 grayscale opacity-50">
                 <img src="/mpesa-logo.jpg" alt="M-Pesa" className="h-8 md:h-12 w-auto object-contain" />
                 <img src="/emola-logo.jpg" alt="e-Mola" className="h-8 md:h-12 w-auto object-contain" />
+                <div className="flex items-center gap-2 text-slate-400 font-bold text-lg">
+                  <span className="text-2xl">🇿🇦</span> ZAR
+                </div>
               </div>
             </div>
           </div>
