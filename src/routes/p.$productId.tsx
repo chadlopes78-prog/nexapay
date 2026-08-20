@@ -430,16 +430,11 @@ function CheckoutPage() {
 
       // 1) Cria a venda (rápido). 2) Dispara a cobrança numa chamada
       // SEPARADA que o browser mantém aberta até a operadora responder.
-      // Motivo: quando a cobrança era feita dentro do startPayment e a
-      // resposta era devolvida ao fim de 1,5s, o resto do trabalho ficava
-      // em background no servidor e era frequentemente descartado — a
-      // venda ficava presa em "pending" mesmo depois de o cliente pagar,
-      // sem marcar como aprovada nem redireccionar.
       const paymentPromise = (async (): Promise<PaymentResult> => {
         const init = (await initiateSaleFn({
           data: {
             productId,
-            method: paymentMethod,
+            method: paymentMethod as any,
             msisdn: phone,
             customerName: name,
             contactPhone: contactPhone || undefined,
@@ -453,6 +448,7 @@ function CheckoutPage() {
         // Esta chamada fica aberta enquanto o cliente introduz o PIN.
         return (await chargeSaleFn({ data: { saleId: init.saleId } })) as PaymentResult;
       })();
+
 
       // Começa a observar imediatamente com o ID já conhecido pelo cliente.
       // As primeiras consultas podem retornar not_found até o insert concluir.
