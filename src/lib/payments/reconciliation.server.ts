@@ -71,8 +71,40 @@ async function requestHistory(sale: PendingSale) {
     .eq("user_id", sale.user_id)
     .maybeSingle();
     
-  if (!credentials?.e2p_client_id || !credentials.e2p_client_secret) return null;
+  if (!credentials?.e2p_client_id) return null;
 
+  if (isZA) {
+    // Para ZA, usamos a API direta da Débito Pay (API Key auth)
+    const { getDebitoPayTransactionStatus } = await import("@/lib/api/debitopay.server");
+    const auth = { apiKey: credentials.e2p_client_id, environment: "live" as const };
+    
+    // Se tivermos transaction_id, consultamos diretamente
+    if (sale.transaction_id) {
+      const res = await getDebitoPayTransactionStatus(auth, sale.transaction_id);
+      return res.ok ? { data: [res.data] } : null;
+    }
+    
+    // Caso contrário, usamos o endpoint de paginação ZA oficial (se disponível) ou falhamos graciosamente
+    const baseUrl = "https://mpesaemolatech.com";
+    const endpoint = `${baseUrl}/v1/payments/get/all/paginate/${HISTORY_LIMIT}`;
+    const historyResponse = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${credentials.e2p_client_id}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        client_id: credentials.e2p_client_id,
+        wallet_id: credentials.wallet_za 
+      }),
+    });
+    if (!historyResponse.ok) return null;
+    return historyResponse.json().catch(() => null);
+  }
+
+  // Lógica padrão para Moçambique (E2Payments OAuth)
+  if (!credentials.e2p_client_secret) return null;
   let accessToken: string | null = null;
   const cached = tokenCache.get(credentials.e2p_client_id);
   if (cached && cached.expiresAt > Date.now()) {
@@ -104,11 +136,8 @@ async function requestHistory(sale: PendingSale) {
   }
   if (!accessToken) return null;
 
-  // Se for ZA, não usamos method na URL mas sim o wallet_id de ZA
   const baseUrl = getE2payBaseUrl(credentials.e2p_client_id);
-  const endpoint = isZA 
-    ? `${baseUrl}/v1/payments/get/all/paginate/${HISTORY_LIMIT}`
-    : `${baseUrl}/v1/payments/${sale.payment_method}/get/all/paginate/${HISTORY_LIMIT}`;
+  const endpoint = `${baseUrl}/v1/payments/${sale.payment_method}/get/all/paginate/${HISTORY_LIMIT}`;
 
   const historyResponse = await fetch(
     endpoint,
@@ -121,7 +150,6 @@ async function requestHistory(sale: PendingSale) {
       },
       body: JSON.stringify({ 
         client_id: credentials.e2p_client_id,
-        wallet_id: isZA ? credentials.wallet_za : undefined 
       }),
     },
   );
