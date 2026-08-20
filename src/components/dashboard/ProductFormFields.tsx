@@ -50,7 +50,10 @@ export interface ProductFormFieldsProps {
   bannerUrl: string;
   setBannerUrl?: (v: string) => void;
   showDeliveryFile?: boolean;
+  country: string;
+  setCountry: (v: string) => void;
 }
+
 
 
 function Section({
@@ -199,20 +202,35 @@ export function ProductFormFields(props: ProductFormFieldsProps) {
       )}
 
       {showProduct && (
-        <Section icon={DollarSign} title="Oferta" description="Defina o preço do produto">
-          <div className="grid gap-2 max-w-xs">
-            <Label htmlFor={`${p}-price`}>Preço (MT)</Label>
-            <Input
-              id={`${p}-price`}
-              type="number"
-              value={props.price}
-              onChange={(e) => props.setPrice(e.target.value)}
-              placeholder="1000"
-              required
-            />
+        <Section icon={DollarSign} title="Mercado e Preço" description="Defina o país e o preço do produto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor={`${p}-country`}>País do checkout</Label>
+              <select
+                id={`${p}-country`}
+                value={props.country}
+                onChange={(e) => props.setCountry(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              >
+                <option value="MZ">Moçambique 🇲🇿</option>
+                <option value="ZA">África do Sul 🇿🇦</option>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor={`${p}-price`}>Preço ({props.country === "ZA" ? "ZAR" : "MT"})</Label>
+              <Input
+                id={`${p}-price`}
+                type="number"
+                value={props.price}
+                onChange={(e) => props.setPrice(e.target.value)}
+                placeholder="1000"
+                required
+              />
+            </div>
           </div>
         </Section>
       )}
+
 
       {showProduct && (
         <Section icon={Facebook} title="Rastreamento (Meta Pixel)" description="Opcional — para campanhas do Facebook/Instagram">
@@ -278,13 +296,27 @@ export function ProductFormFields(props: ProductFormFieldsProps) {
       {showCheckout && (
         <Section icon={CreditCard} title="Métodos de pagamento" description="Disponíveis para este produto">
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
-              <Phone className="h-3.5 w-3.5" /> M-Pesa
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-              <Phone className="h-3.5 w-3.5" /> e-Mola
-            </div>
+            {props.country === "ZA" ? (
+              <>
+                <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+                  <CreditCard className="h-3.5 w-3.5" /> Visa / Mastercard
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700">
+                  <Settings2 className="h-3.5 w-3.5" /> EFT / Instant Bank
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                  <Phone className="h-3.5 w-3.5" /> M-Pesa
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                  <Phone className="h-3.5 w-3.5" /> e-Mola
+                </div>
+              </>
+            )}
           </div>
+
         </Section>
       )}
 
@@ -375,7 +407,7 @@ export function ProductFormFields(props: ProductFormFieldsProps) {
             </div>
             <div className="text-right">
               <p className="text-base font-semibold text-slate-900">
-                {props.price ? `${Number(props.price).toLocaleString("pt-MZ")} MT` : "—"}
+                {props.price ? `${Number(props.price).toLocaleString("pt-MZ")} ${props.country === "ZA" ? "R" : "MT"}` : "—"}
               </p>
               <p className="text-[11px] text-emerald-600 font-medium">Ativo</p>
             </div>

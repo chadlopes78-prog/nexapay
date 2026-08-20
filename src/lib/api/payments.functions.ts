@@ -358,9 +358,12 @@ const TOKEN_MIN_TTL_MS = 10 * 60 * 1000;
 // Teto: nunca confia em token por mais de 55 min (E2Payments emite 1h).
 const TOKEN_MAX_TTL_MS = 55 * 60 * 1000;
 
+import { invalidateAccessToken as invalidateAccessTokenInternal } from "@/lib/payments/confirmation.server";
+
 export function invalidateAccessToken(clientId: string) {
   tokenCache.delete(clientId);
   inflightToken.delete(clientId);
+  invalidateAccessTokenInternal(clientId);
 }
 
 async function getAccessToken(clientId: string, clientSecret: string): Promise<string> {
