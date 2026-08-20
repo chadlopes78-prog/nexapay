@@ -1138,11 +1138,13 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
         <Label className="text-blue-900 text-xs font-bold mb-1 block">Webhook URL</Label>
         <div className="flex items-center gap-2">
           <code className="text-[10px] bg-white p-1 rounded border flex-1 truncate">
-            {window.location.origin}/api/public/debito-webhook
+            {config?.webhookUrl}
           </code>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
-            navigator.clipboard.writeText(`${window.location.origin}/api/public/debito-webhook`);
-            toast.success("URL copiada");
+            if (config?.webhookUrl) {
+              navigator.clipboard.writeText(config.webhookUrl);
+              toast.success("URL copiada");
+            }
           }}>
             <Code2 className="h-3 w-3" />
           </Button>
