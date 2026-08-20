@@ -7,6 +7,7 @@ const DebitoPayCredentialsInput = z.object({
   environment: z.enum(["sandbox", "live"]),
   apiKey: z.string().min(1),
   walletZa: z.string().min(1),
+  merchantId: z.string().uuid(),
   webhookSecret: z.string().optional(),
 });
 
@@ -17,7 +18,7 @@ export const getDebitoPayConfig = createServerFn({ method: "GET" })
 
     const { data: creds } = await supabaseAdmin
       .from("user_payment_credentials")
-      .select("e2p_client_id, wallet_za, debitopay_za_webhook_secret")
+      .select("e2p_client_id, wallet_za, debitopay_za_webhook_secret, debitopay_merchant_id")
       .eq("user_id", context.userId)
       .maybeSingle();
 
@@ -29,6 +30,7 @@ export const getDebitoPayConfig = createServerFn({ method: "GET" })
       environment: "live" as const,
       apiKeyMasked: creds?.e2p_client_id ? `••••••••${creds.e2p_client_id.slice(-4)}` : "",
       walletZa: creds?.wallet_za || "",
+      merchantId: creds?.debitopay_merchant_id || "",
       webhookSecretMasked: creds?.debitopay_za_webhook_secret ? "••••••••" : "",
       webhookUrl: `${origin}/api/public/debito-webhook`,
     };
@@ -55,7 +57,7 @@ export const testDebitoPayConnection = createServerFn({ method: "POST" })
       const walletData = walletRes.data?.data || walletRes.data;
       return {
         success: true,
-        message: `✅ Conectado com sucesso!\nAmbiente: ${data.environment.toUpperCase()}\nMoeda: ${walletData.currency || "ZAR"}\nStatus: ${walletData.status || "Ativa"}\nWallet ID: ${data.walletZa}`,
+        message: `✅ Conectado com sucesso!\nAmbiente: ${data.environment.toUpperCase()}\nMoeda: ${walletData.currency || "ZAR"}\nStatus: ${walletData.status || "Ativa"}\nWallet Code: ${data.walletZa}`,
         debug: debugLog
       };
     }
@@ -70,7 +72,7 @@ export const testDebitoPayConnection = createServerFn({ method: "POST" })
       detailedMessage += `Dica: Verifique se a API Key está correta e pertence ao ambiente ${data.environment.toUpperCase()}.\n`;
     } else if (status === 404) {
       detailedMessage += `Motivo: Wallet não encontrada (HTTP 404)\n`;
-      detailedMessage += `ID Enviado: ${data.walletZa}\n`;
+      detailedMessage += `Wallet Code Enviado: ${data.walletZa}\n`;
       detailedMessage += "Dica: A wallet informada não existe nesta conta.\n";
     } else if (status === 0) {
       detailedMessage += `Motivo: Falha de Comunicação\n${errorData?.message || "Erro de rede"}\n`;
@@ -99,25 +101,24 @@ export const testDebitoPayConnection = createServerFn({ method: "POST" })
     };
   });
 
+// listDebitoPayWallets foi removido conforme instrução técnica, usaremos validação individual.
 export const fetchDebitoPayWallets = createServerFn({ method: "POST" })
-  .inputValidator((input) => z.object({ apiKey: z.string(), environment: z.enum(["sandbox", "live"]).optional() }).parse(input))
+  .inputValidator((input) => z.object({ apiKey: z.string(), environment: z.enum(["sandbox", "live"]).optional(), walletCode: z.string() }).parse(input))
   .handler(async ({ data }) => {
      const auth = { apiKey: data.apiKey, environment: data.environment || "live" };
      
      try {
-       const res = await listDebitoPayWallets(auth);
+       const res = await validateDebitoPayWallet(auth, data.walletCode);
        if (res.ok) {
-         const wallets = res.data?.data || res.data;
-         return (wallets || [])
-           .filter((w: any) => w.currency === "ZAR" || w.country === "ZA")
-           .map((w: any) => ({
-             id: w.id,
-             name: w.name,
-             country: w.country || "ZA",
-             currency: w.currency || "ZAR",
-             status: w.status || "active",
-             label: `🇿🇦 ${w.name || "ZAR Wallet"} (${w.id}) - ${w.status || 'active'}`
-           }));
+         const w = res.data?.data || res.data;
+         return [{
+           id: w.wallet_code || data.walletCode,
+           name: w.name || "ZAR Wallet",
+           country: w.country || "ZA",
+           currency: w.currency || "ZAR",
+           status: w.status || "active",
+           label: `🇿🇦 ${w.name || "ZAR Wallet"} (${w.wallet_code || data.walletCode}) - ${w.status || 'active'}`
+         }];
        }
      } catch (e) {
        console.error("fetchDebitoPayWallets error", e);
@@ -139,6 +140,7 @@ export const saveDebitoPayConfig = createServerFn({ method: "POST" })
         e2p_client_id: data.apiKey,
         e2p_client_secret: data.apiKey, // DebitoPay API Key
         wallet_za: data.walletZa,
+        debitopay_merchant_id: data.merchantId,
         debitopay_za_webhook_secret: data.webhookSecret || null,
       }, { onConflict: "user_id" });
 

@@ -536,6 +536,12 @@ export const initiateSale = createServerFn({ method: "POST" })
     }
 
     const amount = Number(product.price);
+    const isZa = product.country === "ZA" || product.currency === "ZAR";
+    
+    if (isZa && amount < 5) {
+      return { success: false, error: "O valor mínimo para pagamento é R5." };
+    }
+
     if (!Number.isFinite(amount) || amount <= 0 || amount > 500_000) {
       return { success: false, error: "Valor do produto inválido." };
     }
@@ -644,13 +650,15 @@ export const chargeSale = createServerFn({ method: "POST" })
       if (isZa) {
         const { initiateDebitoPayPayment } = await import("./debitopay.server");
         const auth = { apiKey: creds.e2p_client_id, environment: "live" as const };
-        const debitoRes = await initiateDebitoPayPayment(auth, walletId, {
-          client_id: creds.e2p_client_id,
-          amount: String(amount),
-          phone: localPhone,
-          reference,
-          merchant_name: "NexaPay",
-          description: "Pagamento de produto digital",
+        const debitoRes = await initiateDebitoPayPayment(auth, {
+          merchant_id: (creds as any).debitopay_merchant_id,
+          wallet_code: walletId,
+          amount,
+          currency: "ZAR",
+          customer_email: "cliente@nexapay.io", // Placeholder for serverFn
+          customer_name: sale.customer_name || "Cliente",
+          customer_phone: sale.customer_phone,
+          return_url: `${process.env.VITE_SITE_URL || "https://nexapayio.com"}/payment-success?saleId=${sale.id}`,
         });
         
         res = {
@@ -697,9 +705,15 @@ export const chargeSale = createServerFn({ method: "POST" })
       const finalStatus = normalizeGatewayStatus(json, res.ok, res.status);
       const p = sale.products as { access_link?: string | null; delivery_link?: string | null } | null;
 
+      // Se a Débito Pay devolver checkout_url, temos de a passar ao frontend
+      const checkoutUrl = (json as any)?.checkout_url;
+
       if (finalStatus === "paid") {
         await confirmSalePayment({ saleId: sale.id, transactionId, reference, rawPayload: json, triggerPushcut: true });
         return { success: true, saleId: sale.id, transactionId, status: "paid", accessLink: p?.access_link || p?.delivery_link || null };
+      }
+      if (checkoutUrl && finalStatus === "pending") {
+         return { success: true, saleId: sale.id, transactionId, status: "pending", accessLink: checkoutUrl }; 
       }
       if (finalStatus === "failed" || finalStatus === "expired" || finalStatus === "cancelled") {
         const failure = readGatewayFailureDetails(json, finalStatus);

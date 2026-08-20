@@ -37,7 +37,7 @@ const FAILED_STATUSES = new Set([
 
 const EXPIRED_STATUSES = new Set(["expired", "timeout", "timed_out"]);
 
-export type NormalizedPaymentStatus = "paid" | "cancelled" | "failed" | "expired" | "pending";
+export type NormalizedPaymentStatus = "paid" | "cancelled" | "failed" | "expired" | "pending" | "success";
 export type TerminalFailureStatus = "cancelled" | "failed" | "expired";
 
 type GatewayPayload = Record<string, unknown>;
@@ -833,6 +833,7 @@ async function dispatchApprovedSideEffects(
     payment_method: sale.payment_method,
     status: "paid",
     payment_status: "paid",
+    gateway_status: "success",
     transaction_id: sale.transaction_id,
     payment_reference: sale.payment_reference,
     paid_at: new Date().toISOString(),
