@@ -192,7 +192,7 @@ function IntegrationsPage() {
 
   // Sync DebitoPay connected/enabled from backend
   const getDebitoPay = useServerFn(getDebitoPayConfig);
-  const { data: debitoPayRow, error: debitoPayError } = useQuery({
+  const { data: debitoPayRow, error: debitoPayError, isLoading: isDebitoLoading } = useQuery({
     queryKey: ["debitopay-config"],
     queryFn: () => getDebitoPay(),
   });
@@ -204,19 +204,25 @@ function IntegrationsPage() {
   }, [debitoPayError]);
 
   useEffect(() => {
-    setConfig((prev) => ({
-      ...prev,
-      pushcut: {
+    setConfig((prev) => {
+      const next = { ...prev };
+      
+      // Update Pushcut
+      next.pushcut = {
         connected: !!pushcutRow,
         enabled: !!pushcutRow?.active,
         config: pushcutRow ? { url: pushcutRow.url } : {},
-      },
-      debitopay_za: {
+      };
+
+      // Update DebitoPay
+      next.debitopay_za = {
         connected: !!debitoPayRow?.connected,
-        enabled: !!debitoPayRow?.connected, // For ZA, if connected it is enabled by default logic
+        enabled: !!debitoPayRow?.connected,
         config: debitoPayRow || {},
-      },
-    }));
+      };
+
+      return next;
+    });
   }, [pushcutRow, debitoPayRow]);
 
   const filtered = useMemo(() => {
@@ -254,6 +260,13 @@ function IntegrationsPage() {
 
   return (
     <div className="space-y-8">
+      {/* Debug Info Temporário */}
+      <div className="hidden">
+        Debug: DebitoPay Loaded: {debitoPayRow ? 'Yes' : 'No'} | 
+        Connected: {debitoPayRow?.connected ? 'Yes' : 'No'} |
+        Error: {debitoPayError ? String(debitoPayError) : 'None'}
+      </div>
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Integrações</h1>
