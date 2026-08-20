@@ -44,7 +44,7 @@ export const getPublicProduct = createServerFn({ method: "GET" })
       console.error("Public checkout product lookup failed:", error.message);
     }
 
-    if (!product) {
+    if (!product || (product.status && product.status !== "active")) {
       return { product: null, checkout: null, defaultPixel: null };
     }
 
