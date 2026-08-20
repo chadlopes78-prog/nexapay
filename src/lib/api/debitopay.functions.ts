@@ -43,24 +43,24 @@ export const testDebitoPayConnection = createServerFn({ method: "POST" })
     let message = "Não foi possível autenticar na Débito Pay";
 
     for (const host of hosts) {
-        try {
-            const res = await fetch(`${host}/oauth/token`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    grant_type: "client_credentials",
-                    client_id: data.apiKey, // Assuming API Key is used as client_id or similar per E2Pay pattern
-                    client_secret: data.apiKey, // Placeholder
-                })
-            });
-            if (res.ok) {
-                success = true;
-                message = "Conexão com Débito Pay estabelecida";
-                break;
-            }
-        } catch (e) {
-            continue;
+      try {
+        const res = await fetch(`${host}/oauth/token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            grant_type: "client_credentials",
+            client_id: data.apiKey,
+            client_secret: data.apiKey,
+          }),
+        });
+        if (res.ok) {
+          success = true;
+          message = "✅ Conexão com Débito Pay estabelecida";
+          break;
         }
+      } catch (e) {
+        continue;
+      }
     }
 
     return { success, message };
@@ -69,10 +69,45 @@ export const testDebitoPayConnection = createServerFn({ method: "POST" })
 export const fetchDebitoPayWallets = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ apiKey: z.string() }).parse(input))
   .handler(async ({ data }) => {
-     // Mocking response based on "listar wallets" requirement
-     return [
-       { id: "wallet_zar_live_1", country: "South Africa", currency: "ZAR", status: "active", label: "🇿🇦 ZAR Wallet" }
-     ];
+     const hosts = ["https://mpesaemolatech.com", "https://e2payments.explicador.co.mz"];
+     
+     for (const host of hosts) {
+       try {
+         const tokenRes = await fetch(`${host}/oauth/token`, {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify({
+             grant_type: "client_credentials",
+             client_id: data.apiKey,
+             client_secret: data.apiKey,
+           }),
+         });
+         
+         if (tokenRes.ok) {
+           const { access_token } = await tokenRes.json();
+           const walletRes = await fetch(`${host}/v1/wallets`, {
+             headers: { "Authorization": `Bearer ${access_token}` },
+           });
+           
+           if (walletRes.ok) {
+             const { data: wallets } = await walletRes.json();
+             return (wallets || [])
+               .filter((w: any) => w.currency === "ZAR" || w.country === "ZA")
+               .map((w: any) => ({
+                 id: w.id,
+                 country: w.country || "ZA",
+                 currency: w.currency || "ZAR",
+                 status: w.status || "active",
+                 label: `🇿🇦 ${w.name || "ZAR Wallet"} (${w.currency})`
+               }));
+           }
+         }
+       } catch (e) {
+         continue;
+       }
+     }
+
+     return [];
   });
 
 export const saveDebitoPayConfig = createServerFn({ method: "POST" })
