@@ -200,7 +200,8 @@ export async function reconcilePendingSale(sale: PendingSale) {
           source: "e2payments_history",
         });
       }
-      return status;
+      const final = status as NormalizedPaymentStatus | null;
+      return final === "paid" ? "paid" : final;
     } catch (error) {
       console.warn("[payments] reconciliation unavailable", {
         saleId: sale.id,
