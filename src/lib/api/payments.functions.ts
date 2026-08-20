@@ -9,7 +9,7 @@ import {
 
 const PaymentInput = z.object({
   productId: z.string().min(1).max(120),
-  method: z.enum(["mpesa", "emola", "card", "eft", "bank_transfer"]),
+  method: z.enum(["mpesa", "emola", "payfast", "card", "eft", "bank_transfer"]),
   msisdn: z.string().min(9).max(20),
   customerName: z.string().min(1).max(100),
   contactPhone: z.string().max(20).optional(),
@@ -467,9 +467,10 @@ export const prewarmPaymentGateway = createServerFn({ method: "POST" })
   });
 
 async function validateAndLoad(data: z.infer<typeof PaymentInput>, product: any) {
-  const isZa = product.country === "ZA" || product.currency === "ZAR";
+  const isZa = product.country === "ZA" || product.currency === "ZAR" || data.method === "payfast" || data.method === "card" || data.method === "eft";
   
   if (isZa) {
+
     // Para ZA, o número de telefone pode ser +27 ou 0 seguido de 9 dígitos.
     // Vamos apenas garantir que tenha dígitos.
     const digits = data.msisdn.replace(/\D/g, "");
@@ -525,10 +526,11 @@ export const initiateSale = createServerFn({ method: "POST" })
     if (!creds) {
       return { success: false, error: "O vendedor ainda não configurou a integração de pagamento." };
     }
-    const isZaSale = product.country === "ZA" || product.currency === "ZAR";
+    const isZaSale = product.country === "ZA" || product.currency === "ZAR" || data.method === "payfast" || data.method === "card" || data.method === "eft";
     const walletId = isZaSale 
       ? creds.wallet_za 
       : (data.method === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
+
       
     if (!walletId) {
       const methodLabel = isZaSale ? "ZAR (África do Sul)" : data.method.toUpperCase();
@@ -536,7 +538,7 @@ export const initiateSale = createServerFn({ method: "POST" })
     }
 
     const amount = Number(product.price);
-    const isZaProduct = product.country === "ZA" || product.currency === "ZAR";
+    const isZaProduct = product.country === "ZA" || product.currency === "ZAR" || data.method === "payfast" || data.method === "card" || data.method === "eft";
     
     if (isZaProduct && amount < 5) {
       return { success: false, error: "O valor mínimo para pagamento é R5." };
@@ -598,7 +600,17 @@ export const initiateSale = createServerFn({ method: "POST" })
       return { success: false, error: "Não foi possível registar a venda." };
     }
 
+    if (isZaSale) {
+
+      const { waitUntil } = await import("@/lib/runtime-context.server");
+      const chargeTask = chargeSale({ data: { saleId: sale.id } }).catch((err) =>
+        console.warn("ZA initial charge background failed", err),
+      );
+      if (!waitUntil(chargeTask)) void chargeTask;
+    }
+
     return { success: true, saleId: sale.id, transactionId: null, status: "pending", accessLink: null };
+
   });
 
 export const chargeSale = createServerFn({ method: "POST" })
@@ -624,7 +636,7 @@ export const chargeSale = createServerFn({ method: "POST" })
       return { success: false, saleId: sale.id, error: "Vendedor sem integração de pagamento configurada." };
     }
     const paymentMethod = sale.payment_method;
-    const isZa = sale.country === "ZA" || sale.currency === "ZAR";
+    const isZa = sale.country === "ZA" || sale.currency === "ZAR" || sale.payment_method === "payfast" || sale.payment_method === "card" || sale.payment_method === "eft";
     const walletId = isZa 
       ? creds.wallet_za 
       : (paymentMethod === "mpesa" ? creds.wallet_mpesa : creds.wallet_emola);
@@ -641,7 +653,7 @@ export const chargeSale = createServerFn({ method: "POST" })
     } = await import("@/lib/payments/confirmation.server");
 
     const reference = sale.payment_reference || `PMZ${sale.id.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 20);
-    const localPhone = isZa ? sale.customer_phone : String(sale.customer_phone).slice(3);
+    const localPhone = (isZa && sale.payment_method !== "payfast" && sale.payment_method !== "card" && sale.payment_method !== "eft") ? sale.customer_phone : (isZa ? sale.customer_phone : String(sale.customer_phone).slice(3));
     const amount = Number(sale.amount);
 
     try {

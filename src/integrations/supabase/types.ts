@@ -86,6 +86,7 @@ export type Database = {
           order_bump_image_url: string | null
           order_bump_price: number | null
           order_bump_title: string | null
+          payment_methods: Json | null
           primary_color: string | null
           product_id: string
           social_proof_count: number
@@ -120,6 +121,7 @@ export type Database = {
           order_bump_image_url?: string | null
           order_bump_price?: number | null
           order_bump_title?: string | null
+          payment_methods?: Json | null
           primary_color?: string | null
           product_id: string
           social_proof_count?: number
@@ -154,6 +156,7 @@ export type Database = {
           order_bump_image_url?: string | null
           order_bump_price?: number | null
           order_bump_title?: string | null
+          payment_methods?: Json | null
           primary_color?: string | null
           product_id?: string
           social_proof_count?: number

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { Clock, Users, ShoppingCart, TrendingUp, Palette, Save, Image as ImageIcon } from "lucide-react";
+import { Clock, Users, ShoppingCart, TrendingUp, Palette, Save, Image as ImageIcon, CheckCircle2, Circle, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CheckoutData {
@@ -33,6 +33,7 @@ interface CheckoutData {
   upsell_title?: string;
   upsell_description?: string;
   upsell_discount_percent?: number | null;
+  payment_methods?: string[];
 }
 
 const PRESET_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899", "#0f172a"];
@@ -134,6 +135,63 @@ export function CheckoutEditor({ productId }: { productId: string }) {
 
   return (
     <div className="space-y-4">
+      {/* Seleção de Métodos de Pagamento */}
+      <div className="rounded-xl border bg-white p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-900 text-white">
+            <CreditCard className="h-4 w-4" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-semibold text-slate-900">Métodos de pagamento</h4>
+            <p className="text-xs text-slate-500">Escolha os métodos que estarão disponíveis no checkout deste produto.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            { id: "mpesa", label: "M-Pesa" },
+            { id: "emola", label: "e-Mola" },
+            { id: "payfast", label: "PayFast" },
+          ].map((method) => {
+            const enabled = (data.payment_methods || ["mpesa", "emola", "payfast"]).includes(method.id);
+            return (
+              <button
+                key={method.id}
+                type="button"
+                onClick={() => {
+                  const current = data.payment_methods || ["mpesa", "emola", "payfast"];
+                  const next = enabled 
+                    ? current.filter(m => m !== method.id)
+                    : [...current, method.id];
+                  update({ payment_methods: next });
+                }}
+                className={cn(
+                  "flex items-center justify-between gap-3 rounded-lg border p-3 text-left transition-all",
+                  enabled 
+                    ? "border-primary bg-primary/5 ring-1 ring-primary" 
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                )}
+              >
+                <span className={cn("text-sm font-medium", enabled ? "text-primary" : "text-slate-700")}>
+                  {method.label}
+                </span>
+                {enabled ? (
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                ) : (
+                  <Circle className="h-4 w-4 text-slate-300" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {(data.payment_methods || ["mpesa", "emola", "payfast"]).length === 0 && (
+          <p className="text-[11px] text-amber-600 font-medium bg-amber-50 p-2 rounded border border-amber-100">
+            Atenção: Selecione pelo menos um método para que os clientes possam pagar.
+          </p>
+        )}
+      </div>
+
+
       {/* Botão de compra — destacado */}
       <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
         <div className="flex items-center gap-2">
