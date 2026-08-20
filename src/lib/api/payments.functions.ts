@@ -330,11 +330,11 @@ type UserCreds = {
   wallet_emola: string | null;
 };
 
-async function loadUserCreds(userId: string): Promise<UserCreds & { wallet_za?: string | null } | null> {
+async function loadUserCreds(userId: string): Promise<UserCreds & { wallet_za?: string | null; debitopay_za_webhook_secret?: string | null } | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("user_payment_credentials")
-    .select("e2p_client_id, e2p_client_secret, wallet_mpesa, wallet_emola, wallet_za")
+    .select("e2p_client_id, e2p_client_secret, wallet_mpesa, wallet_emola, wallet_za, debitopay_za_webhook_secret")
     .eq("user_id", userId)
     .maybeSingle();
   if (!data?.e2p_client_id || !data?.e2p_client_secret) return null;
@@ -344,6 +344,7 @@ async function loadUserCreds(userId: string): Promise<UserCreds & { wallet_za?: 
     wallet_mpesa: data.wallet_mpesa,
     wallet_emola: data.wallet_emola,
     wallet_za: data.wallet_za,
+    debitopay_za_webhook_secret: data.debitopay_za_webhook_secret,
   };
 }
 
@@ -465,7 +466,19 @@ export const prewarmPaymentGateway = createServerFn({ method: "POST" })
     }
   });
 
-async function validateAndLoad(data: z.infer<typeof PaymentInput>) {
+async function validateAndLoad(data: z.infer<typeof PaymentInput>, product: any) {
+  const isZa = product.country === "ZA" || product.currency === "ZAR";
+  
+  if (isZa) {
+    // Para ZA, o número de telefone pode ser +27 ou 0 seguido de 9 dígitos.
+    // Vamos apenas garantir que tenha dígitos.
+    const digits = data.msisdn.replace(/\D/g, "");
+    if (digits.length < 9) {
+      return { error: "Número de telefone inválido para a África do Sul." };
+    }
+    return { msisdn: data.msisdn };
+  }
+
   const msisdn = normalizeMozambicanPhone(data.msisdn);
   // Formato final exigido pela E2Payments: 258 + 9 dígitos, começando por 84/85/86/87.
   if (!/^258(84|85|86|87)\d{7}$/.test(msisdn)) {
@@ -485,10 +498,6 @@ async function validateAndLoad(data: z.infer<typeof PaymentInput>) {
 export const initiateSale = createServerFn({ method: "POST" })
   .inputValidator(InitiateInput)
   .handler(async ({ data }): Promise<PaymentResult> => {
-    const v = await validateAndLoad(data);
-    if (v.error) return { success: false, error: v.error };
-    const msisdn = v.msisdn!;
-
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const isUuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -498,6 +507,15 @@ export const initiateSale = createServerFn({ method: "POST" })
       .from("products")
       .select("id, price, status, user_id, country, currency, access_link, delivery_link");
     productQuery = isUuid
+      ? productQuery.eq("id", data.productId)
+      : productQuery.eq("custom_url", data.productId);
+      
+    const { data: product } = await productQuery.single();
+    if (!product) return { success: false, error: "Produto não encontrado." };
+
+    const v = await validateAndLoad(data, product);
+    if (v.error) return { success: false, error: v.error };
+    const msisdn = v.msisdn!;
       ? productQuery.eq("id", data.productId)
       : productQuery.eq("custom_url", data.productId);
     const { data: product, error: productError } = await productQuery.single();
@@ -620,41 +638,58 @@ export const chargeSale = createServerFn({ method: "POST" })
     } = await import("@/lib/payments/confirmation.server");
 
     const reference = sale.payment_reference || `PMZ${sale.id.replace(/[^a-zA-Z0-9]/g, "")}`.slice(0, 20);
-    const localPhone = String(sale.customer_phone).slice(3);
+    const localPhone = isZa ? sale.customer_phone : String(sale.customer_phone).slice(3);
     const amount = Number(sale.amount);
 
     try {
-      const token = await getAccessToken(creds.e2p_client_id, creds.e2p_client_secret);
-      const controller = new AbortController();
-      // Timeout unificado: mesma janela do PIN usada em startPayment e no
-      // polling — evita cortar a chamada antes de a operadora confirmar.
-      const { PAYMENT_WAIT_WINDOW_MS } = await import("@/lib/payments/timing");
-      const timeoutId = setTimeout(() => controller.abort(), PAYMENT_WAIT_WINDOW_MS);
-      const endpoint =
-        isZa
-          ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/debitopay-payment/${walletId}`
-          : (paymentMethod === "mpesa"
-            ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
-            : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`);
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-          "User-Agent": "NexaPay/1.0",
-        },
-        body: JSON.stringify({
+      let res: Response;
+      
+      if (isZa) {
+        const { initiateDebitoPayPayment } = await import("./debitopay.server");
+        const auth = { apiKey: creds.e2p_client_id, environment: "live" as const };
+        const debitoRes = await initiateDebitoPayPayment(auth, walletId, {
           client_id: creds.e2p_client_id,
           amount: String(amount),
           phone: localPhone,
           reference,
           merchant_name: "NexaPay",
           description: "Pagamento de produto digital",
-        }),
-        signal: controller.signal,
-      }).finally(() => clearTimeout(timeoutId));
+        });
+        
+        res = {
+          ok: debitoRes.ok,
+          status: debitoRes.status,
+          text: () => Promise.resolve(JSON.stringify(debitoRes.data)),
+          json: () => Promise.resolve(debitoRes.data),
+        } as Response;
+      } else {
+        const token = await getAccessToken(creds.e2p_client_id, creds.e2p_client_secret);
+        const controller = new AbortController();
+        const { PAYMENT_WAIT_WINDOW_MS } = await import("@/lib/payments/timing");
+        const timeoutId = setTimeout(() => controller.abort(), PAYMENT_WAIT_WINDOW_MS);
+        const endpoint = paymentMethod === "mpesa"
+            ? `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/mpesa-payment/${walletId}`
+            : `${getE2payBaseUrl(creds.e2p_client_id)}/v1/c2b/emola-payment/${walletId}`;
+
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+            "User-Agent": "NexaPay/1.0",
+          },
+          body: JSON.stringify({
+            client_id: creds.e2p_client_id,
+            amount: String(amount),
+            phone: localPhone,
+            reference,
+            merchant_name: "NexaPay",
+            description: "Pagamento de produto digital",
+          }),
+          signal: controller.signal,
+        }).finally(() => clearTimeout(timeoutId));
+      }
 
       const text = await res.text();
       let json: Record<string, unknown> | null = null;
@@ -703,7 +738,24 @@ export const startPayment = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<PaymentResult> => {
     const t0 = Date.now();
     const mark = (label: string) => console.info(`[startPayment] ${label} +${Date.now() - t0}ms`);
-    const v = await validateAndLoad(data);
+    
+    // Precisamos carregar o produto antes de validar o telefone
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        data.productId,
+      );
+    let productQuery = supabaseAdmin
+      .from("products")
+      .select("id, price, status, user_id, country, currency, access_link, delivery_link");
+    productQuery = isUuid
+      ? productQuery.eq("id", data.productId)
+      : productQuery.eq("custom_url", data.productId);
+
+    const { data: product } = await productQuery.single();
+    if (!product) return { success: false, error: "Produto não encontrado." };
+
+    const v = await validateAndLoad(data, product);
     if (v.error) return { success: false, error: v.error };
     const msisdn = v.msisdn!;
     mark("validate");
@@ -745,19 +797,8 @@ export const startPayment = createServerFn({ method: "POST" })
       }
     }
 
-    const isUuid =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-        data.productId,
-      );
-    let productQuery = supabaseAdmin
-      .from("products")
-      .select("id, price, status, user_id, country, currency, access_link, delivery_link");
-    productQuery = isUuid
-      ? productQuery.eq("id", data.productId)
-      : productQuery.eq("custom_url", data.productId);
-
-    const [productRes, trafficRes] = await Promise.all([
-      productQuery.single(),
+    // Produto já carregado acima
+    const [trafficRes] = await Promise.all([
       data.trafficPageTrackingId
         ? supabaseAdmin
             .from("traffic_pages")
@@ -766,8 +807,7 @@ export const startPayment = createServerFn({ method: "POST" })
             .maybeSingle()
         : Promise.resolve({ data: null as { id?: string } | null }),
     ]);
-    const product = productRes.data;
-    if (productRes.error || !product) return { success: false, error: "Produto não encontrado." };
+    
     if (product.status && product.status !== "active") {
       return { success: false, error: "Produto indisponível para compra." };
     }
@@ -799,9 +839,9 @@ export const startPayment = createServerFn({ method: "POST" })
     // Insert sale with the final gateway reference + preload OAuth token in parallel.
     // This removes the old insert→update race where a fast webhook could arrive
     // before `payment_reference` existed, leaving checkout stuck in processing.
-    const tokenPromise = getAccessToken(creds.e2p_client_id, creds.e2p_client_secret).catch(
-      (e) => e as Error,
-    );
+    const tokenPromise = isZa 
+      ? Promise.resolve("ZA_DIRECT_KEY") 
+      : getAccessToken(creds.e2p_client_id, creds.e2p_client_secret).catch((e) => e as Error);
     const saleRes = await supabaseAdmin
       .from("sales")
       .insert({
