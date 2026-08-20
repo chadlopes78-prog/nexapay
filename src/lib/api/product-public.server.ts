@@ -16,7 +16,7 @@ export async function findPublicProduct(productId: string) {
 
   const { data: product, error } = await supabase
     .from("products")
-    .select("*, checkouts(*)")
+    .select("*, checkouts!checkouts_product_id_fkey(*)")
     .or(filter)
     .limit(1)
     .maybeSingle();
