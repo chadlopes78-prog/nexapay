@@ -182,13 +182,27 @@ function IntegrationsPage() {
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<IntegrationDef | null>(null);
 
-  // Sync Pushcut connected/enabled from backend on mount
+  // Sync Pushcut connected/enabled from backend
   const getPushcut = useServerFn(getPushcutIntegration);
   const deletePushcut = useServerFn(deletePushcutIntegration);
   const { data: pushcutRow } = useQuery({
     queryKey: ["pushcut-integration"],
     queryFn: () => getPushcut(),
   });
+
+  // Sync DebitoPay connected/enabled from backend
+  const getDebitoPay = useServerFn(getDebitoPayConfig);
+  const { data: debitoPayRow, error: debitoPayError } = useQuery({
+    queryKey: ["debitopay-config"],
+    queryFn: () => getDebitoPay(),
+  });
+
+  useEffect(() => {
+    if (debitoPayError) {
+      console.error("Erro ao carregar integrações (Débito Pay):", debitoPayError);
+    }
+  }, [debitoPayError]);
+
   useEffect(() => {
     setConfig((prev) => ({
       ...prev,
@@ -197,8 +211,13 @@ function IntegrationsPage() {
         enabled: !!pushcutRow?.active,
         config: pushcutRow ? { url: pushcutRow.url } : {},
       },
+      debitopay_za: {
+        connected: !!debitoPayRow?.connected,
+        enabled: !!debitoPayRow?.connected, // For ZA, if connected it is enabled by default logic
+        config: debitoPayRow || {},
+      },
     }));
-  }, [pushcutRow]);
+  }, [pushcutRow, debitoPayRow]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
