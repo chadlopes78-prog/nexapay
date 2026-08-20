@@ -1,6 +1,263 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-// Corrija a página /integrations para que o cartão Débito Pay 🇿🇦 permaneça visível após conexão, mostrando status, mercado, moeda, wallet mascarada, ambiente, métodos configurados e botões Gerir integração e Testar conexão, sem expor API Key. Não altere credenciais, endpoints ou autenticação. Verifique que o checkout para country=ZA e currency=ZAR usa essa integração exclusivamente. Confirme que a criação de pagamento chama realmente a Débito Pay, que o webhook está configurado e processa idempotentemente, e que a venda só fica APROVADA após confirmação real do provedor. Após correção, informe: Integração ZA: Conectada/Não conectada; Wallet ZAR: Validada/Não validada; Checkout ZA utiliza esta integração: Sim/Não; Criação real de pagamento implementada: Sim/Não; Endpoint utilizado: [endpoint real]; Webhook funcional: Sim/Não; Consulta de status implementada: Sim/Não; Métodos ZA disponíveis: [lista real]; Pronto para cobrança LIVE de baixo valor: Sim/Não (listar o que falta se Não). Não realize pagamento real.
+// EXISTE UM BUG CRÍTICO NA INTEGRAÇÃO DÉBITO PAY.
+// 
+// Actualmente acontece isto:
+// 
+// Eu preencho API Key, Wallet ZAR e demais dados.
+// 
+// Clico em Salvar configuração.
+// 
+// O sistema informa que foi salvo.
+// 
+// Dou refresh na página.
+// 
+// Todos os campos ficam vazios novamente.
+// 
+// A página de Integrações volta para a tela vazia ou perde o card da Débito Pay.
+// 
+// Isso significa que a configuração NÃO está sendo persistida correctamente ou NÃO está sendo carregada novamente do banco.
+// 
+// Quero corrigir isso de forma definitiva.
+// 
+// 1. AUDITAR O SALVAMENTO
+// 
+// Verifique o botão:
+// 
+// Salvar configuração
+// 
+// Ele deve realmente gravar a configuração no backend/Supabase.
+// 
+// Não quero apenas:
+// 
+// state React
+// 
+// localStorage
+// 
+// variável temporária
+// 
+// toast “salvo”
+// 
+// objeto em memória
+// 
+// Quero persistência real.
+// 
+// 2. CRIAR/USAR TABELA DE CONFIGURAÇÃO
+// 
+// Utilize a arquitectura existente do projecto.
+// 
+// Se já existe tabela de integrações/gateways, reutilize.
+// 
+// Se não existir, criar uma estrutura persistente para guardar algo equivalente a:
+// 
+// provider
+// 
+// country
+// 
+// currency
+// 
+// environment
+// 
+// wallet_id
+// 
+// api_key_reference/encrypted_secret
+// 
+// webhook_secret_reference
+// 
+// is_active
+// 
+// created_at
+// 
+// updated_at
+// 
+// Para esta integração:
+// 
+// provider = debitopay
+// 
+// country = ZA
+// 
+// currency = ZAR
+// 
+// 3. API KEY
+// 
+// API Key não deve ficar exposta no frontend.
+// 
+// Guardar com segurança utilizando a estrutura de secrets/backend do projecto.
+// 
+// Na base de dados pode existir apenas referência/configuração necessária, nunca a API Key em texto público.
+// 
+// 4. CARREGAR CONFIGURAÇÃO AO ABRIR A PÁGINA
+// 
+// Quando abrir:
+// 
+// /integrations
+// 
+// o frontend deve fazer uma consulta ao backend e recuperar a configuração já salva.
+// 
+// Se a integração existir, mostrar automaticamente:
+// 
+// Débito Pay 🇿🇦
+// 
+// Status:
+// 🟢 Conectado
+// 
+// Ambiente:
+// Live / Produção
+// 
+// Wallet:
+// 34471 ou versão mascarada
+// 
+// API Key:
+// ••••••••••••
+// 
+// Webhook:
+// configurado
+// 
+// NÃO exigir que eu preencha novamente depois de refresh.
+// 
+// 5. NÃO APAGAR VALORES NO REFRESH
+// 
+// Refresh do navegador NÃO pode:
+// 
+// apagar API Key
+// 
+// apagar Wallet
+// 
+// apagar status
+// 
+// remover card da integração
+// 
+// voltar para “não configurado”
+// 
+// A integração deve continuar exactamente no estado persistido no backend.
+// 
+// 6. VERIFICAR O CARD DE INTEGRAÇÃO
+// 
+// O card da Débito Pay deve aparecer sempre que existir configuração no banco.
+// 
+// Não esconder o card por causa de um estado frontend temporário.
+// 
+// A renderização deve depender da configuração persistida.
+// 
+// 7. SALVAR E DEPOIS RECARREGAR
+// 
+// Depois de salvar, faça imediatamente:
+// 
+// SAVE
+// → backend
+// → confirmação
+// → nova consulta ao banco
+// → atualizar interface com dados persistidos
+// 
+// Não use somente o objeto que já estava no formulário.
+// 
+// 8. TESTE OBRIGATÓRIO
+// 
+// Depois de corrigir, execute este teste:
+// 
+// preencher configuração
+// 
+// salvar
+// 
+// confirmar registro no banco
+// 
+// recarregar /integrations
+// 
+// confirmar que os dados continuam carregados
+// 
+// fechar a página
+// 
+// abrir novamente
+// 
+// confirmar que continuam carregados
+// 
+// logout/login
+// 
+// confirmar que continuam carregados para o mesmo utilizador/admin
+// 
+// 9. NÃO DUPLICAR CONFIGURAÇÕES
+// 
+// Não criar um novo registro toda vez que eu clicar Salvar.
+// 
+// Use upsert/update para a integração:
+// 
+// debitopay + ZA
+// 
+// Deve existir uma única configuração activa por conta/merchant, salvo se a arquitectura actual exigir outra lógica.
+// 
+// 10. STATUS “CONECTADO”
+// 
+// Só mostrar:
+// 
+// 🟢 Conectado
+// 
+// quando existir configuração persistida e validada.
+// 
+// Não depender apenas de uma variável como:
+// 
+// setConnected(true)
+// 
+// Depois de refresh o sistema deve calcular o status baseado no backend.
+// 
+// 11. INVESTIGAR O BUG ACTUAL
+// 
+// Quero que identifique exactamente:
+// 
+// onde o formulário salva;
+// 
+// em qual tabela;
+// 
+// se o insert/update está realmente acontecendo;
+// 
+// se existe erro silencioso;
+// 
+// se RLS está bloqueando;
+// 
+// se o registro está associado ao utilizador/admin correcto;
+// 
+// como os dados são carregados ao iniciar a página;
+// 
+// por que desaparecem após refresh.
+// 
+// Corrija a causa raiz.
+// 
+// 12. RELATÓRIO FINAL
+// 
+// Depois da correção, responda:
+// 
+// Tabela utilizada:
+// [...]
+// 
+// Registro criado/atualizado:
+// [...]
+// 
+// Chave lógica da integração:
+// [...]
+// 
+// API Key armazenada como:
+// [...]
+// 
+// Função usada para salvar:
+// [...]
+// 
+// Função usada para carregar:
+// [...]
+// 
+// RLS verificada:
+// Sim/Não
+// 
+// Teste após refresh:
+// Passou/Falhou
+// 
+// Teste após sair e entrar novamente:
+// Passou/Falhou
+// 
+// Card permanece visível:
+// Sim/Não
+// 
+// NÃO diga apenas “corrigido”.
+// 
+// Quero confirmação de persistência real no backend.
 
 export const Route = createFileRoute("/")({
   component: Index,
