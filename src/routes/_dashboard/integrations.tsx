@@ -1145,7 +1145,7 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
           type="password"
           value={webhookSecret}
           onChange={(e) => setWebhookSecret(e.target.value)}
-          placeholder="Opcional - para validação de assinatura"
+          placeholder={config?.webhookSecretMasked || "Opcional - para validação de assinatura"}
         />
       </div>
 
