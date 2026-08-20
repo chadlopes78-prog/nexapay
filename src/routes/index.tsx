@@ -124,7 +124,7 @@ O cliente escolhe o método e clica: PAGAR R 197
 7. CRIAÇÃO DO PAGAMENTO
 
 Quando o cliente clicar em pagar:
-Frontend → Backend/Supabase Edge Function → Débito Pay API
+Frontend -{" > "}Backend/Supabase Edge Function -{" > "}Débito Pay API
 
 O frontend envia somente informações necessárias como product_id, customer, amount/product reference, payment method.
 Por segurança, sempre que possível, o backend deve recuperar o valor real do produto directamente da base de dados, em vez de confiar no valor enviado pelo navegador.
