@@ -163,16 +163,27 @@ function CheckoutPage() {
   const [name, setName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [phone, setPhone] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola" | "card" | "eft">("mpesa");
+  const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "emola" | "payfast" | "card" | "eft">("mpesa");
   
-  useEffect(() => {
-    const country = (product as any)?.country;
-    if (country === "ZA") {
-      setPaymentMethod("card");
-    } else {
-      setPaymentMethod("mpesa");
+  const availableMethods = useMemo(() => {
+    // If checkout has payment_methods, use them. Otherwise default to all based on country.
+    const methods = (checkout as any)?.payment_methods as string[] | undefined;
+    if (methods && Array.isArray(methods) && methods.length > 0) {
+      return methods;
     }
-  }, [product]);
+    
+    // Fallback logic
+    const country = (product as any)?.country;
+    if (country === "ZA") return ["payfast"];
+    return ["mpesa", "emola"];
+  }, [checkout, product]);
+
+  useEffect(() => {
+    if (availableMethods.length > 0 && !availableMethods.includes(paymentMethod as any)) {
+      setPaymentMethod(availableMethods[0] as any);
+    }
+  }, [availableMethods]);
+
 
 
   const [bumpAccepted, setBumpAccepted] = useState(false);
