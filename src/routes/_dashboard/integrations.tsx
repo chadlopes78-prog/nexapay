@@ -185,7 +185,7 @@ function IntegrationsPage() {
   // Sync Pushcut connected/enabled from backend
   const getPushcut = useServerFn(getPushcutIntegration);
   const deletePushcut = useServerFn(deletePushcutIntegration);
-  const { data: pushcutRow } = useQuery({
+  const { data: pushcutRow, isLoading: isPushcutLoading } = useQuery({
     queryKey: ["pushcut-integration"],
     queryFn: () => getPushcut(),
   });
@@ -204,6 +204,7 @@ function IntegrationsPage() {
   }, [debitoPayError]);
 
   useEffect(() => {
+    // Only update when data is available to avoid flickering
     setConfig((prev) => {
       const next = { ...prev };
       
@@ -1094,7 +1095,7 @@ function DebitoPayZaEditor({ onSaved }: { onSaved: () => void }) {
     if (!apiKey && !config?.connected) return toast.error("API Key obrigatória");
     try {
       await saveFn({ data: { environment: env, apiKey, walletZa, merchantId: values.merchantId, webhookSecret } });
-      qc.invalidateQueries({ queryKey: ["debitopay-config"] });
+      await qc.invalidateQueries({ queryKey: ["debitopay-config"] });
       toast.success("Configuração Débito Pay ZA salva");
       onSaved();
     } catch (e: any) {
