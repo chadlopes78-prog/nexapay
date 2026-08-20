@@ -79,6 +79,23 @@ export const saveDebitoPayConfig = createServerFn({ method: "POST" })
   .inputValidator((input) => DebitoPayCredentialsInput.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Secure storage logic
+    const { data: { user } } = await supabaseAdmin.auth.getUser();
+    if (!user) throw new Error("Unauthorized");
+
+    const { error } = await supabaseAdmin
+      .from("user_payment_credentials")
+      .upsert({
+        user_id: user.id,
+        e2p_client_id: data.apiKey,
+        e2p_client_secret: data.apiKey, // DebitoPay API Key
+        wallet_za: data.walletZa,
+      }, { onConflict: "user_id" });
+
+    if (error) throw error;
+    
+    // Invalidate tokens for this user
+    const { invalidateAccessToken } = await import("./payments.functions");
+    invalidateAccessToken(data.apiKey);
+
     return { success: true };
   });
