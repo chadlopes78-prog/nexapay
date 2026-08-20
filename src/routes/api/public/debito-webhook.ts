@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/public/debito-webhook")({
         const { data: creds } = await supabaseAdmin
           .from("user_payment_credentials")
           .select("debitopay_za_webhook_secret")
-          .eq("user_id", saleData.user_id)
+          .eq("user_id", saleData.user_id!)
           .maybeSingle();
 
         if (creds?.debitopay_za_webhook_secret) {
