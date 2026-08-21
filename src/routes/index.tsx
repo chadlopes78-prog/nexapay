@@ -32,7 +32,7 @@ function Index() {
                   Novo: Checkout Inteligente Disponível
                 </div>
                 <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900">
-                  'Eu não pedi para você editar a homepage; eu pedi que você me envie o site em ZIP ou HTML.' (on element 'body' at '/src/routes/index.tsx:1')
+                  Checkout Seguro e Conversão Máxima
                 </h1>
                 <p className="mx-auto max-w-[800px] text-gray-500 text-sm md:text-base leading-relaxed">
                   A plataforma de pagamentos mais rápida e segura para o seu negócio digital. Integre M-Pesa, e-Mola, EFT e cartões em minutos e comece a escalar suas vendas hoje mesmo.
